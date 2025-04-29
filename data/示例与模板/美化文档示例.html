@@ -32,6 +32,10 @@
             border-bottom: 2px solid #e5e7eb;
             padding-bottom: 0.5rem;
         }
+
+        .dark .feature-card {
+            background-color: #151B2A;
+        }
         
         .tip-box {
             background-color: #e6f7ff;
@@ -55,6 +59,18 @@
             padding: 1rem;
             margin: 1.5rem 0;
             border-radius: 0 4px 4px 0;
+        }
+
+        .dark .tip-box {
+            background-color: #151B2A;
+        }
+
+        .dark .warning-box {
+            background-color: #151B2A;
+        }
+
+        .dark .success-box {
+            background-color: #151B2A;
         }
         
         .flex-container {
@@ -87,7 +103,17 @@
             margin-top: 0;
             background-color: #f0f0f0;
             padding: 1rem;
+            border: 1px solid #ddd;
+            border-top: none;
             border-radius: 0 0 4px 4px;
+        }
+
+        .dark .code-title {
+            background-color: #151B2A;
+        }
+
+        .dark .code-with-title pre {
+            background-color: #151B2A;
         }
         
         .image-with-caption {
@@ -181,6 +207,20 @@
         
         table.styled-table tr:hover {
             background-color: #e6f7ff;
+        }
+
+        /* 暗黑模式样式 */
+        .dark table.styled-table th {
+            background-color: #1e3a8a; /* 深色模式下表头背景色 */
+            color: #ffffff; /* 深色模式下表头文字颜色 */
+        }
+
+        .dark table.styled-table tr:nth-child(even) {
+            background-color: #374151; /* 深色模式下偶数行背景色 */
+        }
+
+        .dark table.styled-table tr:hover {
+            background-color: #4b5563; /* 深色模式下悬停行背景色 */
         }
         
         .tabs {
