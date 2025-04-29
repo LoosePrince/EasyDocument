@@ -200,6 +200,67 @@ ol[data-style="1."] > li::before {
     align-items: center;
 }
 
+/* 代码块滚动条美化 */
+.vditor-reset pre, pre, code, .hljs {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.vditor-reset pre::-webkit-scrollbar, 
+pre::-webkit-scrollbar, 
+code::-webkit-scrollbar, 
+.hljs::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+}
+
+.vditor-reset pre::-webkit-scrollbar-track, 
+pre::-webkit-scrollbar-track, 
+code::-webkit-scrollbar-track, 
+.hljs::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+}
+
+.vditor-reset pre::-webkit-scrollbar-thumb, 
+pre::-webkit-scrollbar-thumb, 
+code::-webkit-scrollbar-thumb, 
+.hljs::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+.vditor-reset pre::-webkit-scrollbar-thumb:hover, 
+pre::-webkit-scrollbar-thumb:hover, 
+code::-webkit-scrollbar-thumb:hover, 
+.hljs::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(107, 114, 128, 0.7);
+}
+
+/* 深色模式下的代码块滚动条 */
+.dark .vditor-reset pre::-webkit-scrollbar-thumb, 
+.dark pre::-webkit-scrollbar-thumb, 
+.dark code::-webkit-scrollbar-thumb, 
+.dark .hljs::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.3);
+}
+
+.dark .vditor-reset pre::-webkit-scrollbar-thumb:hover, 
+.dark pre::-webkit-scrollbar-thumb:hover, 
+.dark code::-webkit-scrollbar-thumb:hover, 
+.dark .hljs::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(156, 163, 175, 0.5);
+}
+
+/* 代码块整体样式增强 */
+.vditor-reset pre, pre, .hljs {
+    border-radius: 8px;
+    overflow: auto;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
 .dark .vditor-reset code {
     background-color: #111827;
 }
