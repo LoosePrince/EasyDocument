@@ -9,7 +9,9 @@ EasyDocument 文档路径生成工具
 import os
 import json
 import argparse
+import re
 from pathlib import Path
+from html.parser import HTMLParser
 
 # 默认配置
 DEFAULT_CONFIG = {
@@ -19,6 +21,28 @@ DEFAULT_CONFIG = {
                    "index.md", "index.html"], 
     "supported_extensions": [".md", ".html"],           # 支持的文档扩展名
 }
+
+# HTML解析器，用于从HTML文件中提取文本内容
+class HTMLTextExtractor(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.result = []
+        self.skip = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ["script", "style"]:
+            self.skip = True
+
+    def handle_endtag(self, tag):
+        if tag in ["script", "style"]:
+            self.skip = False
+
+    def handle_data(self, data):
+        if not self.skip and data.strip():
+            self.result.append(data.strip())
+
+    def get_text(self):
+        return " ".join(self.result)
 
 def is_supported_file(filename, config):
     """检查文件是否为支持的文档文件"""
@@ -222,12 +246,121 @@ def merge_structures(existing, new_structure, config):
     result["children"] = updated_children
     return result
 
+def extract_content(file_path, max_chars=1000):
+    """提取文件内容，用于搜索索引"""
+    try:
+        ext = os.path.splitext(file_path)[1].lower()
+        
+        if ext == ".md":
+            # 从Markdown文件中提取内容
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                
+                # 移除Markdown标记
+                # 移除代码块
+                content = re.sub(r'```.*?```', '', content, flags=re.DOTALL)
+                # 移除行内代码
+                content = re.sub(r'`.*?`', '', content)
+                # 移除链接，保留链接文本
+                content = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', content)
+                # 移除图片
+                content = re.sub(r'!\[.*?\]\(.*?\)', '', content)
+                # 移除HTML标签
+                content = re.sub(r'<[^>]+>', '', content)
+                # 移除标题标记
+                content = re.sub(r'#+\s', '', content)
+                # 移除空行和多余空格
+                content = re.sub(r'\n+', ' ', content)
+                content = re.sub(r'\s+', ' ', content)
+                
+                # 截取一部分内容
+                return content[:max_chars]
+        
+        elif ext == ".html":
+            # 从HTML文件中提取内容
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                parser = HTMLTextExtractor()
+                parser.feed(content)
+                text = parser.get_text()
+                return text[:max_chars]
+        
+        return ""
+    except Exception as e:
+        print(f"读取文件 {file_path} 内容失败: {e}")
+        return ""
+
+def extract_keywords(content, max_keywords=10):
+    """从内容中提取关键词"""
+    if not content:
+        return []
+    
+    # 定义停用词
+    stopwords = set(['的', '了', '和', '是', '在', '我', '有', '个', '与', '这', '你', '们',
+                     'the', 'and', 'is', 'in', 'to', 'of', 'a', 'for', 'on', 'that', 'by', 'this', 'with'])
+    
+    # 分词并统计频率
+    words = re.findall(r'\b\w+\b|[\u4e00-\u9fa5]+', content.lower())
+    word_freq = {}
+    
+    for word in words:
+        if len(word) > 1 and word not in stopwords:
+            word_freq[word] = word_freq.get(word, 0) + 1
+    
+    # 按频率排序并返回前N个关键词
+    sorted_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)
+    return [word for word, freq in sorted_words[:max_keywords]]
+
+def build_search_tree(structure, config, result=None):
+    """构建搜索树"""
+    if result is None:
+        result = []
+    
+    # 处理索引文档
+    if structure.get("index"):
+        file_path = os.path.join(config["root_dir"], structure["index"]["path"])
+        if os.path.exists(file_path):
+            content = extract_content(file_path)
+            keywords = extract_keywords(content)
+            
+            search_item = {
+                "title": structure["index"]["title"],
+                "path": structure["index"]["path"],
+                "content": content[:200] + "..." if len(content) > 200 else content,
+                "keywords": keywords
+            }
+            result.append(search_item)
+    
+    # 处理文件
+    for child in structure.get("children", []):
+        if not child.get("children"):
+            # 这是一个文件
+            file_path = os.path.join(config["root_dir"], child["path"])
+            if os.path.exists(file_path):
+                content = extract_content(file_path)
+                keywords = extract_keywords(content)
+                
+                search_item = {
+                    "title": child["title"],
+                    "path": child["path"],
+                    "content": content[:200] + "..." if len(content) > 200 else content,
+                    "keywords": keywords
+                }
+                result.append(search_item)
+        else:
+            # 这是一个目录，递归处理
+            build_search_tree(child, config, result)
+    
+    return result
+
 def main():
     parser = argparse.ArgumentParser(description='EasyDocument 文档路径生成工具')
     parser.add_argument('--root', default='data', help='文档根目录 (默认: data)')
     parser.add_argument('--output', default='path.json', help='输出文件 (默认: path.json)')
     parser.add_argument('--pretty', action='store_true', help='美化输出的JSON格式')
     parser.add_argument('--extend', action='store_true', help='拓展模式：保留已有结构和排序')
+    parser.add_argument('--search', action='store_true', help='生成搜索索引文件(search.json)')
+    parser.add_argument('--search-output', default='search.json', help='搜索索引输出文件 (默认: search.json)')
     args = parser.parse_args()
     
     # 合并配置
@@ -266,6 +399,17 @@ def main():
         json.dump(final_structure, f, ensure_ascii=False, indent=indent)
     
     print(f"已生成文档路径文件: {args.output}")
+    
+    # 生成搜索索引
+    if args.search:
+        print("开始构建搜索索引...")
+        search_data = build_search_tree(final_structure, config)
+        
+        search_indent = 4 if args.pretty else None
+        with open(args.search_output, 'w', encoding='utf-8') as f:
+            json.dump(search_data, f, ensure_ascii=False, indent=search_indent)
+        
+        print(f"已生成搜索索引文件: {args.search_output} (共 {len(search_data)} 个文档)")
     
     # 打印基本统计信息
     file_count = count_files(final_structure)
