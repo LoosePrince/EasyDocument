@@ -1,0 +1,85 @@
+{
+    "title": "首页",
+    "path": "",
+    "index": {
+        "title": "EasyDocument 文档中心",
+        "path": "README.md"
+    },
+    "children": [
+        {
+            "title": "快速入门",
+            "path": "快速入门",
+            "children": [
+                {
+                    "title": "Markdown语法指南",
+                    "path": "快速入门/Markdown语法.md",
+                    "children": []
+                }
+            ],
+            "index": {
+                "title": "快速入门",
+                "path": "快速入门/README.md"
+            }
+        },
+        {
+            "title": "使用指南",
+            "path": "使用指南",
+            "children": [
+                {
+                    "title": "基本使用流程",
+                    "path": "使用指南/基本使用流程.md",
+                    "children": []
+                },
+                {
+                    "title": "文档内链接",
+                    "path": "使用指南/文档内链接.md",
+                    "children": []
+                },
+                {
+                    "title": "文档编写规范",
+                    "path": "使用指南/文档编写规范.md",
+                    "children": []
+                }
+            ],
+            "index": {
+                "title": "使用指南",
+                "path": "使用指南/README.md"
+            }
+        },
+        {
+            "title": "示例与模板",
+            "path": "示例与模板",
+            "children": [
+                {
+                    "title": "美化文档示例 - EasyDocument",
+                    "path": "示例与模板/美化文档示例.html",
+                    "children": []
+                }
+            ],
+            "index": {
+                "title": "示例与模板",
+                "path": "示例与模板/README.md"
+            }
+        },
+        {
+            "title": "配置详解",
+            "path": "配置详解",
+            "children": [
+                {
+                    "title": "外观设置",
+                    "path": "配置详解/外观设置.md",
+                    "children": []
+                },
+                {
+                    "title": "path-json结构",
+                    "path": "配置详解/path-json结构.md",
+                    "children": []
+                }
+            ],
+            "index": {
+                "title": "配置详解",
+                "path": "配置详解/README.md"
+            }
+        }
+    ]
+}
