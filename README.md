@@ -6,9 +6,8 @@ EasyDocument 是一个轻量级、免编译的纯静态前端文档系统。它�
 
 ## 设计风格
 
-采用现代风格设计，精致排版规则，添加大量的交互效果创造极致的交互体验。背景可
-使用浅色和部分鲜艳色块点缀。可使用大小字体和各种提示来创造体验感。图形元素应
-用几何形状，边缘柔和。层次感通过大小、颜色和位置创造。
+![image](https://github.com/user-attachments/assets/f9a14da2-d50a-421d-8805-de2eda484da8)
+
 
 ## 技术栈
 
@@ -27,6 +26,7 @@ EasyDocument/
 ├── main.html           # 文档页面模板（文档首页，文档渲染，基于get属性）
 ├── config.js           # 网站配置文件
 ├── path.json           # 文档路径文件（data文件夹中的文档结构）
+├── search.json         # 搜索索引文件
 ├── build.py            # 一键创建文档路径
 ├── assets/             # 静态资源
 │   ├── css/            # CSS文件
