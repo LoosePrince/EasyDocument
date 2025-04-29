@@ -79,7 +79,7 @@ function loadDefaultHeader() {
                 <div class="flex items-center space-x-2">
                     <img src="${config.appearance.logo}" alt="${config.site.name}" class="site-logo h-8 w-8">
                     <span class="text-lg font-bold">
-                        <span class="text-primary">Easy</span><span class="dark:text-white">Document</span>
+                        ${formatSiteName(config.site.name)}
                     </span>
                 </div>
                 <div class="flex items-center space-x-4">
@@ -200,6 +200,18 @@ function fixAlpineInit() {
         // 重新绑定主题切换事件
         bindThemeToggleEvents();
     }, 100);
+}
+
+// 格式化网站名称
+function formatSiteName(siteName) {
+    // 如果名称以Easy开头，保持原有的样式
+    if (siteName.match(/^Easy/i)) {
+        const firstPart = siteName.substring(0, 4);
+        const restPart = siteName.substring(4);
+        return `<span class="text-primary">${firstPart}</span><span class="dark:text-white">${restPart}</span>`;
+    } else {
+        return `<span class="text-primary">${siteName}</span>`;
+    }
 }
 
 // 监听DOM加载完成，初始化应用
