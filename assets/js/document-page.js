@@ -5,6 +5,7 @@ import config from '../../config.js';
 
 let pathData = null; // 存储文档结构数据
 let vditor = null; // Vditor实例
+let currentRoot = null; // 当前根目录
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 应用布局配置
@@ -241,48 +242,101 @@ function setupMobileMenu() {
 function generateSidebar(node) {
     const nav = document.getElementById('sidebar-nav');
     nav.innerHTML = ''; // 清空加载中
+    
+    // 处理root参数
+    if (currentRoot) {
+        // 查找指定的根目录节点
+        const rootNode = findNodeByPath(node, currentRoot);
+        if (rootNode) {
+            // 显示该节点下的内容
+            const ul = createNavList(rootNode.children, 0);
+            nav.appendChild(ul);
+            
+            // 添加返回完整目录的链接
+            const backDiv = document.createElement('div');
+            backDiv.className = 'py-2 px-3 mb-4 border-b border-gray-200 dark:border-gray-700';
+            
+            const backLink = document.createElement('a');
+            backLink.href = 'main.html'; // 直接跳转到main.html，不带任何参数
+            backLink.className = 'flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-primary';
+            backLink.innerHTML = '<i class="fas fa-arrow-left mr-2"></i> 返回完整目录';
+            
+            backDiv.appendChild(backLink);
+            nav.insertBefore(backDiv, nav.firstChild);
+            
+            return;
+        }
+    }
+    
+    // 没有指定root参数或root参数无效，显示完整目录
     const ul = createNavList(node.children, 0);
     nav.appendChild(ul);
 }
 
-// 点击文件夹名称切换到文件夹描述页面的处理函数
-// 在createNavList函数中的文件夹span点击事件里调用此函数
-function navigateToFolderIndex(item) {
-    // 如果启用了自动折叠功能，先折叠所有目录
-    if (config.navigation.auto_collapse) {
-        collapseAllFolders();
+// 根据路径查找节点
+function findNodeByPath(rootNode, targetPath) {
+    // 清理路径确保兼容性
+    const normalizedPath = targetPath.replace(/\/+$/, '');
+    
+    function traverse(node, currentPath) {
+        // 检查是否有索引页
+        if (node.index && node.index.path) {
+            const folderPath = getFolderPathFromIndexPath(node.index.path);
+            if (folderPath === normalizedPath) {
+                return node;
+            }
+        }
+        
+        // 递归查找子节点
+        if (node.children) {
+            for (const child of node.children) {
+                const found = traverse(child, '');
+                if (found) return found;
+            }
+        }
+        
+        return null;
     }
     
-    // 清除所有激活状态
-    document.querySelectorAll('#sidebar-nav a').forEach(a => a.classList.remove('active'));
-    document.querySelectorAll('#sidebar-nav div.folder-title').forEach(div => div.classList.remove('active-folder'));
-    
-    // 获取文件夹路径（不含README.md）
-    let cleanPath = item.index.path;
-    const folderPath = cleanPath.replace(/\/README\.md$/i, '');
-    const folderDiv = document.querySelector(`#sidebar-nav div.folder-title[data-folder-path="${folderPath}"]`);
-    
-    if (folderDiv) {
-        folderDiv.classList.add('active-folder');
-        // 展开当前文件夹及其所有父级文件夹
-        toggleFolder(folderDiv, true);
-        expandParentFolders(folderDiv);
+    // 特殊情况：如果目标路径是完全一样的索引文件
+    function checkExactPath(node) {
+        // 直接检查节点本身
+        if (node.path === normalizedPath) {
+            return node;
+        }
+        
+        // 检查子节点
+        if (node.children) {
+            for (const child of node.children) {
+                // 检查子节点是否匹配
+                if (child.path === normalizedPath) {
+                    return child;
+                }
+                
+                // 递归检查
+                const found = checkExactPath(child);
+                if (found) return found;
+            }
+        }
+        
+        return null;
     }
     
-    // 如果路径以 /README.md 结尾，则移除它
-    if (cleanPath.toLowerCase().endsWith('/readme.md')) {
-        cleanPath = cleanPath.substring(0, cleanPath.length - '/readme.md'.length);
+    // 先尝试直接查找目录名称
+    let result = checkExactPath(rootNode);
+    if (result) return result;
+    
+    // 如果没找到，再尝试通过索引页路径查找
+    return traverse(rootNode);
+}
+
+// 从索引页路径获取文件夹路径
+function getFolderPathFromIndexPath(indexPath) {
+    const parts = indexPath.split('/');
+    if (parts.length > 0 && isIndexFile(parts[parts.length - 1])) {
+        parts.pop();
     }
-    
-    // 构建新的URL
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.set('path', cleanPath);
-    
-    // 使用pushState实现无刷新导航
-    window.history.pushState({path: cleanPath}, '', newUrl.toString());
-    
-    // 手动触发内容加载
-    loadContentFromUrl();
+    return parts.join('/');
 }
 
 // 递归创建导航列表
@@ -374,8 +428,14 @@ function createNavList(items, level) {
 // 创建导航链接
 function createNavLink(item, level, isIndex = false) {
     const a = document.createElement('a');
-    // 使用query参数而不是hash
-    a.href = `?path=${encodeURIComponent(item.path)}`;
+    
+    // 构建URL，保留root参数
+    let url = `?path=${encodeURIComponent(item.path)}`;
+    if (currentRoot) {
+        url += `&root=${encodeURIComponent(currentRoot)}`;
+    }
+    
+    a.href = url;
     a.textContent = item.title;
     a.classList.add('block', 'text-gray-700', 'dark:text-gray-300', 'hover:text-primary', 'dark:hover:text-primary');
     a.classList.add(`file-level-${level}`); // 添加层级类名，用于CSS控制缩进
@@ -402,9 +462,12 @@ function createNavLink(item, level, isIndex = false) {
         // 展开所有父级文件夹
         expandParentFolders(a);
         
-        // 更新URL
+        // 更新URL，保留root参数
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.set('path', item.path);
+        if (currentRoot) {
+            newUrl.searchParams.set('root', currentRoot);
+        }
         window.history.pushState({path: item.path}, '', newUrl.toString());
         
         // 加载文档
@@ -417,6 +480,46 @@ function createNavLink(item, level, isIndex = false) {
         });
     });
     return a;
+}
+
+// 点击文件夹名称切换到文件夹描述页面的处理函数
+function navigateToFolderIndex(item) {
+    // 如果启用了自动折叠功能，先折叠所有目录
+    if (config.navigation.auto_collapse) {
+        collapseAllFolders();
+    }
+    
+    // 清除所有高亮状态
+    document.querySelectorAll('#sidebar-nav a').forEach(link => link.classList.remove('active'));
+    document.querySelectorAll('#sidebar-nav div.folder-title').forEach(div => div.classList.remove('active-folder'));
+    
+    // 添加文件夹的高亮状态
+    const folderPath = getFolderPathFromIndexPath(item.index.path);
+    const folderDiv = document.querySelector(`#sidebar-nav div.folder-title[data-folder-path="${folderPath}"]`);
+    if (folderDiv) {
+        folderDiv.classList.add('active-folder');
+        // 确保文件夹展开
+        toggleFolder(folderDiv, true);
+        // 展开所有父级文件夹
+        expandParentFolders(folderDiv);
+    }
+    
+    // 更新URL，添加path参数并保留root参数
+    const url = new URL(window.location.href);
+    url.searchParams.set('path', item.index.path);
+    if (currentRoot) {
+        url.searchParams.set('root', currentRoot);
+    }
+    window.history.pushState({path: item.index.path}, '', url.toString());
+    
+    // 加载文档
+    loadDocument(item.index.path);
+    
+    // 滚动到顶部
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
 }
 
 // 展开/折叠文件夹
@@ -501,13 +604,38 @@ function expandParentFolders(element) {
 
 // 从URL加载内容
 async function loadContentFromUrl() {
-    // 从query参数获取路径，而不是hash
+    // 从query参数获取路径
     const urlParams = new URLSearchParams(window.location.search);
     let pagePath = urlParams.get('path');
     
+    // 获取根目录参数
+    const rootParam = urlParams.get('root');
+    if (rootParam !== currentRoot) {
+        // 根目录变化，更新当前根目录并重新生成侧边栏
+        currentRoot = rootParam;
+        generateSidebar(pathData);
+    }
+    
     if (!pagePath) {
-        // 如果没有指定页面，加载根目录的索引页（如果有）或配置的默认页
-        pagePath = pathData?.index?.path || config.document.default_page;
+        // 如果没有指定页面，但有root参数，则加载root目录下的README.md
+        if (currentRoot) {
+            // 尝试查找root目录下的索引文件
+            const rootDirNode = findNodeByPath(pathData, currentRoot);
+            if (rootDirNode && rootDirNode.index) {
+                pagePath = rootDirNode.index.path;
+            } else {
+                // 如果没有找到索引文件，构造一个可能的路径
+                for (const indexName of config.document.index_pages) {
+                    const possiblePath = `${currentRoot}/${indexName}`;
+                    // 暂时使用第一个可能的索引页
+                    pagePath = possiblePath;
+                    break;
+                }
+            }
+        } else {
+            // 没有root参数，加载根目录的索引页
+            pagePath = pathData?.index?.path || config.document.default_page;
+        }
         // 不需要在这里添加 data/ 前缀，loadDocument 会处理
     } else {
         // 支持省略/README.md，检查路径是否为目录
@@ -688,54 +816,137 @@ async function loadDocument(relativePath) {
         const response = await fetch(fetchPath);
         if (!response.ok) {
             if (response.status === 404) {
-                throw new Error(`文档未找到: ${relativePath}`);
+                // 处理文件未找到的情况
+                if (currentRoot) {
+                    console.log(`在指定root(${currentRoot})下未找到文件: ${relativePath}，尝试回退到全局加载`);
+                    
+                    // 保存一下当前的root参数值，以便之后恢复侧边栏
+                    const originalRoot = currentRoot;
+                    
+                    // 临时重置root参数，以便在全局范围内加载文件
+                    currentRoot = null;
+                    
+                    // 更新URL，移除root参数
+                    const newUrl = new URL(window.location.href);
+                    newUrl.searchParams.delete('root');
+                    window.history.replaceState({path: relativePath}, '', newUrl.toString());
+                    
+                    // 重新加载侧边栏
+                    generateSidebar(pathData);
+                    
+                    // 尝试在全局范围内加载文件
+                    try {
+                        const globalResponse = await fetch(fetchPath);
+                        if (globalResponse.ok) {
+                            // 成功找到文件，继续处理
+                            const content = await globalResponse.text();
+                            renderDocument(relativePath, content, contentDiv, tocNav);
+                            
+                            // 添加提示，说明已经切换到全局视图
+                            const notificationBar = document.createElement('div');
+                            notificationBar.className = 'bg-yellow-100 dark:bg-yellow-900 p-3 rounded-md mb-4 text-sm flex items-center justify-between';
+                            notificationBar.innerHTML = `
+                                <div class="flex items-center">
+                                    <i class="fas fa-info-circle text-yellow-500 mr-2"></i>
+                                    <span class="text-gray-700 dark:text-gray-300">
+                                        未在"${originalRoot}"目录下找到该文档，已自动切换到全局视图
+                                    </span>
+                                </div>
+                                <button id="restore-root-btn" class="text-primary hover:underline">
+                                    返回到"${originalRoot}"
+                                </button>
+                            `;
+                            contentDiv.insertBefore(notificationBar, contentDiv.firstChild);
+                            
+                            // 添加恢复按钮的点击事件
+                            const restoreBtn = document.getElementById('restore-root-btn');
+                            if (restoreBtn) {
+                                restoreBtn.addEventListener('click', () => {
+                                    // 恢复原始root参数
+                                    const restoreUrl = new URL(window.location.href);
+                                    restoreUrl.searchParams.set('root', originalRoot);
+                                    window.location.href = restoreUrl.toString();
+                                });
+                            }
+                            
+                            return; // 已经完成处理，直接返回
+                        } else {
+                            // 在全局范围内也找不到文件
+                            throw new Error(`文档未找到: ${relativePath} (全局范围内也不存在)`);
+                        }
+                    } catch (globalErr) {
+                        // 在全局范围内加载失败，恢复原始状态
+                        currentRoot = originalRoot;
+                        const restoreUrl = new URL(window.location.href);
+                        restoreUrl.searchParams.set('root', originalRoot);
+                        window.history.replaceState({path: relativePath}, '', restoreUrl.toString());
+                        generateSidebar(pathData);
+                        throw new Error(`文档未找到: ${relativePath} (尝试回退也失败)`);
+                    }
+                } else {
+                    // 没有设置root参数的情况，直接报告文件未找到
+                    throw new Error(`文档未找到: ${relativePath}`);
+                }
             } else {
                 throw new Error(`无法加载文档: ${response.statusText} (路径: ${fetchPath})`);
             }
         }
+        
+        // 文件成功加载
         const content = await response.text();
+        renderDocument(relativePath, content, contentDiv, tocNav);
         
-        // 移除加载指示器
-        contentDiv.innerHTML = '';
+    } catch (error) {
+        console.error("加载文档失败:", error);
+        contentDiv.innerHTML = `<p class="text-red-500">加载文档失败: ${error.message}</p>`;
+    }
+}
+
+// 渲染文档内容（从loadDocument函数抽离出来，便于复用）
+function renderDocument(relativePath, content, contentDiv, tocNav) {
+    // 移除加载指示器
+    contentDiv.innerHTML = '';
+    
+    // 创建Vditor容器
+    const vditorContainer = document.createElement('div');
+    vditorContainer.id = 'vditor-container';
+    contentDiv.appendChild(vditorContainer);
+    
+    // 处理不同类型的文档
+    if (relativePath.endsWith('.md')) {
+        // Markdown渲染
+        const options = {
+            theme: isDarkMode() ? 'dark' : 'light',
+            customEmoji: {},
+            lazyLoadImage: '', // 禁用懒加载，避免URL拼接问题
+            linkBase: filePathToUrl(relativePath),
+            anchor: 1,
+            math: {
+                engine: config.extensions.math ? 'KaTeX' : '',
+                inlineDigit: true,
+                macros: {}
+            },
+            hljs: {
+                enable: config.extensions.highlight,
+                lineNumber: true,
+                style: isDarkMode() ? 'dracula' : 'github'
+            },
+            markdown: {
+                toc: true,
+                listStyle: true
+            }
+        };
         
-        // 创建Vditor容器
-        const vditorContainer = document.createElement('div');
-        vditorContainer.id = 'vditor-container';
-        contentDiv.appendChild(vditorContainer);
-        
-        // 处理不同类型的文档
-        if (relativePath.endsWith('.md')) {
-            // Markdown渲染
-            const options = {
-                theme: isDarkMode() ? 'dark' : 'light',
-                customEmoji: {},
-                lazyLoadImage: '', // 禁用懒加载，避免URL拼接问题
-                linkBase: filePathToUrl(relativePath),
-                anchor: 1,
-                math: {
-                    engine: config.extensions.math ? 'KaTeX' : '',
-                    inlineDigit: true,
-                    macros: {}
-                },
-                hljs: {
-                    enable: config.extensions.highlight,
-                    lineNumber: true,
-                    style: isDarkMode() ? 'dracula' : 'github'
-                },
-                markdown: {
-                    toc: true,
-                    listStyle: true
-                }
-            };
-            
-            // 使用Vditor渲染Markdown
-            await Vditor.preview(vditorContainer, content, options);
-            
+        // 使用Vditor渲染Markdown
+        Vditor.preview(vditorContainer, content, options).then(() => {
             // 为外部链接添加target="_blank"属性
             fixExternalLinks(vditorContainer);
             
             // 修复图像链接
             fixExternalImageLinks(vditorContainer);
+            
+            // 修复内部链接，保留root参数
+            fixInternalLinks(vditorContainer);
             
             // 添加代码复制按钮
             if (config.document.code_copy_button) {
@@ -744,18 +955,19 @@ async function loadDocument(relativePath) {
             
             // 生成目录
             generateToc(vditorContainer);
-            
-            // 为了使暗黑模式切换生效，将Vditor实例存储到全局变量
-            window.vditorInstance = {
-                setTheme: (theme, contentTheme, codeTheme) => {
-                    // 重新渲染具有新主题的内容
-                    options.theme = contentTheme;
-                    options.hljs.style = codeTheme;
-                    Vditor.preview(vditorContainer, content, options);
-                    
+        });
+        
+        // 为了使暗黑模式切换生效，将Vditor实例存储到全局变量
+        window.vditorInstance = {
+            setTheme: (theme, contentTheme, codeTheme) => {
+                // 重新渲染具有新主题的内容
+                options.theme = contentTheme;
+                options.hljs.style = codeTheme;
+                Vditor.preview(vditorContainer, content, options).then(() => {
                     // 重新处理链接和图片
                     fixExternalLinks(vditorContainer);
                     fixExternalImageLinks(vditorContainer);
+                    fixInternalLinks(vditorContainer);
                     
                     // 重新添加代码复制按钮
                     if (config.document.code_copy_button) {
@@ -766,32 +978,35 @@ async function loadDocument(relativePath) {
                     setTimeout(() => {
                         generateToc(vditorContainer);
                     }, 500);
-                }
-            };
-            
-        } else if (relativePath.endsWith('.html')) {
-            // 对于HTML，直接插入
-            contentDiv.innerHTML = content;
-            // HTML 文件也尝试生成目录
-            generateToc(contentDiv);
-        } else {
-            contentDiv.innerHTML = '<p class="text-red-500">不支持的文件类型</p>';
-        }
+                });
+            }
+        };
         
-        // 更新页面标题
-        updatePageTitle(relativePath);
+    } else if (relativePath.endsWith('.html')) {
+        // 对于HTML，直接插入
+        contentDiv.innerHTML = content;
         
-        // 生成面包屑
-        generateBreadcrumb(relativePath);
+        // 修复HTML中的链接
+        fixExternalLinks(contentDiv);
+        fixExternalImageLinks(contentDiv);
+        fixInternalLinks(contentDiv);
         
-        // 添加上一篇/下一篇导航
-        if (config.navigation.prev_next_buttons) {
-            generatePrevNextNavigation(relativePath);
-        }
-        
-    } catch (error) {
-        console.error("加载文档失败:", error);
-        contentDiv.innerHTML = `<p class="text-red-500">加载文档失败: ${error.message}</p>`;
+        // HTML 文件也尝试生成目录
+        generateToc(contentDiv);
+    } else {
+        contentDiv.innerHTML = '<p class="text-red-500">不支持的文件类型</p>';
+        return;
+    }
+    
+    // 更新页面标题
+    updatePageTitle(relativePath);
+    
+    // 生成面包屑
+    generateBreadcrumb(relativePath);
+    
+    // 添加上一篇/下一篇导航
+    if (config.navigation.prev_next_buttons) {
+        generatePrevNextNavigation(relativePath);
     }
 }
 
@@ -833,9 +1048,15 @@ function generateBreadcrumb(path) {
     const breadcrumbParts = [];
     
     // 添加首页
+    let homeUrl = '?';
+    if (currentRoot) {
+        homeUrl += `root=${encodeURIComponent(currentRoot)}`;
+    }
+    
     breadcrumbParts.push({
         text: config.navigation.home_text || '首页',
         path: '',
+        url: homeUrl,
         isLast: false
     });
     
@@ -861,6 +1082,7 @@ function generateBreadcrumb(path) {
             breadcrumbParts.push({
                 text: title,
                 path: currentPath,
+                url: filePathToUrl(currentPath),
                 isLast: i === parts.length - 1 || (i === parts.length - 2 && isIndexFile(parts[parts.length - 1]))
             });
             lastTitle = title;
@@ -886,17 +1108,7 @@ function generateBreadcrumb(path) {
         } else {
             // 链接项
             const link = document.createElement('a');
-            // 使用query参数而不是hash
-            let itemPath = '';
-            if (item.path === '') {
-                // 首页
-                itemPath = '?';  // 清除query参数
-            } else {
-                // 使用简洁的路径形式（不含README.md）
-                itemPath = `?path=${encodeURIComponent(item.path)}`;
-            }
-            
-            link.href = itemPath;
+            link.href = item.url;
             link.textContent = item.text;
             link.classList.add('hover:text-primary');
             container.appendChild(link);
@@ -1075,10 +1287,11 @@ function isDarkMode() {
 
 // 将文件路径转换为URL基础路径
 function filePathToUrl(path) {
-    // 提取目录部分
-    const parts = path.split('/');
-    parts.pop(); // 移除文件名部分
-    return parts.join('/');
+    let url = `?path=${encodeURIComponent(path)}`;
+    if (currentRoot) {
+        url += `&root=${encodeURIComponent(currentRoot)}`;
+    }
+    return url;
 }
 
 // 修复外部链接，在外部链接上添加target="_blank"
@@ -1210,9 +1423,16 @@ function generatePrevNextNavigation(currentPath) {
         const prevLink = allLinks[currentIndex - 1];
         const prevDiv = document.createElement('div');
         prevDiv.className = 'mb-4 md:mb-0';
+        
+        // 构建URL，保留root参数
+        let prevUrl = `?path=${encodeURIComponent(prevLink.path)}`;
+        if (currentRoot) {
+            prevUrl += `&root=${encodeURIComponent(currentRoot)}`;
+        }
+        
         prevDiv.innerHTML = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">上一篇</p>
-            <a href="?path=${encodeURIComponent(prevLink.path)}" class="text-primary hover:underline flex items-center">
+            <a href="${prevUrl}" class="text-primary hover:underline flex items-center">
                 <i class="fas fa-arrow-left mr-2"></i>
                 ${prevLink.title}
             </a>
@@ -1229,9 +1449,16 @@ function generatePrevNextNavigation(currentPath) {
         const nextLink = allLinks[currentIndex + 1];
         const nextDiv = document.createElement('div');
         nextDiv.className = 'text-right';
+        
+        // 构建URL，保留root参数
+        let nextUrl = `?path=${encodeURIComponent(nextLink.path)}`;
+        if (currentRoot) {
+            nextUrl += `&root=${encodeURIComponent(currentRoot)}`;
+        }
+        
         nextDiv.innerHTML = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">下一篇</p>
-            <a href="?path=${encodeURIComponent(nextLink.path)}" class="text-primary hover:underline flex items-center justify-end">
+            <a href="${nextUrl}" class="text-primary hover:underline flex items-center justify-end">
                 ${nextLink.title}
                 <i class="fas fa-arrow-right ml-2"></i>
             </a>
@@ -1292,4 +1519,26 @@ function getAllDocumentLinks() {
     traverseInOrder(pathData);
     
     return links;
+}
+
+// 修复内部链接，维持root参数
+function fixInternalLinks(container) {
+    const links = container.querySelectorAll('a');
+    links.forEach(link => {
+        const href = link.getAttribute('href');
+        if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#')) {
+            // 内部链接，检查是否是相对路径
+            if (!href.startsWith('?')) {
+                // 获取完整路径并编码
+                let newHref = `?path=${encodeURIComponent(href)}`;
+                if (currentRoot) {
+                    newHref += `&root=${encodeURIComponent(currentRoot)}`;
+                }
+                link.setAttribute('href', newHref);
+            } else if (href.includes('path=') && currentRoot && !href.includes('root=')) {
+                // 已有path参数但没有root参数
+                link.setAttribute('href', `${href}&root=${encodeURIComponent(currentRoot)}`);
+            }
+        }
+    });
 } 
