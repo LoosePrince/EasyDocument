@@ -10,6 +10,7 @@ import os
 import json
 import argparse
 import re
+import sys
 from pathlib import Path
 from html.parser import HTMLParser
 
@@ -361,6 +362,29 @@ def main():
     parser.add_argument('--extend', action='store_true', help='拓展模式：保留已有结构和排序')
     parser.add_argument('--search', action='store_true', help='生成搜索索引文件(search.json)')
     parser.add_argument('--search-output', default='search.json', help='搜索索引输出文件 (默认: search.json)')
+    
+    # 检查是否没有提供参数
+    if len(sys.argv) == 1:
+        parser.print_help()
+        print("\n风险提示:")
+        print("------------------------")
+        print("你正在尝试不带任何参数运行此工具，这将使用以下默认设置:")
+        print(f" - 文档根目录: '{DEFAULT_CONFIG['root_dir']}'")
+        print(f" - 输出文件: 'path.json'")
+        print(f" - 不会使用拓展模式 (将覆盖任何已有的自定义排序和结构)")
+        print(f" - 不会生成搜索索引")
+        print("\n推荐的用法:")
+        print("------------------------")
+        print("标准使用: python build.py --pretty")
+        print("保留结构: python build.py --extend --pretty")
+        print("生成搜索索引: python build.py --extend --pretty --search")
+        print("\n是否确定要继续使用默认设置? [y/N] ", end="")
+        response = input().strip().lower()
+        if response != 'y' and response != 'yes':
+            print("操作已取消")
+            return
+        print("继续使用默认设置...")
+    
     args = parser.parse_args()
     
     # 合并配置
