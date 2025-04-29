@@ -608,6 +608,9 @@ async function loadContentFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     let pagePath = urlParams.get('path');
     
+    // 检查URL hash是否存在，如果存在则不执行页面滚动
+    const hashExists = window.location.hash && window.location.hash.length > 1;
+    
     // 获取根目录参数
     const rootParam = urlParams.get('root');
     if (rootParam !== currentRoot) {
@@ -702,11 +705,22 @@ async function loadContentFromUrl() {
     // 加载文档内容
     await loadDocument(decodedPath);
     
-    // 切换文章后滚动到顶部
-    window.scrollTo({
-        top: 0,
-        behavior: 'smooth' // 使用平滑滚动效果
-    });
+    // 检查URL中是否有锚点，如果有则滚动到对应位置
+    if (window.location.hash && window.location.hash.length > 1) {
+        const targetId = window.location.hash.substring(1);
+        const targetElement = document.getElementById(targetId);
+        if (targetElement) {
+            setTimeout(() => {
+                targetElement.scrollIntoView({ behavior: 'smooth' });
+            }, 300); // 给内容渲染一点时间
+        }
+    } else {
+        // 切换文章后滚动到顶部
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth' // 使用平滑滚动效果
+        });
+    }
 }
 
 // 折叠所有文件夹
@@ -1229,11 +1243,19 @@ function generateToc(contentElement) {
         // 点击目录条目时滚动到对应标题
         a.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation(); // 阻止冒泡，防止触发document的全局点击事件处理
             const targetHeading = document.getElementById(id);
             if (targetHeading) {
-                targetHeading.scrollIntoView({ behavior: 'smooth' });
+                // 计算目标位置，使标题显示在屏幕上方25%的位置
+                const targetPosition = targetHeading.getBoundingClientRect().top + window.pageYOffset;
+                const offset = window.innerHeight * 0.25; // 屏幕高度的25%
+                window.scrollTo({
+                    top: targetPosition - offset,
+                    behavior: 'smooth'
+                });
+                
                 // 更新URL hash但不触发页面跳转
-                history.pushState(null, null, `#${window.location.hash.substring(1)}#${id}`);
+                history.pushState(null, null, `#${id}`);
                 
                 // 高亮当前目录项
                 document.querySelectorAll('#toc-nav a').forEach(link => link.classList.remove('active'));
