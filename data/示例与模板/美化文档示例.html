@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美化文档示例 - EasyDocument</title>
+    <style>
+        /* 自定义样式，在 EasyDocument 中会与系统样式合并 */
+        .custom-container {
+            max-width: 100%;
+            margin: 2rem 0;
+            padding: 0;
+        }
+        
+        .feature-card {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .feature-card h3 {
+            color: #3b82f6;
+            margin-top: 0;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+        
+        .tip-box {
+            background-color: #e6f7ff;
+            border-left: 4px solid #1890ff;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .warning-box {
+            background-color: #fff2e8;
+            border-left: 4px solid #fa541c;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .success-box {
+            background-color: #f6ffed;
+            border-left: 4px solid #52c41a;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .flex-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .flex-item {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .code-with-title {
+            margin: 1.5rem 0;
+        }
+        
+        .code-title {
+            background-color: #f0f0f0;
+            padding: 0.5rem 1rem;
+            border-radius: 4px 4px 0 0;
+            font-family: monospace;
+            font-weight: bold;
+            border: 1px solid #ddd;
+            border-bottom: none;
+        }
+        
+        .code-with-title pre {
+            margin-top: 0;
+            background-color: #f0f0f0;
+            padding: 1rem;
+            border-radius: 0 0 4px 4px;
+        }
+        
+        .image-with-caption {
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+        
+        .image-with-caption img {
+            max-width: 100%;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .image-caption {
+            margin-top: 0.5rem;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .hero-section h1 {
+            margin-top: 0;
+            font-size: 2.5rem;
+        }
+        
+        .hero-section p {
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin: 1rem auto;
+        }
+        
+        .steps-container {
+            counter-reset: step;
+            margin: 2rem 0;
+        }
+        
+        .step {
+            position: relative;
+            padding-left: 3rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .step::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background-color: #3b82f6;
+            color: white;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        table.styled-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        table.styled-table th,
+        table.styled-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+        }
+        
+        table.styled-table th {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        table.styled-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        table.styled-table tr:hover {
+            background-color: #e6f7ff;
+        }
+        
+        .tabs {
+            margin: 2rem 0;
+        }
+        
+        .tab-headers {
+            display: flex;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .tab-header {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            user-select: none;
+        }
+        
+        .tab-header.active {
+            border-bottom-color: #3b82f6;
+            color: #3b82f6;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            padding: 1.5rem 0;
+        }
+        
+        .tab-panel {
+            display: none;
+        }
+        
+        .tab-panel.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="hero-section">
+    <h1>HTML 增强的美化文档示例</h1>
+    <p>这个文档展示了如何使用 HTML 和 CSS 在 EasyDocument 中创建美观、交互式的文档页面，提升阅读体验。</p>
+</div>
+
+<h2>HTML 增强的优势</h2>
+
+<p>虽然 Markdown 提供了简洁的语法来编写文档，但有时候我们需要更多的格式控制和交互功能。HTML 可以帮助我们实现这些高级需求。</p>
+
+<div class="flex-container">
+    <div class="flex-item feature-card">
+        <h3>自定义样式</h3>
+        <p>使用 CSS 可以完全控制文档的外观，包括颜色、字体、间距、阴影等各个方面。</p>
+    </div>
+    <div class="flex-item feature-card">
+        <h3>交互元素</h3>
+        <p>添加按钮、标签页、折叠面板等交互元素，使文档更具交互性。</p>
+    </div>
+    <div class="flex-item feature-card">
+        <h3>复杂布局</h3>
+        <p>创建多列布局、卡片网格、响应式设计等复杂的页面结构。</p>
+    </div>
+</div>
+
+<h2>提示框与警告框</h2>
+
+<p>在文档中，我们经常需要突出显示重要信息，可以使用不同样式的提示框。</p>
+
+<div class="tip-box">
+    <strong>提示：</strong> 这是一个普通提示框，用于提供额外的有用信息或建议。
+</div>
+
+<div class="warning-box">
+    <strong>警告：</strong> 这是一个警告框，提醒用户注意可能存在的风险或问题。
+</div>
+
+<div class="success-box">
+    <strong>成功：</strong> 这是一个成功提示框，表示操作已成功完成或提供积极的反馈。
+</div>
+
+<h2>代码展示增强</h2>
+
+<p>为代码块添加标题和样式可以提高代码的可读性和上下文相关性。</p>
+
+<div class="code-with-title">
+    <div class="code-title">config.js - 基本配置</div>
+<pre><code class="language-javascript">const config = {
+  site: {
+    name: "EasyDocument",
+    title: "简易静态文档系统",
+    description: "一个轻量级、免编译的纯静态前端文档系统"
+  },
+  appearance: {
+    theme_color: "#3b82f6",
+    default_dark_mode: "auto"
+  }
+};
+
+export default config;</code></pre>
+</div>
+
+<h2>步骤引导</h2>
+
+<p>使用自定义的步骤引导样式，可以让教程类文档更加清晰易懂。</p>
+
+<div class="steps-container">
+    <div class="step">
+        <h3>创建项目目录</h3>
+        <p>首先，创建一个新的项目目录，并将 EasyDocument 的源代码复制到该目录中。</p>
+    </div>
+    <div class="step">
+        <h3>配置网站信息</h3>
+        <p>编辑 <code>config.js</code> 文件，设置网站的基本信息、外观和布局等。</p>
+    </div>
+    <div class="step">
+        <h3>添加文档文件</h3>
+        <p>在 <code>/data</code> 目录中添加您的 Markdown 或 HTML 文档文件，按照逻辑结构组织目录。</p>
+    </div>
+    <div class="step">
+        <h3>生成文档结构</h3>
+        <p>运行 <code>build.py</code> 脚本生成文档结构文件，这将自动识别您的文档并构建导航。</p>
+    </div>
+</div>
+
+<h2>美化表格</h2>
+
+<p>标准的 HTML 表格可以通过 CSS 美化，添加颜色、阴影和悬停效果。</p>
+
+<table class="styled-table">
+    <thead>
+        <tr>
+            <th>功能</th>
+            <th>Markdown</th>
+            <th>HTML</th>
+            <th>推荐用法</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>基本文本格式</td>
+            <td>✅ 简单</td>
+            <td>✅ 可控</td>
+            <td>优先使用 Markdown</td>
+        </tr>
+        <tr>
+            <td>表格</td>
+            <td>✅ 基本支持</td>
+            <td>✅ 完全控制</td>
+            <td>复杂表格用 HTML</td>
+        </tr>
+        <tr>
+            <td>代码块</td>
+            <td>✅ 语法高亮</td>
+            <td>✅ 可添加功能</td>
+            <td>基本用 Markdown，增强用 HTML</td>
+        </tr>
+        <tr>
+            <td>布局控制</td>
+            <td>❌ 不支持</td>
+            <td>✅ 完全支持</td>
+            <td>需要布局时用 HTML</td>
+        </tr>
+        <tr>
+            <td>交互元素</td>
+            <td>❌ 不支持</td>
+            <td>✅ 支持</td>
+            <td>需要交互时用 HTML</td>
+        </tr>
+        <tr>
+            <td>JavaScript</td>
+            <td>❌ 不支持</td>
+            <td>❌ 不支持</td>
+            <td>加载html文件不会执行js</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>结论</h2>
+
+<p>使用HTML和CSS可以极大地增强文档的表现力和用户体验。虽然需要更多的编码工作，但对于需要高度定制和专业外观的文档来说，这是值得的投入。</p>
+
+<div class="tip-box">
+    <strong>建议：</strong> 根据文档的复杂度和目标受众来选择使用Markdown还是HTML。对于简单的文档，Markdown已经足够；对于需要精细控制或特殊功能的文档，可以考虑使用HTML。
+</div>
+
+</body>
+</html> 

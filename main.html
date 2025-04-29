@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyDocument</title>
+    <meta name="description" content="一个轻量级、免编译的纯静态前端文档系统">
+    <meta name="keywords" content="文档,静态网站,Markdown,Alpine.js">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="assets/img/favicon.ico">
+    
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Markdown Rendering (Vditor) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.9.4/dist/index.css" />
+    <script src="https://cdn.jsdelivr.net/npm/vditor@3.9.4/dist/index.min.js"></script>
+    
+    <!-- 主应用JS (加载公共部分和主题) -->
+    <script type="module" src="assets/js/main.js"></script>
+
+    <!-- css -->
+    <link rel="stylesheet" href="assets/css/style.css">
+    <!-- Vditor暗黑模式控制 -->
+    <script>
+        // 监听暗黑模式变化
+        const darkModeObserver = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                if (mutation.attributeName === 'class') {
+                    const isDarkMode = document.documentElement.classList.contains('dark');
+                    // 如果存在vditor实例，更新其主题
+                    if (window.vditorInstance) {
+                        window.vditorInstance.setTheme(
+                            isDarkMode ? 'dark' : 'classic',
+                            isDarkMode ? 'dark' : 'light',
+                            isDarkMode ? 'dracula' : 'github'
+                        );
+                    }
+                }
+            });
+        });
+        
+        // 开始观察html元素上的class变化
+        darkModeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+        
+        // DOM加载完成后检查一次初始状态
+        document.addEventListener('DOMContentLoaded', () => {
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            console.log('初始化暗黑模式状态:', isDarkMode ? '暗黑模式' : '亮色模式');
+        });
+    </script>
+    
+    <!-- 文档页面专用JS -->
+    <script type="module" src="assets/js/document-page.js"></script>
+    
+    <!-- 自定义配置 (保持与index.html一致) -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                    },
+                    fontFamily: {
+                        sans: ['system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-gray-50 font-sans">
+    <!-- 加载顶部导航 -->
+    <div id="header-container"></div>
+    <div class="main-layout">
+        <!-- 左侧边栏 -->
+        <aside id="sidebar-container" class="hidden md:block">
+            <nav id="sidebar-nav">
+                <!-- 文档树将由JS填充 -->
+                <p class="text-gray-400">加载中...</p>
+            </nav>
+        </aside>
+        
+        <!-- 中间内容区 -->
+        <main id="main-content-area" class="p-6 md:p-8 lg:p-10 overflow-y-auto">
+            <!-- 面包屑导航 -->
+            <div id="breadcrumb-container" class="mb-4 text-sm text-gray-600 dark:text-gray-300 flex items-center">
+                <i class="fas fa-home mr-2 text-primary"></i>
+                <!-- 面包屑内容将由JS填充 -->
+            </div>
+            
+            <!-- 文档内容 -->
+            <article id="document-content" class="prose dark:prose-invert max-w-none">
+                <!-- 文档内容将由JS填充 -->
+                <p class="text-gray-400">正在加载文档...</p>
+            </article>
+        </main>
+        
+        <!-- 右侧目录 -->
+        <aside id="toc-container" class="hidden lg:block">
+            <h3 class="text-lg font-semibold mb-3">目录</h3>
+            <nav id="toc-nav">
+                <!-- 文档目录将由JS填充 -->
+                <p class="text-gray-400 text-sm">暂无目录</p>
+            </nav>
+        </aside>
+        
+        <!-- 返回顶部按钮 -->
+        <button id="back-to-top" 
+                x-data="{ shown: false }" 
+                @scroll.window="shown = (window.scrollY > 200)" 
+                x-show="shown" 
+                x-transition:enter="transition ease-out duration-300" 
+                x-transition:enter-start="opacity-0 transform translate-y-2" 
+                x-transition:enter-end="opacity-100 transform translate-y-0" 
+                x-transition:leave="transition ease-in duration-200" 
+                x-transition:leave-start="opacity-100 transform translate-y-0" 
+                x-transition:leave-end="opacity-0 transform translate-y-2" 
+                @click="window.scrollTo({ top: 0, behavior: 'smooth' })" 
+                class="fixed bottom-8 right-8 bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 focus:outline-none" 
+                style="display: none;">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+    </div>
+
+    <!-- 加载底部信息 -->
+    <div id="footer-container"></div>
+</body>
+</html> 
