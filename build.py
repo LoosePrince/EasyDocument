@@ -150,11 +150,84 @@ def normalize_paths(structure):
     
     return structure
 
+def load_existing_structure(filepath):
+    """加载已存在的path.json文件结构"""
+    try:
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"加载已有结构文件失败: {e}")
+    return None
+
+def merge_structures(existing, new_structure, config):
+    """合并已有结构和新扫描的结构，保留已有结构的排序，添加新内容"""
+    if not existing:
+        return new_structure
+    
+    # 更新基本信息和索引文件
+    # 保留原标题，但更新索引文件（如果有变化）
+    result = existing.copy()
+    
+    # 如果新结构有索引但旧结构没有，或索引路径发生变化
+    if (new_structure.get("index") and (not existing.get("index") or 
+                                       existing.get("index", {}).get("path") != new_structure.get("index", {}).get("path"))):
+        result["index"] = new_structure["index"]
+    
+    # 创建现有路径的映射，用于快速查找
+    existing_paths = {}
+    if "children" in existing:
+        for child in existing["children"]:
+            path = child.get("path", "")
+            if path:
+                existing_paths[path] = child
+    
+    # 创建新路径的映射，用于检查
+    new_paths = {}
+    if "children" in new_structure:
+        for child in new_structure["children"]:
+            path = child.get("path", "")
+            if path:
+                new_paths[path] = child
+    
+    # 保留现有子项
+    updated_children = []
+    for child in existing.get("children", []):
+        path = child.get("path", "")
+        if path in new_paths:
+            # 如果是目录，递归合并
+            if child.get("children") or new_paths[path].get("children"):
+                updated_child = merge_structures(child, new_paths[path], config)
+                updated_children.append(updated_child)
+            else:
+                # 文件项，保留原有结构（例如可能包含order字段）但更新标题
+                child_copy = child.copy()
+                child_copy["title"] = new_paths[path]["title"]
+                updated_children.append(child_copy)
+            # 标记为已处理
+            del new_paths[path]
+        else:
+            # 检查这个路径是否真的不存在了
+            full_path = os.path.join(config["root_dir"], path)
+            if os.path.exists(full_path):
+                # 如果文件或目录仍然存在，保留这个条目
+                updated_children.append(child)
+            else:
+                print(f"移除不存在的项: {path}")
+    
+    # 添加新的子项（添加到末尾）
+    for path, child in new_paths.items():
+        updated_children.append(child)
+    
+    result["children"] = updated_children
+    return result
+
 def main():
     parser = argparse.ArgumentParser(description='EasyDocument 文档路径生成工具')
     parser.add_argument('--root', default='data', help='文档根目录 (默认: data)')
     parser.add_argument('--output', default='path.json', help='输出文件 (默认: path.json)')
     parser.add_argument('--pretty', action='store_true', help='美化输出的JSON格式')
+    parser.add_argument('--extend', action='store_true', help='拓展模式：保留已有结构和排序')
     args = parser.parse_args()
     
     # 合并配置
@@ -169,19 +242,34 @@ def main():
     print(f"开始扫描目录: {config['root_dir']}")
     
     # 扫描文档目录并生成结构
-    structure = scan_directory(config["root_dir"], config)
-    structure = normalize_paths(structure)
+    new_structure = scan_directory(config["root_dir"], config)
+    new_structure = normalize_paths(new_structure)
+    
+    # 检查是否使用拓展模式
+    if args.extend:
+        existing_structure = load_existing_structure(args.output)
+        if existing_structure:
+            print(f"拓展模式: 合并已有结构 ({args.output})")
+            final_structure = merge_structures(existing_structure, new_structure, config)
+            
+            # 确保最终结构规范化
+            final_structure = normalize_paths(final_structure)
+        else:
+            print(f"未找到已有结构文件，将创建新文件")
+            final_structure = new_structure
+    else:
+        final_structure = new_structure
     
     # 输出JSON文件
-    indent = 2 if args.pretty else None
+    indent = 4 if args.pretty else None
     with open(args.output, 'w', encoding='utf-8') as f:
-        json.dump(structure, f, ensure_ascii=False, indent=indent)
+        json.dump(final_structure, f, ensure_ascii=False, indent=indent)
     
     print(f"已生成文档路径文件: {args.output}")
     
     # 打印基本统计信息
-    file_count = count_files(structure)
-    dir_count = count_dirs(structure)
+    file_count = count_files(final_structure)
+    dir_count = count_dirs(final_structure)
     print(f"统计信息: {file_count} 个文档文件, {dir_count} 个目录")
 
 def count_files(structure):
