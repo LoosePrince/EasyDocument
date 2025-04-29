@@ -56,13 +56,13 @@
     <main class="container mx-auto px-4 py-16 relative min-h-screen">
         <div class="max-w-4xl mx-auto text-center mb-16">
             <div class="flex justify-center mb-6">
-                <img class="site-logo h-16" src="assets/img/logo.svg" alt="EasyDocument Logo">
+                <img class="site-logo h-16" src="assets/img/logo.svg" alt="EasyDocument Logo" id="home-logo">
             </div>
-            <h1 class="text-5xl font-bold text-gray-800 dark:text-white mb-6">
+            <h1 class="text-5xl font-bold text-gray-800 dark:text-white mb-6" id="home-title">
                 <span class="text-primary">Easy</span>Document
             </h1>
-            <p class="text-2xl text-gray-600 dark:text-gray-300 mb-8">简易静态文档系统</p>
-            <p class="text-lg text-gray-500 dark:text-gray-400 mb-10 max-w-2xl mx-auto">
+            <p class="text-2xl text-gray-600 dark:text-gray-300 mb-8" id="home-subtitle">简易静态文档系统</p>
+            <p class="text-lg text-gray-500 dark:text-gray-400 mb-10 max-w-2xl mx-auto" id="home-description">
                 一个轻量级、免编译的纯静态前端文档系统。简单添加 Markdown 或 HTML 文件，即可生成美观、结构化的文档网站。
             </p>
             <a href="main.html" class="inline-block bg-primary hover:bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105">
@@ -155,5 +155,46 @@
     
     <!-- 加载底部信息 -->
     <div id="footer-container"></div>
+
+    <script>
+    // 在页面加载后从config中读取网站信息并更新
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.config) {
+            // 更新logo alt属性
+            const homeLogo = document.getElementById('home-logo');
+            if (homeLogo && window.config.site && window.config.site.name) {
+                homeLogo.alt = window.config.site.name + " Logo";
+            }
+            
+            // 更新网站标题
+            const homeTitle = document.getElementById('home-title');
+            if (homeTitle && window.config.site && window.config.site.name) {
+                const siteName = window.config.site.name;
+                // 如果名称包含特定格式（如EasyDocument），则保持样式
+                if (siteName.match(/^Easy/i)) {
+                    const firstPart = siteName.substring(0, 4);
+                    const restPart = siteName.substring(4);
+                    homeTitle.innerHTML = 
+                        `<span class="text-primary">${firstPart}</span><span class="dark:text-white">${restPart}</span>`;
+                } else {
+                    homeTitle.innerHTML = 
+                        `<span class="text-primary">${siteName}</span>`;
+                }
+            }
+            
+            // 更新副标题
+            const homeSubtitle = document.getElementById('home-subtitle');
+            if (homeSubtitle && window.config.site && window.config.site.title) {
+                homeSubtitle.textContent = window.config.site.title;
+            }
+            
+            // 更新描述
+            const homeDescription = document.getElementById('home-description');
+            if (homeDescription && window.config.site && window.config.site.description) {
+                homeDescription.textContent = window.config.site.description;
+            }
+        }
+    });
+    </script>
 </body>
 </html> 
