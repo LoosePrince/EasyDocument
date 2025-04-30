@@ -3,11 +3,10 @@
  */
 import config from '../../config.js';
 import { initializeMermaid, processMermaidDiagrams } from './mermaid-handler.js';
-import { processKaTeXFormulas, preloadKaTeXFonts } from './katex-handler.js';
+import { processKaTeXFormulas } from './katex-handler.js';
 import documentCache from './document-cache.js';
 
 let pathData = null; // 存储文档结构数据
-let vditor = null; // Vditor实例
 let currentRoot = null; // 当前根目录
 let isLoadingDocument = false; // 是否正在加载文档
 let progressBar = null; // 进度条元素
@@ -15,9 +14,6 @@ let progressBar = null; // 进度条元素
 document.addEventListener('DOMContentLoaded', async () => {
     // 初始化Mermaid
     initializeMermaid();
-    
-    // 预加载KaTeX字体
-    preloadKaTeXFonts();
     
     // 应用布局配置
     applyLayoutConfig();
@@ -1566,19 +1562,8 @@ function generateToc(contentElement) {
     const tocNav = document.getElementById('toc-nav');
     tocNav.innerHTML = '';
     
-    // 对于Vditor，需要在渲染的内容中寻找标题
-    let headings;
-    if (contentElement.id === 'vditor-container') {
-        // Vditor渲染的内容在.vditor-reset内
-        const vditorContent = contentElement.querySelector('.vditor-reset');
-        if (vditorContent) {
-            headings = vditorContent.querySelectorAll(`h1, h2, h3, h4, h5, h6`);
-        } else {
-            headings = contentElement.querySelectorAll(`h1, h2, h3, h4, h5, h6`);
-        }
-    } else {
-        headings = contentElement.querySelectorAll(`h1, h2, h3, h4, h5, h6`);
-    }
+    // **修改**: 直接在 contentElement 中查找标题
+    const headings = contentElement.querySelectorAll(`h1, h2, h3, h4, h5, h6`);
     
     const tocDepth = config.document.toc_depth || 3;
     // 是否显示标题编号
@@ -1588,14 +1573,14 @@ function generateToc(contentElement) {
     const counters = [0, 0, 0, 0, 0, 0];
     let lastLevel = 0;
     
-    headings = Array.from(headings);
+    const headingsArray = Array.from(headings); // 直接转换
     
-    if (headings.length === 0) {
+    if (headingsArray.length === 0) {
         tocNav.innerHTML = '<p class="text-gray-400 text-sm">暂无目录</p>';
         return; // 如果没有标题，直接返回
     }
     
-    headings.forEach((heading, index) => {
+    headingsArray.forEach((heading, index) => { // 使用转换后的数组
         const level = parseInt(heading.tagName.substring(1));
         if (level > tocDepth) return;
 
@@ -1677,10 +1662,6 @@ function generateToc(contentElement) {
         li.appendChild(a);
         tocNav.appendChild(li);
     });
-
-    if (tocNav.children.length === 0) {
-        tocNav.innerHTML = '<p class="text-gray-400 text-sm">暂无目录</p>';
-    }
     
     // 移除旧的滚动监听器（如果有）
     window.removeEventListener('scroll', handleTocScrollHighlight);
