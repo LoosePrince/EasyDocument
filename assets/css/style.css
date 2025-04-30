@@ -192,6 +192,18 @@ body {
 }
 
 @media (max-width: 768px) {
+    #document-content {
+        padding: 0.2rem 1.25rem;
+    }
+
+    #main-content-area {
+        padding: 0.75rem;
+    }
+
+    #breadcrumb-container {
+        margin-bottom: 0.75rem
+    }
+
     .main-layout {
         grid-template-columns: 1fr;
         grid-template-areas:
