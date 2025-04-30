@@ -991,11 +991,13 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
         // 添加到内容区域
         contentDiv.appendChild(markdownBody);
         
-        // 处理代码块
+        // 处理代码块 - 必须在处理数学公式之前执行
         const codeBlocks = markdownBody.querySelectorAll('pre code');
         codeBlocks.forEach(block => {
             // 应用 highlight.js
-            hljs.highlightElement(block);
+            if (config.extensions.highlight) {
+                hljs.highlightElement(block);
+            }
             
             // 获取 pre 元素
             const preElement = block.parentElement;
@@ -1008,68 +1010,52 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
             preElement.parentNode.insertBefore(wrapper, preElement);
             wrapper.appendChild(preElement);
             
-            // 创建复制按钮容器
-            const buttonContainer = document.createElement('div');
-            buttonContainer.className = 'code-copy-button-container';
-            
-            // 创建复制按钮
-            const copyButton = document.createElement('button');
-            copyButton.className = 'code-copy-button';
-            copyButton.innerHTML = '<i class="fas fa-copy"></i>';
-            copyButton.title = '复制代码';
-            
-            // 添加复制功能
-            copyButton.addEventListener('click', async (e) => {
-                // 阻止事件冒泡，避免触发其他事件
-                e.stopPropagation();
+            // 如果启用了代码复制按钮，添加复制功能
+            if (config.document.code_copy_button) {
+                // 创建复制按钮容器
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'code-copy-button-container';
                 
-                try {
-                    await navigator.clipboard.writeText(block.textContent);
-                    copyButton.innerHTML = '<i class="fas fa-check"></i>';
-                    setTimeout(() => {
-                        copyButton.innerHTML = '<i class="fas fa-copy"></i>';
-                    }, 2000);
-                } catch (err) {
-                    console.error('复制失败:', err);
-                    copyButton.innerHTML = '<i class="fas fa-times"></i>';
-                    setTimeout(() => {
-                        copyButton.innerHTML = '<i class="fas fa-copy"></i>';
-                    }, 2000);
-                }
-            });
-            
-            // 将按钮添加到容器
-            buttonContainer.appendChild(copyButton);
-            
-            // 将按钮容器添加到包装器
-            wrapper.appendChild(buttonContainer);
-        });
-        
-        // 手动处理块级数学公式
-        processBlockMath(markdownBody);
-        
-        // 处理数学公式
-        const mathElements = markdownBody.querySelectorAll('.math, .katex');
-        if (mathElements.length > 0) {
-            // 确保 KaTeX 已加载
-            if (typeof katex !== 'undefined') {
-                mathElements.forEach(element => {
-                    if (element.classList.contains('math')) {
-                        const formula = element.textContent;
-                        try {
-                            katex.render(formula, element, {
-                                throwOnError: false,
-                                displayMode: element.classList.contains('display')
-                            });
-                        } catch (err) {
-                            console.error('KaTeX 渲染错误:', err);
-                        }
+                // 创建复制按钮
+                const copyButton = document.createElement('button');
+                copyButton.className = 'code-copy-button';
+                copyButton.innerHTML = '<i class="fas fa-copy"></i>';
+                copyButton.title = '复制代码';
+                
+                // 添加复制功能
+                copyButton.addEventListener('click', async (e) => {
+                    // 阻止事件冒泡，避免触发其他事件
+                    e.stopPropagation();
+                    
+                    try {
+                        await navigator.clipboard.writeText(block.textContent);
+                        copyButton.innerHTML = '<i class="fas fa-check"></i>';
+                        setTimeout(() => {
+                            copyButton.innerHTML = '<i class="fas fa-copy"></i>';
+                        }, 2000);
+                    } catch (err) {
+                        console.error('复制失败:', err);
+                        copyButton.innerHTML = '<i class="fas fa-times"></i>';
+                        setTimeout(() => {
+                            copyButton.innerHTML = '<i class="fas fa-copy"></i>';
+                        }, 2000);
                     }
                 });
+                
+                // 将按钮添加到容器
+                buttonContainer.appendChild(copyButton);
+                
+                // 将按钮容器添加到包装器
+                wrapper.appendChild(buttonContainer);
             }
+        });
+        
+        // 手动处理块级数学公式 (必须在代码块处理后执行)
+        if (config.extensions.math) {
+            processBlockMath(markdownBody);
         }
         
-        // 处理 Mermaid 图表
+        // Mermaid图表处理完成后，才处理其他元素
         const mermaidDivs = markdownBody.querySelectorAll('.mermaid');
         if (mermaidDivs.length > 0 && typeof mermaid !== 'undefined' && config.extensions.mermaid) {
             mermaid.init(undefined, mermaidDivs);
@@ -1109,32 +1095,100 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
 
 // 预处理Markdown内容中的数学公式
 function preProcessMathContent(content) {
-    // 处理块级数学公式，确保它们被正确识别
-    // 查找所有$$...$$格式的块级公式（不跨行）
-    content = content.replace(/\$\$(.*?)\$\$/g, function(match, formula) {
-        // 将它包装在特殊标记中
-        return `<div class="math-block">$$${formula}$$</div>`;
-    });
+    // 分割代码块和非代码块
+    const segments = [];
+    let isInCodeBlock = false;
+    let currentSegment = '';
+    let codeBlockLang = '';
     
-    // 处理多行的块级数学公式
-    // 查找$$开始，然后跨多行，最后以$$结束的内容
-    content = content.replace(/\$\$([\s\S]*?)\$\$/g, function(match, formula) {
-        // 确保这不是我们已经处理过的单行公式
-        if (!match.includes('<div class="math-block">')) {
-            return `<div class="math-block">$$${formula}$$</div>`;
+    const lines = content.split('\n');
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // 检测代码块开始或结束
+        if (line.trim().startsWith('```')) {
+            if (!isInCodeBlock) {
+                // 开始新代码块
+                isInCodeBlock = true;
+                // 获取代码块语言
+                codeBlockLang = line.trim().substring(3).trim();
+                
+                // 保存之前的非代码块内容
+                if (currentSegment) {
+                    segments.push({
+                        type: 'text',
+                        content: currentSegment
+                    });
+                }
+                
+                // 开始新的代码块内容
+                currentSegment = line + '\n';
+            } else {
+                // 结束当前代码块
+                isInCodeBlock = false;
+                currentSegment += line;
+                
+                // 保存代码块内容
+                segments.push({
+                    type: 'code',
+                    content: currentSegment,
+                    lang: codeBlockLang
+                });
+                
+                // 重置内容收集器
+                currentSegment = '';
+            }
+        } else {
+            // 普通行，添加到当前段落
+            currentSegment += line + '\n';
         }
-        return match;
-    });
+    }
     
-    return content;
+    // 添加最后一段内容
+    if (currentSegment) {
+        segments.push({
+            type: isInCodeBlock ? 'code' : 'text',
+            content: currentSegment,
+            lang: isInCodeBlock ? codeBlockLang : ''
+        });
+    }
+    
+    // 只处理非代码块中的公式
+    for (let i = 0; i < segments.length; i++) {
+        if (segments[i].type === 'text') {
+            // 处理块级公式
+            segments[i].content = segments[i].content.replace(/\$\$([\s\S]*?)\$\$/g, function(match, formula) {
+                return `<div class="math-block">$$${formula}$$</div>`;
+            });
+        }
+    }
+    
+    // 重新组合内容
+    return segments.map(segment => segment.content).join('');
 }
 
 // 处理文档中的块级数学公式
 function processBlockMath(container) {
-    // 查找所有数学块容器
-    const mathBlocks = container.querySelectorAll('.math-block');
+    // 检查是否启用了数学公式支持
+    if (!config.extensions.math) return;
+    
+    // 确保KaTeX已加载
+    if (typeof katex === 'undefined') {
+        console.warn('KaTeX未加载，无法渲染数学公式');
+        return;
+    }
+    
+    // 查找所有数学块容器 (排除在代码块内的)
+    const mathBlocks = container.querySelectorAll('div.math-block');
     
     mathBlocks.forEach(block => {
+        // 检查是否在代码块内
+        if (block.closest('pre') || block.closest('code')) {
+            // 在代码块内，不处理
+            return;
+        }
+        
         // 提取公式（去掉$$符号）
         const formula = block.textContent.replace(/^\$\$([\s\S]*)\$\$$/, '$1');
         
@@ -1144,19 +1198,38 @@ function processBlockMath(container) {
         
         try {
             // 直接使用KaTeX渲染
-            if (typeof katex !== 'undefined') {
-                katex.render(formula, displayMath, {
-                    throwOnError: false,
-                    displayMode: true
-                });
-                
-                // 替换原始内容
-                block.innerHTML = '';
-                block.appendChild(displayMath);
-            }
+            katex.render(formula, displayMath, {
+                throwOnError: false,
+                displayMode: true
+            });
+            
+            // 替换原始内容
+            block.innerHTML = '';
+            block.appendChild(displayMath);
         } catch (err) {
             console.error('渲染块级公式失败:', err);
             block.innerHTML = `<div class="katex-error">公式渲染错误: ${formula}</div>`;
+        }
+    });
+    
+    // 处理行内公式
+    const inlineMathElements = container.querySelectorAll('.math');
+    inlineMathElements.forEach(element => {
+        // 检查是否在代码块内
+        if (element.closest('pre') || element.closest('code')) {
+            // 在代码块内，不处理
+            return;
+        }
+        
+        // 处理包含$...$格式的公式
+        const formula = element.textContent;
+        try {
+            katex.render(formula, element, {
+                throwOnError: false,
+                displayMode: false
+            });
+        } catch (err) {
+            console.error('渲染行内公式失败:', err);
         }
     });
 }
