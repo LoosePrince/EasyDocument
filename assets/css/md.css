@@ -406,3 +406,9 @@ ol[data-style="1."] > li::before {
     color: var(--color-primary, #3b82f6);
     font-weight: 600;
 }
+
+@media (max-width: 768px) {
+    .markdown-body{
+        padding: 0;
+    }
+}
