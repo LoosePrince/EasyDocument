@@ -4,10 +4,13 @@
 import config from '../../config.js';
 import { initializeMermaid, processMermaidDiagrams } from './mermaid-handler.js';
 import { processKaTeXFormulas, preloadKaTeXFonts } from './katex-handler.js';
+import documentCache from './document-cache.js';
 
 let pathData = null; // 存储文档结构数据
 let vditor = null; // Vditor实例
 let currentRoot = null; // 当前根目录
+let isLoadingDocument = false; // 是否正在加载文档
+let progressBar = null; // 进度条元素
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 初始化Mermaid
@@ -22,11 +25,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 设置侧边栏粘连控制
     setupStickyBars();
     
+    // 创建顶部进度条
+    createProgressBar();
+    
     // 加载文档结构
     try {
         const response = await fetch('path.json');
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         pathData = await response.json();
+        
+        // 预加载文档
+        documentCache.autoPreloadDocuments(pathData, 5);
     } catch (error) {
         console.error("加载 path.json 失败:", error);
         document.getElementById('sidebar-nav').innerHTML = '<p class="text-red-500">加载文档结构失败!</p>';
@@ -66,6 +75,71 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 初始加载内容
     loadContentFromUrl();
 });
+
+// 创建顶部进度条
+function createProgressBar() {
+    // 创建进度条容器
+    progressBar = document.createElement('div');
+    progressBar.id = 'top-progress-bar';
+    progressBar.className = 'fixed top-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700 z-50 hidden';
+    
+    // 创建进度条内部填充
+    const progressFill = document.createElement('div');
+    progressFill.id = 'progress-fill';
+    progressFill.className = 'h-full bg-primary transition-all duration-300 ease-out';
+    progressFill.style.width = '0%';
+    
+    // 组装进度条
+    progressBar.appendChild(progressFill);
+    document.body.appendChild(progressBar);
+}
+
+// 显示进度条
+function showProgressBar() {
+    if (!progressBar) return;
+    
+    // 重置进度
+    const progressFill = document.getElementById('progress-fill');
+    if (progressFill) {
+        progressFill.style.width = '0%';
+    }
+    
+    // 显示进度条
+    progressBar.classList.remove('hidden');
+    
+    // 快速初始进度
+    setTimeout(() => {
+        if (progressFill) {
+            progressFill.style.width = '30%';
+        }
+    }, 50);
+}
+
+// 更新进度条
+function updateProgressBar(percentage) {
+    if (!progressBar) return;
+    
+    const progressFill = document.getElementById('progress-fill');
+    if (progressFill) {
+        progressFill.style.width = `${percentage}%`;
+    }
+}
+
+// 隐藏进度条
+function hideProgressBar() {
+    if (!progressBar) return;
+    
+    // 先完成进度
+    const progressFill = document.getElementById('progress-fill');
+    if (progressFill) {
+        progressFill.style.width = '100%';
+    }
+    
+    // 延迟隐藏，确保动画完成
+    setTimeout(() => {
+        progressBar.classList.add('hidden');
+    }, 300);
+}
 
 // 应用布局配置
 function applyLayoutConfig() {
@@ -652,122 +726,103 @@ function expandParentFolders(element) {
 
 // 从URL加载内容
 async function loadContentFromUrl() {
-    // 从query参数获取路径
-    const urlParams = new URLSearchParams(window.location.search);
-    let pagePath = urlParams.get('path');
+    // 如果已经在加载中，则不重复加载
+    if (isLoadingDocument) {
+        console.log('文档正在加载中，跳过重复加载请求');
+        return;
+    }
     
-    // 检查URL hash是否存在，如果存在则不执行页面滚动
-    const hashExists = window.location.hash && window.location.hash.length > 1;
+    // 获取URL中的path参数
+    const url = new URL(window.location.href);
+    const path = url.searchParams.get('path') || '';
+    const root = url.searchParams.get('root') || null;
     
-    // 获取根目录参数
-    const rootParam = urlParams.get('root');
-    if (rootParam !== currentRoot) {
-        // 根目录变化，更新当前根目录并重新生成侧边栏
-        currentRoot = rootParam;
+    // 如果root参数更改或从无到有，需要重新生成侧边栏
+    if (root !== currentRoot) {
+        currentRoot = root;
+        
+        // 重新生成侧边栏
         generateSidebar(pathData);
     }
     
-    if (!pagePath) {
-        // 如果没有指定页面，但有root参数，则加载root目录下的README.md
-        if (currentRoot) {
-            // 尝试查找root目录下的索引文件
-            const rootDirNode = findNodeByPath(pathData, currentRoot);
-            if (rootDirNode && rootDirNode.index) {
-                pagePath = rootDirNode.index.path;
-            } else {
-                // 如果没有找到索引文件，构造一个可能的路径
-                for (const indexName of config.document.index_pages) {
-                    const possiblePath = `${currentRoot}/${indexName}`;
-                    // 暂时使用第一个可能的索引页
-                    pagePath = possiblePath;
-                    break;
-                }
-            }
+    // 如果没有path参数，尝试加载欢迎页面或默认页面
+    if (!path) {
+        const indexPath = findIndexPath(pathData);
+        if (indexPath) {
+            // 如果有根节点索引，则加载它
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('path', indexPath);
+            
+            // 使用replaceState而不是pushState，避免堆积历史记录
+            window.history.replaceState({ path: indexPath }, '', newUrl.toString());
+            
+            // 递归调用自身加载新路径
+            loadContentFromUrl();
+            return;
         } else {
-            // 没有root参数，加载根目录的索引页
-            pagePath = pathData?.index?.path || config.document.default_page;
+            // 没有找到索引页面，使用欢迎信息
+            document.getElementById('document-content').innerHTML = `
+                <h1 class="text-2xl mb-4">欢迎使用 EasyDocument</h1>
+                <p class="mb-4">请从左侧导航栏选择一个文档开始浏览。</p>
+            `;
+            
+            // 清空面包屑导航和目录
+            document.getElementById('breadcrumb-container').innerHTML = `
+                <i class="fas fa-home mr-2 text-primary"></i>
+                <span>首页</span>
+            `;
+            document.getElementById('toc-nav').innerHTML = '<p class="text-gray-400 text-sm">暂无目录</p>';
+            
+            // 更新页面标题
+            document.title = `${config.site.name} - ${config.site.title}`;
+            
+            return;
         }
-        // 不需要在这里添加 data/ 前缀，loadDocument 会处理
-    } else {
-        // 支持省略/README.md，检查路径是否为目录
-        // 如果路径不以.md或.html结尾，则认为是目录路径
-        const hasExtension = /\.(md|html)$/i.test(pagePath);
+    }
+    
+    try {
+        // 显示进度条
+        showProgressBar();
         
-        if (!hasExtension) {
-            // 尝试在目录后面添加README.md
-            const indexPath = findDirectoryIndexPath(pagePath);
-            if (indexPath) {
-                // 如果找到了索引页，更新路径
-                pagePath = indexPath;
-                
-                // 更新URL，但不触发新的导航
-                const newUrl = new URL(window.location.href);
-                newUrl.searchParams.set('path', pagePath);
-                window.history.replaceState({path: pagePath}, '', newUrl.toString());
+        // 标记加载状态
+        isLoadingDocument = true;
+        
+        // 更新进度到50%
+        setTimeout(() => {
+            updateProgressBar(50);
+        }, 200);
+        
+        // 高亮当前文档
+        const docLink = document.querySelector(`a[href*="path=${encodeURIComponent(path)}"]`);
+        if (docLink) {
+            setActiveLink(docLink);
+        } else {
+            // 如果未找到对应链接，可能是因为路径中包含特殊字符，尝试查找部分匹配
+            const partialMatches = Array.from(document.querySelectorAll('a[href*="path="]')).filter(a => {
+                return decodeURIComponent(a.href).includes(path);
+            });
+            
+            if (partialMatches.length > 0) {
+                setActiveLink(partialMatches[0]);
             }
         }
-    }
-    
-    // 使用 decodeURIComponent 处理可能存在的中文或特殊字符路径
-    const decodedPath = decodeURIComponent(pagePath);
-    
-    // 如果启用了自动折叠功能，先折叠所有目录
-    if (config.navigation.auto_collapse) {
-        collapseAllFolders();
-    }
-    
-    // 清除所有高亮状态
-    document.querySelectorAll('#sidebar-nav a').forEach(a => a.classList.remove('active'));
-    document.querySelectorAll('#sidebar-nav div.folder-title').forEach(div => div.classList.remove('active-folder'));
-    
-    // 检测是否是README文件（可能是文件夹索引）
-    const isReadmeFile = decodedPath.toLowerCase().endsWith('readme.md');
-    
-    if (isReadmeFile && decodedPath.includes('/')) {
-        // 如果是README文件，高亮对应的文件夹
-        const folderPath = decodedPath.substring(0, decodedPath.lastIndexOf('/'));
-        const folderDiv = document.querySelector(`#sidebar-nav div.folder-title[data-folder-path="${folderPath}"]`);
         
-        if (folderDiv) {
-            folderDiv.classList.add('active-folder');
-            // 确保文件夹展开
-            toggleFolder(folderDiv, true);
-            // 展开所有父级文件夹
-            expandParentFolders(folderDiv);
-        }
-    } else {
-        // 设置当前激活的侧边栏链接
-        const activeLink = document.querySelector(`#sidebar-nav a[data-path="${decodedPath}"]`);
+        // 更新进度到70%
+        setTimeout(() => {
+            updateProgressBar(70);
+        }, 400);
         
-        // 如果直接找到匹配的链接，直接设置激活状态
-        if (activeLink) {
-            activeLink.classList.add('active');
-            // 展开所有父级文件夹
-            expandParentFolders(activeLink);
-        } else {
-            // 如果找不到完全匹配的链接，尝试高亮文件夹
-            highlightParentFolders(decodedPath);
-        }
-    }
-    
-    // 加载文档内容
-    await loadDocument(decodedPath);
-    
-    // 检查URL中是否有锚点，如果有则滚动到对应位置
-    if (window.location.hash && window.location.hash.length > 1) {
-        const targetId = window.location.hash.substring(1);
-        const targetElement = document.getElementById(targetId);
-        if (targetElement) {
-            setTimeout(() => {
-                targetElement.scrollIntoView({ behavior: 'smooth' });
-            }, 300); // 给内容渲染一点时间
-        }
-    } else {
-    // 切换文章后滚动到顶部
-    window.scrollTo({
-        top: 0,
-        behavior: 'smooth' // 使用平滑滚动效果
-    });
+        // 加载文档
+        await loadDocument(path);
+        
+        // 完成加载，隐藏进度条
+        hideProgressBar();
+    } catch (error) {
+        console.error('加载内容出错:', error);
+        hideProgressBar();
+    } finally {
+        // 重置加载状态
+        isLoadingDocument = false;
     }
 }
 
@@ -861,20 +916,59 @@ function findDirectoryIndexPath(dirPath) {
 // 加载并渲染文档
 async function loadDocument(relativePath) {
     const contentDiv = document.getElementById('document-content');
-    contentDiv.innerHTML = ''; // 清空内容区域
     const tocNav = document.getElementById('toc-nav');
     tocNav.innerHTML = '<p class="text-gray-400 text-sm">暂无目录</p>';
     
-    // 显示加载指示器
+    // 重要：这里不再清空内容区域，而是保留当前内容直到新内容加载完成
+    // contentDiv.innerHTML = ''; 
+    
+    // 添加一个加载指示器，但不清空现有内容
     const loadingIndicator = document.createElement('div');
-    loadingIndicator.className = 'text-center py-8';
-    loadingIndicator.innerHTML = '<p class="text-gray-400">正在加载文档...</p>';
-    contentDiv.appendChild(loadingIndicator);
+    loadingIndicator.className = 'fixed bottom-4 left-4 z-40 bg-white dark:bg-gray-800 shadow-md rounded-lg p-2 text-sm';
+    loadingIndicator.innerHTML = '<p class="text-gray-600 dark:text-gray-300 flex items-center"><i class="fas fa-spinner fa-spin mr-2"></i>正在加载文档...</p>';
+    document.body.appendChild(loadingIndicator);
     
     // 确保路径是相对于根目录的，而不是 data/ 目录
     const fetchPath = `${config.document.root_dir}/${relativePath}`;
     
+    // 首先检查缓存中是否有该文档
+    const cachedContent = documentCache.get(relativePath);
+    if (cachedContent) {
+        console.log(`从缓存加载文档: ${relativePath}`);
+        
+        // 更新进度条到90%
+        updateProgressBar(90);
+        
+        // 加载完成后再清空内容区域
+        contentDiv.innerHTML = '';
+        
+        await renderDocument(relativePath, cachedContent, contentDiv, tocNav);
+        
+        // 更新缓存状态指示器
+        const isPreloaded = documentCache.isPreloaded(relativePath);
+        const isCached = documentCache.isCached(relativePath);
+        
+        if (isPreloaded) {
+            addCacheStatusIndicator(contentDiv, 'preloaded');
+        } else if (isCached) {
+            addCacheStatusIndicator(contentDiv, 'cached');
+        }
+        
+        // 继续预加载其他文档
+        setTimeout(() => {
+            documentCache.autoPreloadDocuments(pathData, 3);
+        }, 1000);
+        
+        // 移除加载指示器
+        loadingIndicator.remove();
+        
+        return;
+    }
+    
     try {
+        // 更新进度条
+        updateProgressBar(60);
+        
         const response = await fetch(fetchPath);
         if (!response.ok) {
             if (response.status === 404) {
@@ -896,12 +990,25 @@ async function loadDocument(relativePath) {
                     // 重新加载侧边栏
                     generateSidebar(pathData);
                     
+                    // 更新进度条
+                    updateProgressBar(70);
+                    
                     // 尝试在全局范围内加载文件
                     try {
                         const globalResponse = await fetch(fetchPath);
                         if (globalResponse.ok) {
                             // 成功找到文件，继续处理
                             const content = await globalResponse.text();
+                            
+                            // 缓存文档
+                            documentCache.set(relativePath, content);
+                            
+                            // 更新进度条
+                            updateProgressBar(90);
+                            
+                            // 加载完成后再清空内容区域
+                            contentDiv.innerHTML = '';
+                            
                             await renderDocument(relativePath, content, contentDiv, tocNav);
                             
                             // 添加提示，说明已经切换到全局视图
@@ -920,6 +1027,9 @@ async function loadDocument(relativePath) {
                             `;
                             contentDiv.insertBefore(notificationBar, contentDiv.firstChild);
                             
+                            // 添加缓存状态指示器
+                            addCacheStatusIndicator(contentDiv, 'cached');
+                            
                             // 添加恢复按钮的点击事件
                             const restoreBtn = document.getElementById('restore-root-btn');
                             if (restoreBtn) {
@@ -930,6 +1040,14 @@ async function loadDocument(relativePath) {
                                     window.location.href = restoreUrl.toString();
                                 });
                             }
+                            
+                            // 继续预加载其他文档
+                            setTimeout(() => {
+                                documentCache.autoPreloadDocuments(pathData, 3);
+                            }, 1000);
+                            
+                            // 移除加载指示器
+                            loadingIndicator.remove();
                             
                             return; // 已经完成处理，直接返回
                         } else {
@@ -954,14 +1072,109 @@ async function loadDocument(relativePath) {
             }
         }
         
+        // 更新进度条
+        updateProgressBar(80);
+        
         // 文件成功加载
         const content = await response.text();
+        
+        // 将文档添加到持久缓存中
+        documentCache.set(relativePath, content);
+        
+        // 更新进度条
+        updateProgressBar(90);
+        
+        // 加载完成后再清空内容区域
+        contentDiv.innerHTML = '';
+        
         await renderDocument(relativePath, content, contentDiv, tocNav);
+        
+        // 添加缓存状态指示器
+        addCacheStatusIndicator(contentDiv, 'cached');
+        
+        // 继续预加载其他文档
+        setTimeout(() => {
+            documentCache.autoPreloadDocuments(pathData, 3);
+        }, 1000);
         
     } catch (error) {
         console.error("加载文档失败:", error);
+        
+        // 出错后清空内容区域显示错误
         contentDiv.innerHTML = `<p class="text-red-500">加载文档失败: ${error.message}</p>`;
+    } finally {
+        // 移除加载指示器
+        loadingIndicator.remove();
     }
+}
+
+// 添加缓存状态指示器
+function addCacheStatusIndicator(contentDiv, cacheType) {
+    // 移除已有的缓存状态指示器（如果有）
+    const existingIndicator = document.getElementById('cache-status-indicator');
+    if (existingIndicator) {
+        existingIndicator.remove();
+    }
+    
+    // 创建状态指示器
+    const statusIndicator = document.createElement('div');
+    statusIndicator.id = 'cache-status-indicator';
+    
+    let className, icon, text, color;
+    
+    switch(cacheType) {
+        case 'preloaded':
+            className = 'text-purple-600 dark:text-purple-400';
+            icon = 'fas fa-bolt';
+            text = '预加载';
+            color = 'purple';
+            break;
+        case 'cached':
+            className = 'text-blue-600 dark:text-blue-400';
+            icon = 'fas fa-database';
+            text = '已缓存';
+            color = 'blue';
+            break;
+        default:
+            return; // 未知类型不显示指示器
+    }
+    
+    statusIndicator.className = `fixed bottom-4 right-4 bg-white dark:bg-gray-800 shadow-md rounded-lg p-2 text-sm z-40 flex items-center ${className} cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors`;
+    
+    statusIndicator.innerHTML = `
+        <i class="${icon} mr-2"></i>
+        <span>${text}</span>
+    `;
+    
+    // 添加到页面
+    document.body.appendChild(statusIndicator);
+    
+    // 添加点击事件，打开缓存管理窗口
+    statusIndicator.addEventListener('click', () => {
+        const cacheModal = document.getElementById('cache-modal');
+        if (cacheModal) {
+            cacheModal.classList.remove('hidden');
+            // 如果cache-manager.js导出了updateCacheList函数，则调用它
+            if (typeof window.updateCacheList === 'function') {
+                window.updateCacheList();
+            }
+        }
+    });
+    
+    // 3秒后自动隐藏
+    setTimeout(() => {
+        statusIndicator.classList.add('opacity-50');
+    }, 3000);
+    
+    // 鼠标进入时恢复透明度
+    statusIndicator.addEventListener('mouseenter', () => {
+        statusIndicator.classList.remove('opacity-50');
+    });
+    
+    // 鼠标离开时恢复半透明
+    statusIndicator.addEventListener('mouseleave', () => {
+        statusIndicator.classList.add('opacity-50');
+    });
 }
 
 // 渲染文档内容
@@ -1490,6 +1703,12 @@ function generateToc(contentElement) {
     let lastLevel = 0;
     
     headings = Array.from(headings);
+    
+    if (headings.length === 0) {
+        tocNav.innerHTML = '<p class="text-gray-400 text-sm">暂无目录</p>';
+        return; // 如果没有标题，直接返回
+    }
+    
     headings.forEach((heading, index) => {
         const level = parseInt(heading.tagName.substring(1));
         if (level > tocDepth) return;
@@ -1577,42 +1796,71 @@ function generateToc(contentElement) {
         tocNav.innerHTML = '<p class="text-gray-400 text-sm">暂无目录</p>';
     }
     
+    // 移除旧的滚动监听器（如果有）
+    window.removeEventListener('scroll', handleTocScrollHighlight);
     // 添加滚动监听，高亮当前章节
-    window.addEventListener('scroll', debounce(() => {
-        if (tocNav.children.length <= 1) return; // 没有足够的目录项
-        
-        const headingElements = Array.from(headings);
+    window.addEventListener('scroll', handleTocScrollHighlight);
+}
+
+// 处理TOC滚动高亮的函数
+const handleTocScrollHighlight = debounce(() => {
+    const tocNav = document.getElementById('toc-nav');
+    if (!tocNav || tocNav.children.length <= 1) return; // 没有足够的目录项
+
+    const scrollPosition = window.scrollY;
+    let currentHeadingId = null;
+    let activeLink = null;
+
+    // 特殊处理：当滚动到页面顶部时
+    if (scrollPosition <= 50) { // 使用一个小的阈值，而不是严格的0
+        // 找到第一个目录项
+        const firstLink = tocNav.querySelector('a');
+        if (firstLink) {
+            currentHeadingId = firstLink.dataset.headingId;
+            activeLink = firstLink;
+        }
+    } else {
+        // 获取所有内容标题元素
+        const contentElement = document.getElementById('document-content');
+        const headingElements = contentElement ? Array.from(contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')) : [];
+
         if (headingElements.length === 0) return;
-        
+
         // 找到当前可见的标题
-        let currentHeadingId = null;
-        const scrollPosition = window.scrollY + 100; // 加一点偏移量
-        
+        // 增加偏移量，使标题在屏幕靠上的位置时就被选中
+        const offset = window.innerHeight * 0.3;
+
         for (let i = 0; i < headingElements.length; i++) {
             const heading = headingElements[i];
             const headingTop = heading.offsetTop;
-            
-            if (headingTop <= scrollPosition) {
+
+            // 如果标题顶部在当前滚动位置+偏移量之上
+            if (headingTop <= scrollPosition + offset) {
                 currentHeadingId = heading.id;
             } else {
+                // 一旦找到第一个低于滚动位置的标题，就停止
                 break;
             }
         }
         
-        // 更新目录高亮
-        if (currentHeadingId) {
-            document.querySelectorAll('#toc-nav a').forEach(link => {
-                const isActive = link.dataset.headingId === currentHeadingId;
-                link.classList.toggle('active', isActive);
-                
-                // 如果是活动链接，确保它在视图中
-                if (isActive) {
-                    scrollTocToActiveItem(link);
-                }
-            });
+        // 如果循环结束仍然没有找到currentHeadingId（可能滚动太快或页面结构问题），
+        // 尝试选择第一个标题
+        if (!currentHeadingId && headingElements.length > 0) {
+            currentHeadingId = headingElements[0].id;
         }
-    }, 100));
-}
+    }
+
+    // 更新目录高亮
+    document.querySelectorAll('#toc-nav a').forEach(link => {
+        const isActive = link.dataset.headingId === currentHeadingId;
+        link.classList.toggle('active', isActive);
+        
+        // 如果是活动链接，确保它在视图中
+        if (isActive) {
+            scrollTocToActiveItem(link);
+        }
+    });
+}, 100);
 
 // 滚动TOC，确保活动项在视图中
 function scrollTocToActiveItem(activeItem) {
@@ -1623,14 +1871,14 @@ function scrollTocToActiveItem(activeItem) {
     const itemRect = activeItem.getBoundingClientRect();
     const containerRect = tocContainer.getBoundingClientRect();
     
-    // 检查元素是否完全在视图中
-    const isInView = (
+    // 检查元素是否 *完全* 在视图中
+    const isFullyInView = (
         itemRect.top >= containerRect.top &&
         itemRect.bottom <= containerRect.bottom
     );
     
     // 如果不在视图中，滚动TOC
-    if (!isInView) {
+    if (!isFullyInView) {
         // 计算需要滚动的位置
         // 目标：将活动项滚动到TOC容器的中间位置
         const scrollTop = activeItem.offsetTop - tocContainer.offsetHeight / 2 + activeItem.offsetHeight / 2;
