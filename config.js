@@ -9,7 +9,7 @@ const config = {
     title: "简易静态文档系统", // 网站标题，显示在浏览器标签页
     description: "一个轻量级、免编译的纯静态前端文档系统", // 网站描述，用于SEO
     keywords: "文档,静态网站,Markdown,Alpine.js", // 网站关键词，用于SEO
-    base_url: "/" // 网站基础URL，如果部署在子目录则需要修改
+    base_url: "index.html" // 网站基础URL，如果部署在子目录则需要修改
   },
 
   // 外观设置
@@ -44,7 +44,7 @@ const config = {
     nav_links: [ // 导航栏链接
       {
         text: "首页",
-        url: "/"
+        url: "index.html"
       },
       {
         text: "文档",
