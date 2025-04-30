@@ -633,35 +633,21 @@ function toggleFolder(div, forceExpand = false) {
     }
 }
 
-// 设置当前激活的链接
-function setActiveLink(activeElement) {
+// 设置当前激活的链接或文件夹
+function setActiveLink(activeElement, isFolder = false) {
     // 清除所有链接的激活状态
     document.querySelectorAll('#sidebar-nav a').forEach(a => a.classList.remove('active'));
     document.querySelectorAll('#sidebar-nav div.folder-title').forEach(div => div.classList.remove('active-folder'));
     
     if (activeElement) {
-        activeElement.classList.add('active');
+        if (isFolder) {
+            activeElement.classList.add('active-folder');
+        } else {
+            activeElement.classList.add('active');
+        }
         
         // 展开所有父级目录
         expandParentFolders(activeElement);
-        
-        // 如果激活的是文件夹的README，找到对应的文件夹标题并高亮
-        const path = activeElement.dataset.path;
-        if (path) {
-            const pathParts = path.split('/');
-            if (pathParts.length > 1 && pathParts[pathParts.length - 1].toLowerCase() === 'readme.md') {
-                // 构建所在文件夹的路径
-                const folderPath = pathParts.slice(0, pathParts.length - 1).join('/');
-                
-                // 找到所有文件夹div，检查它们是否对应这个路径
-                document.querySelectorAll('#sidebar-nav div.flex').forEach(folderDiv => {
-                    const span = folderDiv.querySelector('span');
-                    if (span && span.dataset.folderPath === folderPath) {
-                        folderDiv.classList.add('active-folder');
-                    }
-                });
-            }
-        }
         
         // 自动滚动侧边栏，确保活动元素在视图中
         const sidebarContainer = document.getElementById('sidebar-container');
@@ -734,7 +720,7 @@ async function loadContentFromUrl() {
     
     // 获取URL中的path参数
     const url = new URL(window.location.href);
-    const path = url.searchParams.get('path') || '';
+    let path = url.searchParams.get('path') || ''; // 使用let，因为可能需要修改
     const root = url.searchParams.get('root') || null;
     
     // 如果root参数更改或从无到有，需要重新生成侧边栏
@@ -745,40 +731,70 @@ async function loadContentFromUrl() {
         generateSidebar(pathData);
     }
     
-    // 如果没有path参数，尝试加载欢迎页面或默认页面
+    // 处理默认页面或目录索引页
     if (!path) {
-        const indexPath = findIndexPath(pathData);
-        if (indexPath) {
-            // 如果有根节点索引，则加载它
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.set('path', indexPath);
-            
-            // 使用replaceState而不是pushState，避免堆积历史记录
-            window.history.replaceState({ path: indexPath }, '', newUrl.toString());
-            
-            // 递归调用自身加载新路径
-            loadContentFromUrl();
-            return;
+        // 如果没有指定页面，但有root参数，则加载root目录下的README.md
+        if (currentRoot) {
+            // 尝试查找root目录下的索引文件
+            const rootDirNode = findNodeByPath(pathData, currentRoot);
+            if (rootDirNode && rootDirNode.index) {
+                path = rootDirNode.index.path;
+            } else {
+                // 如果没有找到索引文件，构造一个可能的路径 (不常用，但作为后备)
+                for (const indexName of config.document.index_pages) {
+                    const possiblePath = `${currentRoot}/${indexName}`;
+                    path = possiblePath; // 暂时使用第一个可能的索引页
+                    break;
+                }
+            }
         } else {
-            // 没有找到索引页面，使用欢迎信息
-            document.getElementById('document-content').innerHTML = `
-                <h1 class="text-2xl mb-4">欢迎使用 EasyDocument</h1>
-                <p class="mb-4">请从左侧导航栏选择一个文档开始浏览。</p>
-            `;
-            
-            // 清空面包屑导航和目录
-            document.getElementById('breadcrumb-container').innerHTML = `
-                <i class="fas fa-home mr-2 text-primary"></i>
-                <span>首页</span>
-            `;
-            document.getElementById('toc-nav').innerHTML = '<p class="text-gray-400 text-sm">暂无目录</p>';
-            
-            // 更新页面标题
-            document.title = `${config.site.name} - ${config.site.title}`;
-            
-            return;
+            // 没有root参数，加载根目录的索引页
+            // **修正：直接从pathData获取根索引或使用默认配置**
+            path = pathData?.index?.path || config.document.default_page;
+        }
+        
+        // 更新URL以反映实际加载的路径 (如果path被修改了)
+        if (path && !url.searchParams.has('path')) {
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('path', path);
+            window.history.replaceState({ path: path }, '', newUrl.toString());
+        }
+        
+    } else {
+        // 支持省略/README.md，检查路径是否为目录
+        const hasExtension = /\.(md|html)$/i.test(path);
+        if (!hasExtension) {
+            // 尝试在目录后面添加索引文件
+            const indexPath = findDirectoryIndexPath(path);
+            if (indexPath) {
+                // 如果找到了索引页，更新路径
+                path = indexPath;
+                
+                // 更新URL，但不触发新的导航
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.set('path', path);
+                window.history.replaceState({path: path}, '', newUrl.toString());
+            }
         }
     }
+    
+    // 如果经过上述处理后仍然没有有效的路径，则显示欢迎信息
+    if (!path) {
+        document.getElementById('document-content').innerHTML = `
+            <h1 class="text-2xl mb-4">欢迎</h1>
+            <p class="mb-4">请从左侧导航栏选择一个文档开始浏览。</p>
+        `;
+        document.getElementById('breadcrumb-container').innerHTML = `
+            <i class="fas fa-home mr-2 text-primary"></i>
+            <span>首页</span>
+        `;
+        document.getElementById('toc-nav').innerHTML = '<p class="text-gray-400 text-sm">暂无目录</p>';
+        document.title = `${config.site.name} - ${config.site.title}`;
+        return; // 结束执行
+    }
+    
+    // 使用 decodeURIComponent 处理最终路径
+    const decodedPath = decodeURIComponent(path);
     
     try {
         // 显示进度条
@@ -792,19 +808,16 @@ async function loadContentFromUrl() {
             updateProgressBar(50);
         }, 200);
         
-        // 高亮当前文档
-        const docLink = document.querySelector(`a[href*="path=${encodeURIComponent(path)}"]`);
-        if (docLink) {
-            setActiveLink(docLink);
+        // 高亮侧边栏
+        // 如果是目录索引页，高亮文件夹；否则高亮文件链接
+        const isReadmeFile = decodedPath.toLowerCase().endsWith('readme.md');
+        if (isReadmeFile && decodedPath.includes('/')) {
+            const folderPath = decodedPath.substring(0, decodedPath.lastIndexOf('/'));
+            const folderDiv = document.querySelector(`#sidebar-nav div.folder-title[data-folder-path="${folderPath}"]`);
+            if (folderDiv) setActiveLink(folderDiv, true);
         } else {
-            // 如果未找到对应链接，可能是因为路径中包含特殊字符，尝试查找部分匹配
-            const partialMatches = Array.from(document.querySelectorAll('a[href*="path="]')).filter(a => {
-                return decodeURIComponent(a.href).includes(path);
-            });
-            
-            if (partialMatches.length > 0) {
-                setActiveLink(partialMatches[0]);
-            }
+            const docLink = document.querySelector(`#sidebar-nav a[data-path="${decodedPath}"]`);
+            if (docLink) setActiveLink(docLink);
         }
         
         // 更新进度到70%
@@ -813,7 +826,7 @@ async function loadContentFromUrl() {
         }, 400);
         
         // 加载文档
-        await loadDocument(path);
+        await loadDocument(decodedPath);
         
         // 完成加载，隐藏进度条
         hideProgressBar();
