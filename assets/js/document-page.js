@@ -1100,24 +1100,10 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
             contentDiv.appendChild(markdownBody);
         } else {
             // Markdown 文件处理
-            // console.log('渲染 Markdown 文件:', relativePath);
+            console.log('渲染 Markdown 文件:', relativePath);
             
             // 预处理Markdown内容，处理块级数学公式
             content = preProcessMathContent(content);
-            
-            // 自定义 marked 渲染器，修复代码块语言标识问题
-            const renderer = new marked.Renderer();
-            // 保存原始的代码块渲染方法
-            const originalCodeRenderer = renderer.code;
-            
-            // 重写代码块渲染方法
-            renderer.code = function(code, lang, escaped) {
-                // 确保语言标识和代码内容之间有明确的分隔
-                if (lang) {
-                    return `<pre><code class="language-${lang}">${escaped ? code : marked.escape(code)}</code></pre>`;
-                }
-                return originalCodeRenderer.call(this, code, lang, escaped);
-            };
             
             // 使用 marked 解析 Markdown
             const markedContent = marked.parse(content, {
@@ -1125,7 +1111,6 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
                 breaks: true,
                 headerIds: true,
                 mangle: false,
-                renderer: renderer // 使用自定义渲染器
             });
             
             // 设置解析后的内容
