@@ -578,7 +578,33 @@ def main():
     parser.add_argument('--no-git', action='store_true', help='禁用Git相关功能')
     parser.add_argument('--no-search', action='store_true', help='禁用搜索索引生成')
     parser.add_argument('--no-github', action='store_true', help='禁用GitHub API查询')
+    parser.add_argument('-y', '--yes', action='store_true', help='自动确认所有提示，不询问')
     args = parser.parse_args()
+    
+    # 检查是否有已存在的path.json文件且是否在没有使用任何参数的情况下运行
+    if os.path.exists(args.output) and len(sys.argv) == 1:
+        print("=" * 80)
+        print("警告：检测到已存在的 path.json 文件！")
+        print("=" * 80)
+        print("如果不使用 --merge 参数重新生成，将可能会丢失以下信息：")
+        print("  1. 文档的手动排序")
+        print("  2. 自定义添加的属性或元数据")
+        print("  3. 其他手动调整的结构")
+        print("\n推荐使用以下命令:")
+        print(f"  python {sys.argv[0]} --merge")
+        print("\n完整的参数选项:")
+        parser.print_help()
+        print("\n" + "=" * 80)
+        
+        if not args.yes:
+            response = input("\n是否仍要继续？这可能会重置您的文档结构。(y/n): ").strip().lower()
+            if response != 'y' and response != 'yes':
+                print("操作已取消。")
+                sys.exit(0)
+            else:
+                print("\n继续执行，但不会合并现有结构...\n")
+        else:
+            print("\n自动确认模式：继续执行，但不会合并现有结构...\n")
     
     # 尝试从配置文件中提取配置
     config = DEFAULT_CONFIG.copy()
