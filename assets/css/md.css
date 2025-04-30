@@ -149,6 +149,14 @@ ol[data-style="1."] > li::before {
     font-weight: bold;
 }
 
+ul:has(> li input[type="checkbox"]) {
+    padding-left: 0.5rem;
+}
+
+li:has(> input[type="checkbox"]) {
+    list-style-type: none;
+}
+
 /* 链接 */
 .markdown-body a {
     color: var(--link-color);
@@ -366,16 +374,6 @@ ol[data-style="1."] > li::before {
 .code-block-wrapper:hover .code-copy-button,
 .code-block-wrapper:hover .code-copy-button-container .code-copy-button {
     opacity: 1;
-}
-
-/* 任务列表 */
-.markdown-body .task-list-item {
-    list-style-type: none;
-}
-
-.markdown-body .task-list-item input[type="checkbox"] {
-    margin: 0 0.2em 0.25em -1.6em;
-    vertical-align: middle;
 }
 
 /* 上一篇/下一篇导航 */
