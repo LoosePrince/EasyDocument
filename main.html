@@ -19,51 +19,36 @@
     <!-- FontAwesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Markdown Rendering (Vditor) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.9.4/dist/index.css" />
-    <script src="https://cdn.jsdelivr.net/npm/vditor@3.9.4/dist/index.min.js"></script>
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+    
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    
+    <!-- Mermaid -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Markdown-it -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.0.0/dist/markdown-it.min.js"></script>
     
     <!-- 主应用JS (加载公共部分和主题) -->
     <script type="module" src="assets/js/main.js"></script>
+    <script type="module" src="assets/js/mermaid-handler.js"></script>
+    <script type="module" src="assets/js/katex-handler.js"></script>
+    <script type="module" src="assets/js/document-page.js"></script>
 
     <!-- css -->
     <link rel="stylesheet" href="assets/css/style.css">
-    <!-- Vditor暗黑模式控制 -->
-    <script>
-        // 监听暗黑模式变化
-        const darkModeObserver = new MutationObserver(mutations => {
-            mutations.forEach(mutation => {
-                if (mutation.attributeName === 'class') {
-                    const isDarkMode = document.documentElement.classList.contains('dark');
-                    // 如果存在vditor实例，更新其主题
-                    if (window.vditorInstance) {
-                        window.vditorInstance.setTheme(
-                            isDarkMode ? 'dark' : 'classic',
-                            isDarkMode ? 'dark' : 'light',
-                            isDarkMode ? 'dracula' : 'github'
-                        );
-                    }
-                }
-            });
-        });
-        
-        // 开始观察html元素上的class变化
-        darkModeObserver.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['class']
-        });
-        
-        // DOM加载完成后检查一次初始状态
-        document.addEventListener('DOMContentLoaded', () => {
-            const isDarkMode = document.documentElement.classList.contains('dark');
-            console.log('初始化暗黑模式状态:', isDarkMode ? '暗黑模式' : '亮色模式');
-        });
-    </script>
+    <link rel="stylesheet" href="assets/css/md.css">
     
-    <!-- 文档页面专用JS -->
-    <script type="module" src="assets/js/document-page.js"></script>
-    
-    <!-- 自定义配置 (保持与index.html一致) -->
+    <!-- 自定义配置 -->
     <script>
         tailwind.config = {
             darkMode: 'class',

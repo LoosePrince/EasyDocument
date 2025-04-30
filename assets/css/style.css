@@ -46,15 +46,17 @@ body {
     top: 20px; /* 距离顶部20px开始粘连 */
     height: calc(100vh - 40px); /* 减去顶部和底部的间距 */
     overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scroll-behavior: smooth;
+    max-height: calc(100vh - 40px); /* 40px 是上下各20px的margin */
+    padding-right: 5px; /* 防止滚动条占用过多空间 */
     background-color: white;
     border-radius: 0.75rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     margin: 0.75rem;
     padding: 1.25rem;
     transition: all 0.3s ease;
-    scrollbar-width: thin;
-    scrollbar-color: #e5e7eb transparent;
-    max-height: calc(100vh - 100px); /* 确保不会太长 */
 }
 
 /* 文档内容卡片样式 */
@@ -74,6 +76,8 @@ body {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     margin-bottom: 1.5rem;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
 }
 
 /* 激活状态的侧边栏链接 */
@@ -107,6 +111,22 @@ body {
 #toc-container::-webkit-scrollbar-thumb {
     background-color: #e5e7eb;
     border-radius: 3px;
+    transition: background-color 0.3s;
+}
+
+.dark #sidebar-container::-webkit-scrollbar-thumb, 
+.dark #toc-container::-webkit-scrollbar-thumb {
+    background-color: #4b5563;
+}
+
+#sidebar-container:hover::-webkit-scrollbar-thumb, 
+#toc-container:hover::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+}
+
+.dark #sidebar-container:hover::-webkit-scrollbar-thumb, 
+.dark #toc-container:hover::-webkit-scrollbar-thumb {
+    background-color: #6b7280;
 }
 
 /* 导航项样式 */
@@ -133,27 +153,6 @@ body {
     padding: 0;
 }
 
-/* 自定义有序列表样式 */
-ol[data-style] {
-    counter-reset: custom-counter;
-    list-style-type: none;
-    padding-left: 1.5em;
-}
-
-ol[data-style="1."] > li {
-    counter-increment: custom-counter;
-    position: relative;
-    padding-left: 1.5em;
-    margin-bottom: 0.5em;
-}
-
-ol[data-style="1."] > li::before {
-    content: counter(custom-counter) ".";
-    position: absolute;
-    left: 0;
-    font-weight: bold;
-}
-
 /* 其他样式保持不变 */
 #sidebar-nav a:hover, #toc-nav a:hover, #sidebar-nav .folder-title:hover {
     background-color: #f3f4f6;
@@ -174,152 +173,6 @@ ol[data-style="1."] > li::before {
     margin-bottom: 1rem;
     border-bottom: 1px solid #f3f4f6;
     color: #111827;
-}
-
-/* Vditor编辑器样式调整 */
-.vditor {
-    border: none;
-    border-radius: 0.75rem;
-}
-
-.vditor-reset {
-    font-family: var(--font-family, 'system-ui, -apple-system, sans-serif');
-}
-
-.vditor-copy {
-    display: none !important;
-}
-
-.vditor-reset code:not(.hljs):not(.highlight-chroma) {
-    background-color: #F5F5F5;
-}
-
-.vditor-reset .language-mermaid {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-/* 代码块滚动条美化 */
-.vditor-reset pre, pre, code, .hljs {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
-}
-
-.vditor-reset pre::-webkit-scrollbar, 
-pre::-webkit-scrollbar, 
-code::-webkit-scrollbar, 
-.hljs::-webkit-scrollbar {
-    height: 6px;
-    width: 6px;
-}
-
-.vditor-reset pre::-webkit-scrollbar-track, 
-pre::-webkit-scrollbar-track, 
-code::-webkit-scrollbar-track, 
-.hljs::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 3px;
-}
-
-.vditor-reset pre::-webkit-scrollbar-thumb, 
-pre::-webkit-scrollbar-thumb, 
-code::-webkit-scrollbar-thumb, 
-.hljs::-webkit-scrollbar-thumb {
-    background-color: rgba(156, 163, 175, 0.5);
-    border-radius: 3px;
-    transition: all 0.3s ease;
-}
-
-.vditor-reset pre::-webkit-scrollbar-thumb:hover, 
-pre::-webkit-scrollbar-thumb:hover, 
-code::-webkit-scrollbar-thumb:hover, 
-.hljs::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(107, 114, 128, 0.7);
-}
-
-/* 深色模式下的代码块滚动条 */
-.dark .vditor-reset pre::-webkit-scrollbar-thumb, 
-.dark pre::-webkit-scrollbar-thumb, 
-.dark code::-webkit-scrollbar-thumb, 
-.dark .hljs::-webkit-scrollbar-thumb {
-    background-color: rgba(156, 163, 175, 0.3);
-}
-
-.dark .vditor-reset pre::-webkit-scrollbar-thumb:hover, 
-.dark pre::-webkit-scrollbar-thumb:hover, 
-.dark code::-webkit-scrollbar-thumb:hover, 
-.dark .hljs::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(156, 163, 175, 0.5);
-}
-
-/* 代码块整体样式增强 */
-.vditor-reset pre, pre, .hljs {
-    border-radius: 8px;
-    overflow: auto;
-    position: relative;
-    transition: all 0.3s ease;
-}
-
-.dark .vditor-reset code {
-    background-color: #111827;
-}
-
-/* Vditor暗黑模式样式适配 */
-.dark .vditor-reset {
-    color: #e5e7eb;
-}
-
-.dark .vditor-reset h1,
-.dark .vditor-reset h2,
-.dark .vditor-reset h3,
-.dark .vditor-reset h4,
-.dark .vditor-reset h5,
-.dark .vditor-reset h6,
-.dark .vditor-reset strong {
-    color: #f3f4f6;
-}
-
-.vditor-reset a {
-    color: #60a5fa !important;
-    text-decoration: underline;
-}
-
-.dark .vditor-reset a {
-    color: #60a5fa !important;
-    text-decoration: underline;
-}
-
-.dark .vditor-reset blockquote {
-    color: #9ca3af;
-    border-left-color: #374151;
-}
-
-.dark .vditor-reset hr {
-    background-color: #374151;
-}
-
-.dark .vditor-reset table th,
-.dark .vditor-reset table td {
-    border-color: #374151;
-    background-color: #111827;
-}
-
-.dark .vditor-reset code:not(.hljs) {
-    background-color: #111827;
-    color: #e5e7eb;
-}
-
-.dark .vditor-reset pre {
-    background-color: #1f2937 !important;
-}
-
-.dark .edgePath .path {
-    stroke: #9ca3af !important
-}
-
-.dark .arrowheadPath {
-    fill: #9ca3af !important
 }
 
 /* 响应式布局 */
@@ -345,7 +198,7 @@ code::-webkit-scrollbar-thumb:hover,
     
     /* 共同的移动端侧边栏基础样式 */
     #sidebar-container, #toc-container { 
-        display: block !important; /* 使用block而不是none，以便动画生效 */
+        display: block !important;
         position: fixed !important;
         top: 0 !important;
         height: 100vh;
@@ -375,7 +228,7 @@ code::-webkit-scrollbar-thumb:hover,
     /* 激活状态样式 */
     #sidebar-container.active, #toc-container.active {
         transform: translateX(0);
-        visibility: visible; /* 显示元素 */
+        visibility: visible;
     }
     
     /* 遮罩层 */
@@ -397,15 +250,15 @@ code::-webkit-scrollbar-thumb:hover,
     /* 移动端菜单按钮位置调整 */
     #mobile-menu-toggle {
         position: fixed;
-        top: 90% !important; /* 确保足够的顶部距离，避免与导航栏重叠 */
+        top: 90% !important;
         left: 16px;
-        z-index: 998; /* 比sidebar的z-index高，确保始终可见 */
+        z-index: 998;
     }
     
     /* 移动端TOC目录按钮 */
     #toc-toggle {
         position: fixed;
-        bottom: 80px; /* 调高位置，避免与返回顶部按钮重叠 */
+        bottom: 80px;
         right: 20px;
         width: 44px;
         height: 44px;
@@ -535,55 +388,4 @@ code::-webkit-scrollbar-thumb:hover,
 
 .dark #sidebar-nav div.folder-title.active-folder {
     background-color: rgba(59, 130, 246, 0.15);
-}
-
-/* 添加代码块样式 */
-.code-block-wrapper {
-    position: relative;
-    margin: 1.5rem 0;
-}
-
-/* 目录编号的样式 */
-#toc-nav a.active {
-    color: var(--tw-text-primary);
-    font-weight: 600;
-}
-
-/* 上一篇/下一篇导航样式 */
-#prev-next-navigation {
-    margin-top: 2rem;
-    padding-top: 1rem;
-    border-top: 1px solid #e5e7eb;
-}
-
-.dark #prev-next-navigation {
-    border-color: #374151;
-}
-
-#prev-next-navigation a {
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-}
-
-#prev-next-navigation a:hover {
-    transform: translateY(-2px);
-}
-
-/* 适配深色模式 */
-.dark .img-error {
-    background-color: #333 !important;
-}
-
-/* 代码复制按钮 */
-.code-block-wrapper button {
-    visibility: hidden;
-    opacity: 0;
-    transition: opacity 0.2s, visibility 0.2s;
-    margin-top: -5px;
-}
-
-.code-block-wrapper:hover button {
-    visibility: visible;
-    opacity: 1;
 }

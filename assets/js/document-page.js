@@ -2,12 +2,20 @@
  * 文档页面交互逻辑
  */
 import config from '../../config.js';
+import { initializeMermaid, processMermaidDiagrams } from './mermaid-handler.js';
+import { processKaTeXFormulas, preloadKaTeXFonts } from './katex-handler.js';
 
 let pathData = null; // 存储文档结构数据
 let vditor = null; // Vditor实例
 let currentRoot = null; // 当前根目录
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // 初始化Mermaid
+    initializeMermaid();
+    
+    // 预加载KaTeX字体
+    preloadKaTeXFonts();
+    
     // 应用布局配置
     applyLayoutConfig();
     
@@ -502,6 +510,19 @@ function navigateToFolderIndex(item) {
         toggleFolder(folderDiv, true);
         // 展开所有父级文件夹
         expandParentFolders(folderDiv);
+        
+        // 自动滚动侧边栏，确保文件夹在视图中
+        const sidebarContainer = document.getElementById('sidebar-container');
+        if (sidebarContainer) {
+            // 计算需要滚动的位置
+            const folderTop = folderDiv.offsetTop - sidebarContainer.offsetHeight / 2 + folderDiv.offsetHeight / 2;
+            
+            // 平滑滚动到该位置
+            sidebarContainer.scrollTo({
+                top: Math.max(0, folderTop),
+                behavior: 'smooth'
+            });
+        }
     }
     
     // 更新URL，添加path参数并保留root参数
@@ -564,6 +585,33 @@ function setActiveLink(activeElement) {
                     if (span && span.dataset.folderPath === folderPath) {
                         folderDiv.classList.add('active-folder');
                     }
+                });
+            }
+        }
+        
+        // 自动滚动侧边栏，确保活动元素在视图中
+        const sidebarContainer = document.getElementById('sidebar-container');
+        if (sidebarContainer) {
+            // 计算元素在侧边栏中的相对位置
+            const elementRect = activeElement.getBoundingClientRect();
+            const containerRect = sidebarContainer.getBoundingClientRect();
+            
+            // 检查元素是否在视图中
+            const isInView = (
+                elementRect.top >= containerRect.top &&
+                elementRect.bottom <= containerRect.bottom
+            );
+            
+            // 如果不在视图中，滚动侧边栏
+            if (!isInView) {
+                // 计算需要滚动的位置
+                // 滚动到元素位于容器中央的位置
+                const scrollTop = activeElement.offsetTop - sidebarContainer.offsetHeight / 2 + activeElement.offsetHeight / 2;
+                
+                // 平滑滚动到该位置
+                sidebarContainer.scrollTo({
+                    top: Math.max(0, scrollTop),
+                    behavior: 'smooth'
                 });
             }
         }
@@ -715,11 +763,11 @@ async function loadContentFromUrl() {
             }, 300); // 给内容渲染一点时间
         }
     } else {
-        // 切换文章后滚动到顶部
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth' // 使用平滑滚动效果
-        });
+    // 切换文章后滚动到顶部
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth' // 使用平滑滚动效果
+    });
     }
 }
 
@@ -854,7 +902,7 @@ async function loadDocument(relativePath) {
                         if (globalResponse.ok) {
                             // 成功找到文件，继续处理
                             const content = await globalResponse.text();
-                            renderDocument(relativePath, content, contentDiv, tocNav);
+                            await renderDocument(relativePath, content, contentDiv, tocNav);
                             
                             // 添加提示，说明已经切换到全局视图
                             const notificationBar = document.createElement('div');
@@ -908,7 +956,7 @@ async function loadDocument(relativePath) {
         
         // 文件成功加载
         const content = await response.text();
-        renderDocument(relativePath, content, contentDiv, tocNav);
+        await renderDocument(relativePath, content, contentDiv, tocNav);
         
     } catch (error) {
         console.error("加载文档失败:", error);
@@ -917,130 +965,199 @@ async function loadDocument(relativePath) {
 }
 
 // 渲染文档内容（从loadDocument函数抽离出来，便于复用）
-function renderDocument(relativePath, content, contentDiv, tocNav) {
-    // 移除加载指示器
+async function renderDocument(relativePath, content, contentDiv, tocNav) {
+    // 清空内容区域
     contentDiv.innerHTML = '';
     
-    // 创建Vditor容器
-    const vditorContainer = document.createElement('div');
-    vditorContainer.id = 'vditor-container';
-    contentDiv.appendChild(vditorContainer);
+    // 创建 markdown-body 容器
+    const markdownBody = document.createElement('div');
+    markdownBody.className = 'markdown-body';
     
-    // 处理不同类型的文档
-    if (relativePath.endsWith('.md')) {
-        // Markdown渲染
-        const options = {
-            theme: isDarkMode() ? 'dark' : 'light',
-            customEmoji: {},
-            lazyLoadImage: '', // 禁用懒加载，避免URL拼接问题
-            linkBase: filePathToUrl(relativePath),
-            anchor: 1,
-            math: {
-                engine: config.extensions.math ? 'KaTeX' : '',
-                inlineDigit: true,
-                macros: {}
-            },
-            hljs: {
-                enable: config.extensions.highlight,
-                lineNumber: true,
-                style: isDarkMode() ? 'dracula' : 'github'
-            },
-            markdown: {
-                toc: true,
-                listStyle: true
-            }
-        };
+    try {
+        // 预处理Markdown内容，处理块级数学公式
+        content = preProcessMathContent(content);
         
-        // 使用Vditor渲染Markdown
-        Vditor.preview(vditorContainer, content, options).then(() => {
-            // 为外部链接添加target="_blank"属性
-            fixExternalLinks(vditorContainer);
-            
-            // 修复图像链接
-            fixExternalImageLinks(vditorContainer);
-            
-            // 修复内部链接，保留root参数
-            fixInternalLinks(vditorContainer);
-            
-            // 添加代码复制按钮
-            if (config.document.code_copy_button) {
-                addCodeCopyButtons(vditorContainer);
-            }
-            
-            // 生成目录
-            generateToc(vditorContainer);
+        // 使用 marked 解析 Markdown
+        const markedContent = marked.parse(content, {
+            gfm: true,
+            breaks: true,
+            headerIds: true,
+            mangle: false
         });
         
-        // 为了使暗黑模式切换生效，将Vditor实例存储到全局变量
-        window.vditorInstance = {
-            setTheme: (theme, contentTheme, codeTheme) => {
-                // 重新渲染具有新主题的内容
-                options.theme = contentTheme;
-                options.hljs.style = codeTheme;
-                Vditor.preview(vditorContainer, content, options).then(() => {
-                    // 重新处理链接和图片
-                    fixExternalLinks(vditorContainer);
-                    fixExternalImageLinks(vditorContainer);
-                    fixInternalLinks(vditorContainer);
-                    
-                    // 重新添加代码复制按钮
-                    if (config.document.code_copy_button) {
-                        addCodeCopyButtons(vditorContainer);
-                    }
-                    
-                    // 重新生成目录，因为重新渲染后DOM结构已更新
+        // 设置解析后的内容
+        markdownBody.innerHTML = markedContent;
+        
+        // 添加到内容区域
+        contentDiv.appendChild(markdownBody);
+        
+        // 处理代码块
+        const codeBlocks = markdownBody.querySelectorAll('pre code');
+        codeBlocks.forEach(block => {
+            // 应用 highlight.js
+            hljs.highlightElement(block);
+            
+            // 获取 pre 元素
+            const preElement = block.parentElement;
+            
+            // 创建代码块包装器
+            const wrapper = document.createElement('div');
+            wrapper.className = 'code-block-wrapper';
+            
+            // 替换 pre 元素为包装器
+            preElement.parentNode.insertBefore(wrapper, preElement);
+            wrapper.appendChild(preElement);
+            
+            // 创建复制按钮容器
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'code-copy-button-container';
+            
+            // 创建复制按钮
+            const copyButton = document.createElement('button');
+            copyButton.className = 'code-copy-button';
+            copyButton.innerHTML = '<i class="fas fa-copy"></i>';
+            copyButton.title = '复制代码';
+            
+            // 添加复制功能
+            copyButton.addEventListener('click', async (e) => {
+                // 阻止事件冒泡，避免触发其他事件
+                e.stopPropagation();
+                
+                try {
+                    await navigator.clipboard.writeText(block.textContent);
+                    copyButton.innerHTML = '<i class="fas fa-check"></i>';
                     setTimeout(() => {
-                        generateToc(vditorContainer);
-                    }, 500);
+                        copyButton.innerHTML = '<i class="fas fa-copy"></i>';
+                    }, 2000);
+                } catch (err) {
+                    console.error('复制失败:', err);
+                    copyButton.innerHTML = '<i class="fas fa-times"></i>';
+                    setTimeout(() => {
+                        copyButton.innerHTML = '<i class="fas fa-copy"></i>';
+                    }, 2000);
+                }
+            });
+            
+            // 将按钮添加到容器
+            buttonContainer.appendChild(copyButton);
+            
+            // 将按钮容器添加到包装器
+            wrapper.appendChild(buttonContainer);
+        });
+        
+        // 手动处理块级数学公式
+        processBlockMath(markdownBody);
+        
+        // 处理数学公式
+        const mathElements = markdownBody.querySelectorAll('.math, .katex');
+        if (mathElements.length > 0) {
+            // 确保 KaTeX 已加载
+            if (typeof katex !== 'undefined') {
+                mathElements.forEach(element => {
+                    if (element.classList.contains('math')) {
+                        const formula = element.textContent;
+                        try {
+                            katex.render(formula, element, {
+                                throwOnError: false,
+                                displayMode: element.classList.contains('display')
+                            });
+                        } catch (err) {
+                            console.error('KaTeX 渲染错误:', err);
+                        }
+                    }
                 });
             }
-        };
+        }
         
-    } else if (relativePath.endsWith('.html')) {
-        // 对于HTML，直接插入
-        contentDiv.innerHTML = content;
+        // 处理 Mermaid 图表
+        const mermaidDivs = markdownBody.querySelectorAll('.mermaid');
+        if (mermaidDivs.length > 0 && typeof mermaid !== 'undefined' && config.extensions.mermaid) {
+            mermaid.init(undefined, mermaidDivs);
+        }
         
-        // 修复HTML中的链接
-        fixExternalLinks(contentDiv);
-        fixExternalImageLinks(contentDiv);
-        fixInternalLinks(contentDiv);
+        // 处理图片链接
+        fixExternalImageLinks(markdownBody);
         
-        // HTML 文件也尝试生成目录
-        generateToc(contentDiv);
-    } else {
-        contentDiv.innerHTML = '<p class="text-red-500">不支持的文件类型</p>';
-        return;
-    }
-    
-    // 更新页面标题
-    updatePageTitle(relativePath);
-    
-    // 生成面包屑
-    generateBreadcrumb(relativePath);
-    
-    // 添加上一篇/下一篇导航
-    if (config.navigation.prev_next_buttons) {
+        // 处理内部链接
+        fixInternalLinks(markdownBody);
+        
+        // 处理外部链接
+        fixExternalLinks(markdownBody);
+        
+        // 生成目录
+        generateToc(markdownBody);
+        
+        // 更新页面标题
+        updatePageTitle(relativePath);
+        
+        // 生成面包屑导航
+        generateBreadcrumb(relativePath);
+        
+        // 添加上一篇/下一篇导航
         generatePrevNextNavigation(relativePath);
+        
+        // 触发内容已加载事件，用于KaTeX自动渲染和其他需要在内容加载后执行的操作
+        document.dispatchEvent(new CustomEvent('mdContentLoaded', {
+            detail: { markdownBody, contentPath: relativePath }
+        }));
+        
+    } catch (error) {
+        console.error('渲染文档时出错:', error);
+        contentDiv.innerHTML = '<div class="error-message">文档渲染失败</div>';
     }
 }
 
-// 预加载KaTeX字体
-function preloadKaTeXFonts() {
-    const fontFiles = [
-        'KaTeX_Main-Regular.woff2',
-        'KaTeX_Math-Italic.woff2',
-        'KaTeX_Size1-Regular.woff2',
-        'KaTeX_Size2-Regular.woff2'
-    ];
+// 预处理Markdown内容中的数学公式
+function preProcessMathContent(content) {
+    // 处理块级数学公式，确保它们被正确识别
+    // 查找所有$$...$$格式的块级公式（不跨行）
+    content = content.replace(/\$\$(.*?)\$\$/g, function(match, formula) {
+        // 将它包装在特殊标记中
+        return `<div class="math-block">$$${formula}$$</div>`;
+    });
     
-    fontFiles.forEach(fontFile => {
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.href = `https://cdn.jsdelivr.net/npm/vditor@3.9.4/dist/js/katex/fonts/${fontFile}`;
-        link.as = 'font';
-        link.type = 'font/woff2';
-        link.crossOrigin = 'anonymous';
-        document.head.appendChild(link);
+    // 处理多行的块级数学公式
+    // 查找$$开始，然后跨多行，最后以$$结束的内容
+    content = content.replace(/\$\$([\s\S]*?)\$\$/g, function(match, formula) {
+        // 确保这不是我们已经处理过的单行公式
+        if (!match.includes('<div class="math-block">')) {
+            return `<div class="math-block">$$${formula}$$</div>`;
+        }
+        return match;
+    });
+    
+    return content;
+}
+
+// 处理文档中的块级数学公式
+function processBlockMath(container) {
+    // 查找所有数学块容器
+    const mathBlocks = container.querySelectorAll('.math-block');
+    
+    mathBlocks.forEach(block => {
+        // 提取公式（去掉$$符号）
+        const formula = block.textContent.replace(/^\$\$([\s\S]*)\$\$$/, '$1');
+        
+        // 创建一个新的div用于KaTeX渲染
+        const displayMath = document.createElement('div');
+        displayMath.className = 'katex-display';
+        
+        try {
+            // 直接使用KaTeX渲染
+            if (typeof katex !== 'undefined') {
+                katex.render(formula, displayMath, {
+                    throwOnError: false,
+                    displayMode: true
+                });
+                
+                // 替换原始内容
+                block.innerHTML = '';
+                block.appendChild(displayMath);
+            }
+        } catch (err) {
+            console.error('渲染块级公式失败:', err);
+            block.innerHTML = `<div class="katex-error">公式渲染错误: ${formula}</div>`;
+        }
     });
 }
 
@@ -1260,6 +1377,9 @@ function generateToc(contentElement) {
                 // 高亮当前目录项
                 document.querySelectorAll('#toc-nav a').forEach(link => link.classList.remove('active'));
                 a.classList.add('active');
+                
+                // 确保当前目录项在视图中
+                scrollTocToActiveItem(a);
             }
         });
         
@@ -1296,10 +1416,45 @@ function generateToc(contentElement) {
         // 更新目录高亮
         if (currentHeadingId) {
             document.querySelectorAll('#toc-nav a').forEach(link => {
-                link.classList.toggle('active', link.dataset.headingId === currentHeadingId);
+                const isActive = link.dataset.headingId === currentHeadingId;
+                link.classList.toggle('active', isActive);
+                
+                // 如果是活动链接，确保它在视图中
+                if (isActive) {
+                    scrollTocToActiveItem(link);
+                }
             });
         }
     }, 100));
+}
+
+// 滚动TOC，确保活动项在视图中
+function scrollTocToActiveItem(activeItem) {
+    const tocContainer = document.getElementById('toc-container');
+    if (!tocContainer || !activeItem) return;
+    
+    // 计算元素在TOC中的相对位置
+    const itemRect = activeItem.getBoundingClientRect();
+    const containerRect = tocContainer.getBoundingClientRect();
+    
+    // 检查元素是否完全在视图中
+    const isInView = (
+        itemRect.top >= containerRect.top &&
+        itemRect.bottom <= containerRect.bottom
+    );
+    
+    // 如果不在视图中，滚动TOC
+    if (!isInView) {
+        // 计算需要滚动的位置
+        // 目标：将活动项滚动到TOC容器的中间位置
+        const scrollTop = activeItem.offsetTop - tocContainer.offsetHeight / 2 + activeItem.offsetHeight / 2;
+        
+        // 平滑滚动到该位置
+        tocContainer.scrollTo({
+            top: Math.max(0, scrollTop),
+            behavior: 'smooth'
+        });
+    }
 }
 
 // 检查当前是否为暗黑模式
@@ -1352,56 +1507,6 @@ function fixExternalImageLinks(container) {
                 this.style.background = '#333';
             }
         });
-    });
-}
-
-// 为代码块添加复制按钮
-function addCodeCopyButtons(container) {
-    const codeBlocks = container.querySelectorAll('pre code');
-    codeBlocks.forEach((codeBlock) => {
-        const pre = codeBlock.parentNode;
-        // 只有在父元素是pre的情况下才添加复制按钮
-        if (pre.tagName.toLowerCase() === 'pre') {
-            // 创建一个包装元素（如果代码块外层已经有一个div，则不创建）
-            let wrapper = pre.parentNode;
-            if (wrapper.tagName.toLowerCase() !== 'div' || !wrapper.classList.contains('code-block-wrapper')) {
-                wrapper = document.createElement('div');
-                wrapper.classList.add('code-block-wrapper', 'relative');
-                pre.parentNode.insertBefore(wrapper, pre);
-                wrapper.appendChild(pre);
-            }
-            
-            // 添加复制按钮
-            const copyBtn = document.createElement('button');
-            copyBtn.innerHTML = '<i class="far fa-copy"></i>';
-            copyBtn.className = 'absolute top-2 right-2 text-gray-400 hover:text-primary p-1 rounded text-sm bg-gray-100 dark:bg-gray-800';
-            copyBtn.title = '复制代码';
-            
-            copyBtn.addEventListener('click', () => {
-                const text = codeBlock.textContent;
-                navigator.clipboard.writeText(text).then(() => {
-                    // 显示成功提示
-                    copyBtn.innerHTML = '<i class="fas fa-check"></i>';
-                    copyBtn.classList.add('text-green-500');
-                    // 2秒后恢复
-                    setTimeout(() => {
-                        copyBtn.innerHTML = '<i class="far fa-copy"></i>';
-                        copyBtn.classList.remove('text-green-500');
-                    }, 2000);
-                }).catch((err) => {
-                    console.error('复制失败:', err);
-                    copyBtn.innerHTML = '<i class="fas fa-times"></i>';
-                    copyBtn.classList.add('text-red-500');
-                    // 2秒后恢复
-                    setTimeout(() => {
-                        copyBtn.innerHTML = '<i class="far fa-copy"></i>';
-                        copyBtn.classList.remove('text-red-500');
-                    }, 2000);
-                });
-            });
-            
-            wrapper.appendChild(copyBtn);
-        }
     });
 }
 
@@ -1563,4 +1668,13 @@ function fixInternalLinks(container) {
             }
         }
     });
-} 
+}
+
+// 在mdContentLoaded事件监听器中添加处理调用
+document.addEventListener('mdContentLoaded', function(event) {
+    // 处理数学公式
+    processKaTeXFormulas();
+    
+    // 处理Mermaid图表
+    processMermaidDiagrams();
+}); 

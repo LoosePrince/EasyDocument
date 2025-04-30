@@ -82,6 +82,7 @@ const config = {
   extensions: {
     math: true, // 数学公式支持(KaTeX)
     highlight: true, // 语法高亮
+    mermaid: true, // Mermaid图表渲染
   },
 
   // 页脚设置
