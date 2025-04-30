@@ -177,4 +177,5 @@ layout: {
 查看各分类的详细配置说明，了解每个配置项的功能和可选值：
 
 - [外观设置](?path=配置详解/外观设置.md)
-- [path.json 结构与手动编写](?path=配置详解/path-json结构.md) 
+- [path.json 结构与手动编写](?path=配置详解/path-json结构.md)
+- [GitHub与Git功能](?path=配置详解/GitHub与Git功能.md) 
