@@ -44,7 +44,7 @@ const config = {
     nav_links: [ // 导航栏链接
       {
         text: "首页",
-        url: "index.html"
+        url: "/"
       },
       {
         text: "文档",
