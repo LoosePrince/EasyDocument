@@ -83,6 +83,18 @@ const config = {
     math: true, // 数学公式支持(KaTeX)
     highlight: true, // 语法高亮
     mermaid: true, // Mermaid图表渲染
+    github: {
+      enable: true, // 是否启用GitHub相关功能
+      repo_url: "https://github.com/LoosePrince/EasyDocument", // GitHub仓库地址
+      edit_link: true, // 是否启用参与编辑链接（点击一键跳转github的编辑）
+      branch: "main", // 默认分支名称
+      show_avatar: true // 显示参与编辑者的github头像而不是名称
+    },
+    git: {
+      enable: true, // 是否启用Git相关功能
+      show_last_modified: true, // 启用文档最后编辑时间显示
+      show_contributors: true // 启用参与者名称显示
+    }
   },
 
   // 页脚设置

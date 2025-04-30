@@ -162,7 +162,7 @@ ol[data-style="1."] > li::before {
 /* 代码块 */
 .markdown-body pre {
     margin: 1em 0;
-    padding: 16px;
+    padding: 4px;
     overflow: auto;
     font-size: 85%;
     line-height: 1.45;

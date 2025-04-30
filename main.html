@@ -91,6 +91,35 @@
                 <!-- 文档内容将由JS填充 -->
                 <p class="text-gray-400">正在加载文档...</p>
             </article>
+            
+            <!-- Git和GitHub信息区域 -->
+            <div id="git-info-container" class="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+                <!-- 最后编辑时间 -->
+                <div id="last-modified" class="flex items-center mb-2" style="display: none;">
+                    <i class="fas fa-history mr-2"></i>
+                    <span>最后更新：</span>
+                    <time id="modified-time" class="ml-1 font-medium"></time>
+                    <span class="ml-1">by</span>
+                    <span id="modified-author" class="ml-1 font-medium"></span>
+                </div>
+                
+                <!-- 贡献者信息 -->
+                <div id="contributors-container" class="flex flex-wrap items-center mb-2" style="display: none;">
+                    <i class="fas fa-users mr-2"></i>
+                    <span>贡献者：</span>
+                    <div id="contributors-list" class="ml-1 flex flex-wrap items-center gap-2">
+                        <!-- 贡献者将由JS填充 -->
+                    </div>
+                </div>
+                
+                <!-- GitHub编辑链接 -->
+                <div id="github-edit-container" class="flex items-center" style="display: none;">
+                    <i class="fab fa-github mr-2"></i>
+                    <a id="github-edit-link" href="#" target="_blank" class="text-primary hover:underline">
+                        在GitHub上编辑此页面
+                    </a>
+                </div>
+            </div>
         </main>
         
         <!-- 右侧目录 -->

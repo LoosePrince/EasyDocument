@@ -964,7 +964,7 @@ async function loadDocument(relativePath) {
     }
 }
 
-// 渲染文档内容（从loadDocument函数抽离出来，便于复用）
+// 渲染文档内容
 async function renderDocument(relativePath, content, contentDiv, tocNav) {
     // 清空内容区域
     contentDiv.innerHTML = '';
@@ -1081,6 +1081,9 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
         
         // 添加上一篇/下一篇导航
         generatePrevNextNavigation(relativePath);
+        
+        // 显示Git和GitHub相关信息
+        updateGitInfo(relativePath);
         
         // 触发内容已加载事件，用于KaTeX自动渲染和其他需要在内容加载后执行的操作
         document.dispatchEvent(new CustomEvent('mdContentLoaded', {
@@ -1739,6 +1742,189 @@ function fixInternalLinks(container) {
                 // 已有path参数但没有root参数
                 link.setAttribute('href', `${href}&root=${encodeURIComponent(currentRoot)}`);
             }
+        }
+    });
+}
+
+// 更新Git和GitHub相关信息
+function updateGitInfo(relativePath) {
+    // 查找当前文档的Git信息
+    const docInfo = findNodeByPath(pathData, relativePath);
+    
+    if (!docInfo || !docInfo.git) {
+        // 隐藏Git信息区域
+        hideGitInfoElements();
+        return;
+    }
+    
+    // 是否启用Git和GitHub功能
+    const gitEnabled = config.extensions?.git?.enable !== false;
+    const githubEnabled = config.extensions?.github?.enable !== false;
+    
+    if (!gitEnabled && !githubEnabled) {
+        hideGitInfoElements();
+        return;
+    }
+    
+    // 处理最后修改时间信息
+    if (gitEnabled && config.extensions?.git?.show_last_modified !== false && docInfo.git.last_modified) {
+        const lastModified = docInfo.git.last_modified;
+        const modifiedTime = document.getElementById('modified-time');
+        const modifiedAuthor = document.getElementById('modified-author');
+        const lastModifiedContainer = document.getElementById('last-modified');
+        
+        if (modifiedTime && modifiedAuthor && lastModifiedContainer) {
+            const date = new Date(lastModified.date + ' ' + lastModified.time);
+            const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            
+            modifiedTime.textContent = formattedDate;
+            modifiedAuthor.textContent = lastModified.author;
+            
+            // 显示最后修改时间区域（使用普通DOM操作替代Alpine.js）
+            lastModifiedContainer.style.display = 'flex';
+        }
+    }
+    
+    // 处理贡献者信息
+    const contributorsList = document.getElementById('contributors-list');
+    const contributorsContainer = document.getElementById('contributors-container');
+    
+    if (contributorsList && contributorsContainer && docInfo.git.contributors && docInfo.git.contributors.length > 0) {
+        // 判断是否显示头像 - 受github.enable影响
+        const showAvatar = githubEnabled && config.extensions?.github?.show_avatar === true;
+        
+        // 判断是否显示贡献者列表 - 当显示头像时忽略git.enable和git.show_contributors设置
+        const showContributors = showAvatar || (gitEnabled && config.extensions?.git?.show_contributors !== false);
+        
+        if (showContributors) {
+            // 清空现有贡献者列表
+            contributorsList.innerHTML = '';
+            
+            // 添加所有贡献者
+            docInfo.git.contributors.forEach(contributor => {
+                if (showAvatar) {
+                    // 如果有GitHub头像
+                    if (contributor.github_avatar) {
+                        // 创建头像元素
+                        const avatar = document.createElement('img');
+                        avatar.src = contributor.github_avatar;
+                        avatar.alt = contributor.name;
+                        avatar.title = `${contributor.name} (${contributor.commits} commits)`;
+                        avatar.className = 'w-6 h-6 rounded-full';
+                        
+                        // 图片加载失败时的处理
+                        avatar.onerror = function() {
+                            // 移除失败的图片
+                            this.parentNode?.removeChild(this);
+                            
+                            // 创建替代的昵称标签
+                            const nameSpan = document.createElement('span');
+                            nameSpan.textContent = contributor.name;
+                            nameSpan.title = `${contributor.commits} commits`;
+                            nameSpan.className = 'px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs';
+                            
+                            // 如果是链接内的图片，将标签加入链接
+                            if (this.parentNode && this.parentNode.tagName === 'A') {
+                                this.parentNode.appendChild(nameSpan);
+                            } else {
+                                contributorsList.appendChild(nameSpan);
+                            }
+                        };
+                        
+                        // 设置头像链接
+                        if (contributor.github_username) {
+                            const avatarLink = document.createElement('a');
+                            avatarLink.href = `https://github.com/${contributor.github_username}`;
+                            avatarLink.target = '_blank';
+                            avatarLink.title = `${contributor.name} (${contributor.commits} commits)`;
+                            avatarLink.appendChild(avatar);
+                            contributorsList.appendChild(avatarLink);
+                        } else {
+                            contributorsList.appendChild(avatar);
+                        }
+                    } else {
+                        // 没有GitHub头像，直接显示昵称
+                        const nameSpan = document.createElement('span');
+                        nameSpan.textContent = contributor.name;
+                        nameSpan.title = `${contributor.commits} commits`;
+                        nameSpan.className = 'px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs';
+                        
+                        // 如果有GitHub用户名，添加链接
+                        if (contributor.github_username) {
+                            const nameLink = document.createElement('a');
+                            nameLink.href = `https://github.com/${contributor.github_username}`;
+                            nameLink.target = '_blank';
+                            nameLink.appendChild(nameSpan);
+                            contributorsList.appendChild(nameLink);
+                        } else {
+                            contributorsList.appendChild(nameSpan);
+                        }
+                    }
+                } else {
+                    // 显示昵称模式，保持不变
+                    // 创建名称标签
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = contributor.name;
+                    nameSpan.title = `${contributor.commits} commits`;
+                    nameSpan.className = 'px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs';
+                    
+                    // 如果有GitHub用户名，创建链接
+                    if (contributor.github_username) {
+                        const nameLink = document.createElement('a');
+                        nameLink.href = `https://github.com/${contributor.github_username}`;
+                        nameLink.target = '_blank';
+                        nameLink.appendChild(nameSpan);
+                        contributorsList.appendChild(nameLink);
+                    } else {
+                        contributorsList.appendChild(nameSpan);
+                    }
+                }
+            });
+            
+            // 显示贡献者区域
+            contributorsContainer.style.display = 'flex';
+        } else {
+            // 如果不显示贡献者，隐藏容器
+            contributorsContainer.style.display = 'none';
+        }
+    }
+    
+    // 处理GitHub编辑链接
+    if (githubEnabled && config.extensions?.github?.edit_link !== false) {
+        const githubEditLink = document.getElementById('github-edit-link');
+        const githubEditContainer = document.getElementById('github-edit-container');
+        
+        if (githubEditLink && githubEditContainer) {
+            // 获取GitHub配置
+            const repoUrl = config.extensions?.github?.repo_url || '';
+            const branch = config.extensions?.github?.branch || 'main';
+            
+            if (repoUrl) {
+                // 构建GitHub编辑链接
+                const rootDir = config.document?.root_dir || 'data';
+                const editUrl = `${repoUrl.replace(/\/$/, '')}/edit/${branch}/${rootDir}/${relativePath}`;
+                
+                githubEditLink.href = editUrl;
+                
+                // 显示GitHub编辑链接区域（使用普通DOM操作替代Alpine.js）
+                githubEditContainer.style.display = 'flex';
+            }
+        }
+    }
+}
+
+// 隐藏所有Git信息元素
+function hideGitInfoElements() {
+    const elements = [
+        document.getElementById('last-modified'),
+        document.getElementById('contributors-container'),
+        document.getElementById('github-edit-container')
+    ];
+    
+    elements.forEach(element => {
+        if (element) {
+            // 使用普通DOM操作替代Alpine.js
+            element.style.display = 'none';
         }
     });
 }
