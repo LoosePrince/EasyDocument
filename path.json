@@ -319,6 +319,11 @@
                             }
                         ]
                     }
+                },
+                {
+                    "title": "GitHub与Git功能配置",
+                    "path": "配置详解/GitHub与Git功能.md",
+                    "children": []
                 }
             ],
             "index": {
