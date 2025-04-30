@@ -12,9 +12,12 @@ EasyDocument 是一个轻量级、免编译的纯静态前端文档系统。它�
 ## 技术栈
 
 - **TailwindCSS**: 用于快速构建现代化响应式界面
-- **Shadcn/UI**: 提供美观的UI组件
 - **FontAwesome**: 丰富的图标库
 - **Alpine.js**: 轻量级JavaScript框架，用于实现交互功能
+- **Marked.js**: 将Markdown转换为HTML
+- **Mermaid**: 流程图和序列图
+- **KaTeX**: 数学公式渲染
+- **Canvg**: 矢量图渲染
 
 ## 项目结构
 

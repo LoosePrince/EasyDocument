@@ -39,26 +39,3 @@ export function processKaTeXFormulas() {
         block.innerHTML = hiddenContents[index];
     });
 }
-
-// 预加载KaTeX字体
-export function preloadKaTeXFonts() {
-    // 检查是否启用了数学公式支持
-    if (!config.extensions.math) return;
-
-    const fontFiles = [
-        'KaTeX_Main-Regular.woff2',
-        'KaTeX_Math-Italic.woff2',
-        'KaTeX_Size1-Regular.woff2',
-        'KaTeX_Size2-Regular.woff2'
-    ];
-    
-    fontFiles.forEach(fontFile => {
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.href = `https://cdn.jsdelivr.net/npm/vditor@3.9.4/dist/js/katex/fonts/${fontFile}`;
-        link.as = 'font';
-        link.type = 'font/woff2';
-        link.crossOrigin = 'anonymous';
-        document.head.appendChild(link);
-    });
-} 
