@@ -306,6 +306,9 @@ ol[data-style="1."] > li::before {
 .markdown-body .mermaid {
     margin: 16px 0;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 /* Mermaid 暗黑模式样式覆盖 */
@@ -330,15 +333,6 @@ ol[data-style="1."] > li::before {
 
 .dark .mermaid .label {
     color: #e0e0e0;
-}
-
-.dark .mermaid .node rect,
-.dark .mermaid .node circle,
-.dark .mermaid .node ellipse,
-.dark .mermaid .node polygon,
-.dark .mermaid .node path {
-    fill: #333 !important;
-    stroke: #555 !important;
 }
 
 /* 代码块包装器和复制按钮 */
