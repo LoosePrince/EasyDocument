@@ -266,19 +266,21 @@ body {
     /* 移动端菜单按钮位置调整 */
     #mobile-menu-toggle {
         position: fixed;
-        top: 90% !important;
+        bottom: 1rem;
         left: 16px;
         z-index: 998;
+        width: 44px;
+        height: 44px;
     }
     
     /* 移动端TOC目录按钮 */
     #toc-toggle {
         position: fixed;
-        bottom: 80px;
-        right: 20px;
-        width: 44px;
+        top: 45%;
+        right: 0;
+        width: 35px;
         height: 44px;
-        border-radius: 50%;
+        border-radius: 30px 0 0 30px;
         background-color: var(--color-primary, #3b82f6);
         color: white;
         display: flex;

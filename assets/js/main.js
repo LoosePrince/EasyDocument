@@ -5,6 +5,7 @@
 import config from '../../config.js';
 import { initDarkMode, initThemeEvents } from './theme.js';
 import { generateNavLinks, generateMobileNavLinks, updateFooterElements } from './navigation.js';
+import documentCache from './document-cache.js';
 
 // 搜索数据
 let searchData = null;
@@ -278,42 +279,219 @@ function performSearch() {
     
     const query = searchInput.value.trim().toLowerCase();
     
-    if (query.length < 2) {
-        searchResultsContainer.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-4">请输入至少2个字符</p>';
+    if (query.length < config.search.min_chars) {
+        searchResultsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 text-center py-4">请输入至少${config.search.min_chars}个字符</p>`;
         return;
     }
     
-    if (!searchData || searchData.length === 0) {
+    // 检查搜索数据和缓存文档
+    const hasSearchData = searchData && searchData.length > 0;
+    const persistentCachedPaths = documentCache.getPersistentCachedPaths();
+    const preloadedPaths = documentCache.getPreloadedPaths();
+    const hasCachedDocs = persistentCachedPaths.length > 0 || preloadedPaths.length > 0;
+    
+    if (!hasSearchData && !hasCachedDocs) {
         searchResultsContainer.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-4">搜索数据未加载，请稍后重试</p>';
         return;
     }
     
-    // 执行搜索
-    const results = searchData.filter(item => {
-        const titleMatch = item.title.toLowerCase().includes(query);
-        const contentMatch = item.content.toLowerCase().includes(query);
-        const keywordMatch = item.keywords && item.keywords.some(keyword => keyword.toLowerCase().includes(query));
+    // 存储搜索结果
+    let results = [];
+    
+    // 搜索静态索引
+    if (hasSearchData) {
+        const indexResults = searchData.filter(item => {
+            const titleMatch = item.title.toLowerCase().includes(query);
+            const contentMatch = item.content.toLowerCase().includes(query);
+            const keywordMatch = item.keywords && item.keywords.some(keyword => keyword.toLowerCase().includes(query));
+            
+            return titleMatch || contentMatch || keywordMatch;
+        });
         
-        return titleMatch || contentMatch || keywordMatch;
+        // 将索引结果添加到总结果中
+        results = results.concat(indexResults);
+    }
+    
+    // 搜索缓存文档（如果有）
+    if (hasCachedDocs && config.search.search_cached) {
+        // 在页面上显示正在搜索缓存的提示
+        const searchingIndicator = document.createElement('div');
+        searchingIndicator.id = 'searching-indicator';
+        searchingIndicator.className = 'text-gray-500 dark:text-gray-400 text-center py-2 italic';
+        searchingIndicator.innerHTML = '正在搜索缓存文档...';
+        
+        // 如果结果为空，则直接显示搜索中提示
+        if (results.length === 0) {
+            searchResultsContainer.innerHTML = '';
+            searchResultsContainer.appendChild(searchingIndicator);
+        } else {
+            // 如果已有结果，则添加到结果下方
+            searchResultsContainer.appendChild(searchingIndicator);
+        }
+        
+        // 由于可能搜索时间较长，使用setTimeout确保UI不会被阻塞
+        setTimeout(() => {
+            // 从缓存中搜索
+            const cachedResults = searchCachedDocuments(query);
+            
+            // 合并结果并去重
+            results = mergeAndDedupResults(results, cachedResults);
+            
+            // 显示最终搜索结果
+            displaySearchResults(results, query, searchResultsContainer);
+            
+            // 移除搜索中提示
+            const indicator = document.getElementById('searching-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }, 10);
+    } else {
+        // 如果没有缓存文档，直接显示结果
+        displaySearchResults(results, query, searchResultsContainer);
+    }
+}
+
+// 搜索缓存的文档
+function searchCachedDocuments(query) {
+    const results = [];
+    
+    // 获取持久缓存和预加载缓存的路径
+    const persistentCachedPaths = documentCache.getPersistentCachedPaths();
+    const preloadedPaths = documentCache.getPreloadedPaths();
+    
+    // 搜索持久缓存
+    persistentCachedPaths.forEach(path => {
+        const cachedDoc = documentCache.cache[path];
+        if (!cachedDoc || !cachedDoc.content) return;
+        
+        const content = cachedDoc.content;
+        
+        // 简单解析标题（从内容中提取第一个标题）
+        let title = getTitleFromContent(content) || path.split('/').pop() || '未命名文档';
+        
+        // 检查是否匹配
+        const titleLower = title.toLowerCase();
+        const contentLower = content.toLowerCase();
+        
+        const titleMatch = titleLower.includes(query);
+        const contentMatch = contentLower.includes(query);
+        
+        if (titleMatch || contentMatch) {
+            results.push({
+                path: path,
+                title: title,
+                content: content,
+                keywords: [], // 缓存文档没有关键词
+                fromCache: true, // 标记为来自缓存
+                cacheType: 'persistent' // 标记为持久缓存
+            });
+        }
     });
     
-    // 显示搜索结果
+    // 搜索预加载缓存
+    preloadedPaths.forEach(path => {
+        const content = documentCache.preloadCache[path];
+        if (!content) return;
+        
+        // 简单解析标题（从内容中提取第一个标题）
+        let title = getTitleFromContent(content) || path.split('/').pop() || '未命名文档';
+        
+        // 检查是否匹配
+        const titleLower = title.toLowerCase();
+        const contentLower = content.toLowerCase();
+        
+        const titleMatch = titleLower.includes(query);
+        const contentMatch = contentLower.includes(query);
+        
+        if (titleMatch || contentMatch) {
+            results.push({
+                path: path,
+                title: title,
+                content: content,
+                keywords: [], // 缓存文档没有关键词
+                fromCache: true, // 标记为来自缓存
+                cacheType: 'preloaded' // 标记为预加载缓存
+            });
+        }
+    });
+    
+    return results;
+}
+
+// 从文档内容中提取标题
+function getTitleFromContent(content) {
+    // 尝试提取第一个h1标题
+    const h1Match = content.match(/<h1[^>]*>(.*?)<\/h1>/i) || content.match(/# (.*?)(?:\n|$)/);
+    if (h1Match) return h1Match[1].trim();
+    
+    // 尝试提取title标签
+    const titleMatch = content.match(/<title[^>]*>(.*?)<\/title>/i);
+    if (titleMatch) return titleMatch[1].trim();
+    
+    return null;
+}
+
+// 合并并去重结果
+function mergeAndDedupResults(results1, results2) {
+    // 合并两个结果数组
+    const combined = [...results1, ...results2];
+    
+    // 使用Map按路径去重
+    const uniqueMap = new Map();
+    combined.forEach(item => {
+        // 如果已存在相同路径的项，且当前项来自缓存，则更新
+        if (uniqueMap.has(item.path) && item.fromCache) {
+            uniqueMap.set(item.path, item);
+        } 
+        // 如果不存在或当前项不是来自缓存，则添加
+        else if (!uniqueMap.has(item.path)) {
+            uniqueMap.set(item.path, item);
+        }
+    });
+    
+    // 转换回数组
+    return Array.from(uniqueMap.values());
+}
+
+// 显示搜索结果
+function displaySearchResults(results, query, searchResultsContainer) {
     if (results.length === 0) {
         searchResultsContainer.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-4">未找到匹配的结果</p>';
     } else {
         let html = '<ul class="space-y-3">';
         
-        results.forEach(result => {
+        // 限制结果数量
+        const maxResults = config.search.max_results || 20;
+        const limitedResults = results.slice(0, maxResults);
+        
+        limitedResults.forEach(result => {
             // 构建URL
             let url = 'main.html?path=' + result.path;
             
             // 提取匹配的内容片段
             let contentPreview = extractContentPreview(result.content, query);
             
+            // 确定图标和CSS
+            let cacheIcon = '', cacheClass = '';
+            
+            if (result.fromCache) {
+                if (result.cacheType === 'preloaded') {
+                    cacheIcon = '<span class="text-purple-500 dark:text-purple-400 ml-1" title="预加载文档"><i class="fas fa-bolt"></i></span>';
+                    cacheClass = 'border-purple-100 dark:border-purple-900';
+                } else {
+                    cacheIcon = '<span class="text-blue-500 dark:text-blue-400 ml-1" title="缓存文档"><i class="fas fa-database"></i></span>';
+                    cacheClass = 'border-blue-100 dark:border-blue-900';
+                }
+            }
+            
             html += `
-            <li class="border-b dark:border-gray-700 pb-3">
+            <li class="border-b dark:border-gray-700 ${cacheClass} pb-3">
                 <a href="${url}" class="block hover:bg-gray-50 dark:hover:bg-gray-700 rounded p-2" onclick="closeSearchModal()">
-                    <h4 class="text-primary font-medium">${highlightText(result.title, query)}</h4>
+                    <div class="flex items-center">
+                        <h4 class="text-primary font-medium">${highlightText(result.title, query)}</h4>
+                        ${cacheIcon}
+                    </div>
                     <p class="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mt-1">${contentPreview}</p>
                     <div class="text-gray-500 dark:text-gray-400 text-xs mt-1 flex items-center">
                         <i class="fas fa-file-alt mr-1"></i> ${result.path}
@@ -321,6 +499,13 @@ function performSearch() {
                 </a>
             </li>`;
         });
+        
+        // 如果结果被截断，显示提示
+        if (results.length > maxResults) {
+            html += `<li class="text-center text-gray-500 dark:text-gray-400 text-sm py-2">
+                        还有 ${results.length - maxResults} 条结果未显示
+                    </li>`;
+        }
         
         html += '</ul>';
         searchResultsContainer.innerHTML = html;

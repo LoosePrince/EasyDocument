@@ -70,12 +70,14 @@ const config = {
     code_copy_button: true, // 代码块是否显示复制按钮
   },
 
-  // 搜索功能（暂不实现）
+  // 搜索功能
   search: {
-    enable: false, // 是否启用搜索
+    enable: true, // 已启用搜索
     min_chars: 2, // 最小搜索字符数
     max_results: 20, // 最大结果数
-    placeholder: "搜索文档..." // 搜索框占位符文本
+    placeholder: "搜索文档...", // 搜索框占位符文本
+    search_cached: true, // 是否搜索缓存的文档内容
+    search_on_type: false // 是否在输入时自动搜索（暂未实现）
   },
 
   // 插件与扩展
