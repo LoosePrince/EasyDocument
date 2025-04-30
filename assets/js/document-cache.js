@@ -25,7 +25,7 @@ const documentCache = {
     get(path) {
         // 先检查预加载缓存
         if (this.preloadCache[path]) {
-            console.log(`从预加载缓存获取文档: ${path}`);
+            // console.log(`从预加载缓存获取文档: ${path}`);
             return this.preloadCache[path];
         }
         
@@ -35,7 +35,7 @@ const documentCache = {
             // 检查缓存是否过期
             const now = Date.now();
             if (now - cachedDoc.timestamp < this.cacheTime) {
-                console.log(`从持久缓存获取文档: ${path}`);
+                // console.log(`从持久缓存获取文档: ${path}`);
                 return cachedDoc.content;
             }
             
@@ -202,7 +202,7 @@ const documentCache = {
         // 限制预加载数量
         const limitedPaths = pathsToPreload.slice(0, maxPreload);
         
-        console.log(`准备预加载 ${limitedPaths.length} 个文档:`, limitedPaths);
+        // console.log(`准备预加载 ${limitedPaths.length} 个文档:`, limitedPaths);
         
         // 开始预加载
         limitedPaths.forEach(path => {
@@ -231,7 +231,7 @@ const documentCache = {
             .then(content => {
                 // 将内容存储到预加载缓存
                 this.setPreloaded(path, content);
-                console.log(`文档预加载成功: ${path}`);
+                // console.log(`文档预加载成功: ${path}`);
             })
             .catch(error => {
                 // 移除标记
@@ -316,7 +316,7 @@ const documentCache = {
             if (cacheString) {
                 const cacheData = JSON.parse(cacheString);
                 this.cache = cacheData;
-                console.log(`从localStorage加载了 ${Object.keys(this.cache).length} 个缓存文档`);
+                // console.log(`从localStorage加载了 ${Object.keys(this.cache).length} 个缓存文档`);
             }
         } catch (e) {
             console.error('从localStorage加载缓存信息失败:', e);
