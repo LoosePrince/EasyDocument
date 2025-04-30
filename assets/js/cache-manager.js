@@ -90,11 +90,11 @@ function bindCacheModalEvents() {
             fetch('path.json')
                 .then(response => response.json())
                 .then(pathData => {
-                    documentCache.autoPreloadDocuments(pathData, 10);
+                    documentCache.preloadAllDocuments(pathData);
                     updateCacheList();
                     
                     // 显示通知
-                    showNotification('已开始预加载文档', 'success');
+                    showNotification('已开始预加载所有文档', 'success');
                 })
                 .catch(error => {
                     console.error('加载path.json失败:', error);
