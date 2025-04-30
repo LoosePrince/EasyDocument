@@ -160,54 +160,118 @@ const documentCache = {
     },
     
     /**
-     * 从path.json自动预加载文档
-     * @param {Object} pathData 文档路径数据
+     * 查找路径在pathData中的节点及其父节点
+     * @private
+     */
+    _findNodeAndParent(pathData, targetPath) {
+        function find(node, parent = null) {
+            // 检查当前节点是否是文件或索引
+            if (node.path === targetPath) return { node, parent };
+            if (node.index && node.index.path === targetPath) return { node: node.index, parent };
+
+            // 递归查找子节点
+            if (node.children) {
+                for (const child of node.children) {
+                    const found = find(child, node); // 传递当前节点作为父节点
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+        return find(pathData);
+    },
+    
+    /**
+     * 自动预加载相关文档（同级文件、父级索引、直接子级索引）
+     * @param {string} currentPath 当前查看的文档路径
+     * @param {Object} pathData 完整的文档结构数据
      * @param {number} maxPreload 最大预加载数量
      */
-    autoPreloadDocuments(pathData, maxPreload = 10) {
-        if (!pathData) return;
-        
-        // 收集所有文档路径
-        const allPaths = [];
-        
-        // 递归遍历文档结构
-        const collectPaths = (node, currentPath = '') => {
-            // 处理索引文档
-            if (node.index && node.index.path) {
-                allPaths.push(node.index.path);
-            }
-            
-            // 处理叶子节点
-            if (node.path && !node.children && node.path.includes('.')) {
-                allPaths.push(node.path);
-            }
-            
-            // 递归处理子节点
-            if (node.children && Array.isArray(node.children)) {
-                node.children.forEach(child => {
-                    collectPaths(child);
-                });
-            }
-        };
-        
-        collectPaths(pathData);
-        
-        // 过滤掉已加载和已预加载的文档
-        const pathsToPreload = allPaths.filter(path => 
-            !this.cache[path] && 
+    autoPreloadDocuments(currentPath, pathData, maxPreload = 5) {
+        if (!currentPath || !pathData) return;
+
+        const result = this._findNodeAndParent(pathData, currentPath);
+        if (!result || !result.parent) {
+            // console.log('自动预加载：未找到当前路径的父节点', currentPath);
+            return; // 无法确定同级
+        }
+
+        const parentNode = result.parent;
+        const pathsToPreload = new Set();
+
+        // 1. 添加同级文件和父级索引
+        if (parentNode.children) {
+            parentNode.children.forEach(sibling => {
+                if (sibling.path !== currentPath && sibling.path && sibling.path.includes('.')) { // 是文件且不是当前文件
+                    pathsToPreload.add(sibling.path);
+                }
+            });
+        }
+        if (parentNode.index && parentNode.index.path !== currentPath) {
+            pathsToPreload.add(parentNode.index.path);
+        }
+
+        // 2. 添加直接子文件夹的索引文件
+        if (parentNode.children) {
+             parentNode.children.forEach(sibling => {
+                // 检查sibling是否为文件夹（有children或有index）且不是当前文件/目录本身对应的节点
+                if ((sibling.children || sibling.index) && sibling.path !== currentPath && (!result.node || sibling.path !== result.node.path)) {
+                    if(sibling.index && sibling.index.path) {
+                        pathsToPreload.add(sibling.index.path);
+                    }
+                }
+            });
+        }
+
+        // 过滤掉已缓存/预加载/正在加载的
+        const filteredPaths = [...pathsToPreload].filter(path => 
             !this.preloadCache[path] && 
+            !this.cache[path] && 
             !this.loadingDocs.has(path)
         );
-        
-        // 限制预加载数量
-        const limitedPaths = pathsToPreload.slice(0, maxPreload);
-        
-        // console.log(`准备预加载 ${limitedPaths.length} 个文档:`, limitedPaths);
-        
-        // 开始预加载
-        limitedPaths.forEach(path => {
-            this.preloadDocument(path);
-        });
+
+        // 限制数量并开始预加载
+        const limitedPaths = filteredPaths.slice(0, maxPreload);
+        if (limitedPaths.length > 0) {
+            console.log(`自动预加载 ${limitedPaths.length} 个相关文档:`, limitedPaths);
+            limitedPaths.forEach(path => this.preloadDocument(path));
+        }
+    },
+
+    /**
+     * 预加载所有在path.json中定义的文档
+     * @param {Object} pathData 完整的文档结构数据
+     * @param {number} maxPreload 最大预加载数量（可选，默认无限制）
+     */
+    preloadAllDocuments(pathData, maxPreload = Infinity) {
+        if (!pathData) return;
+
+        const allPaths = new Set();
+
+        // 递归收集所有路径
+        const collectPaths = (node) => {
+            if (node.path && node.path.includes('.')) allPaths.add(node.path); // 文件
+            if (node.index && node.index.path) allPaths.add(node.index.path); // 索引
+            if (node.children) node.children.forEach(collectPaths);
+        };
+
+        collectPaths(pathData);
+
+        // 过滤掉已缓存/预加载/正在加载的
+        const filteredPaths = [...allPaths].filter(path => 
+            !this.preloadCache[path] && 
+            !this.cache[path] && 
+            !this.loadingDocs.has(path)
+        );
+
+        // 限制数量并开始预加载
+        const limitedPaths = filteredPaths.slice(0, maxPreload);
+         if (limitedPaths.length > 0) {
+            console.log(`手动预加载 ${limitedPaths.length} 个文档:`, limitedPaths);
+            limitedPaths.forEach(path => this.preloadDocument(path));
+        } else {
+             console.log('没有需要手动预加载的新文档。');
+         }
     },
     
     /**
@@ -215,6 +279,11 @@ const documentCache = {
      * @param {string} path 文档路径
      */
     preloadDocument(path) {
+        // 防止重复添加加载任务
+        if(this.loadingDocs.has(path) || this.preloadCache[path] || this.cache[path]){
+            return;
+        }
+        
         // 标记为正在加载
         this.loadingDocs.add(path);
         
