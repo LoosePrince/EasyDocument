@@ -140,6 +140,10 @@ body {
     font-size: 0.8rem;
 }
 
+#toc-nav a {
+    padding: 0.2rem 0.55rem;
+}
+
 /* 去除目录列表项的标记 */
 #toc-nav li, #sidebar-nav li {
     list-style-type: none;

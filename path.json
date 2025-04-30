@@ -3,7 +3,27 @@
     "path": "",
     "index": {
         "title": "EasyDocument 文档中心",
-        "path": "README.md"
+        "path": "README.md",
+        "git": {
+            "last_modified": {
+                "date": "2025-04-29",
+                "time": "20:28:07",
+                "author": "树梢",
+                "email": "pfingan@foxmail.com",
+                "message": "v1.0.0",
+                "github_username": "LoosePrince",
+                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+            },
+            "contributors": [
+                {
+                    "name": "树梢",
+                    "email": "pfingan@foxmail.com",
+                    "commits": 1,
+                    "github_username": "LoosePrince",
+                    "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                }
+            ]
+        }
     },
     "children": [
         {
@@ -13,12 +33,52 @@
                 {
                     "title": "Markdown语法指南",
                     "path": "快速入门/Markdown语法.md",
-                    "children": []
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "date": "2025-04-29",
+                            "time": "20:28:07",
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "v1.0.0",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 1,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            }
+                        ]
+                    }
                 }
             ],
             "index": {
                 "title": "快速入门",
-                "path": "快速入门/README.md"
+                "path": "快速入门/README.md",
+                "git": {
+                    "last_modified": {
+                        "date": "2025-04-29",
+                        "time": "22:07:03",
+                        "author": "树梢",
+                        "email": "pfingan@foxmail.com",
+                        "message": "更新文档",
+                        "github_username": "LoosePrince",
+                        "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                    },
+                    "contributors": [
+                        {
+                            "name": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "commits": 3,
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        }
+                    ]
+                }
             }
         },
         {
@@ -28,27 +88,127 @@
                 {
                     "title": "基本使用流程",
                     "path": "使用指南/基本使用流程.md",
-                    "children": []
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "date": "2025-04-29",
+                            "time": "22:07:03",
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "更新文档",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 2,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            }
+                        ]
+                    }
                 },
                 {
                     "title": "文档内链接",
                     "path": "使用指南/文档内链接.md",
-                    "children": []
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "date": "2025-04-29",
+                            "time": "22:07:03",
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "更新文档",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 2,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            }
+                        ]
+                    }
                 },
                 {
                     "title": "文档编写规范",
                     "path": "使用指南/文档编写规范.md",
-                    "children": []
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "date": "2025-04-29",
+                            "time": "20:28:07",
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "v1.0.0",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 1,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            }
+                        ]
+                    }
                 },
                 {
                     "title": "构建工具与搜索功能",
                     "path": "使用指南/构建工具与搜索功能.md",
-                    "children": []
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "date": "2025-04-29",
+                            "time": "23:07:22",
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "添加搜索相关文档",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 1,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            }
+                        ]
+                    }
                 }
             ],
             "index": {
                 "title": "使用指南",
-                "path": "使用指南/README.md"
+                "path": "使用指南/README.md",
+                "git": {
+                    "last_modified": {
+                        "date": "2025-04-29",
+                        "time": "20:28:07",
+                        "author": "树梢",
+                        "email": "pfingan@foxmail.com",
+                        "message": "v1.0.0",
+                        "github_username": "LoosePrince",
+                        "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                    },
+                    "contributors": [
+                        {
+                            "name": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "commits": 1,
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        }
+                    ]
+                }
             }
         },
         {
@@ -58,12 +218,52 @@
                 {
                     "title": "美化文档示例 - EasyDocument",
                     "path": "示例与模板/美化文档示例.html",
-                    "children": []
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "date": "2025-04-29",
+                            "time": "20:58:29",
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "修改美化文档",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 2,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            }
+                        ]
+                    }
                 }
             ],
             "index": {
                 "title": "示例与模板",
-                "path": "示例与模板/README.md"
+                "path": "示例与模板/README.md",
+                "git": {
+                    "last_modified": {
+                        "date": "2025-04-29",
+                        "time": "20:28:07",
+                        "author": "树梢",
+                        "email": "pfingan@foxmail.com",
+                        "message": "v1.0.0",
+                        "github_username": "LoosePrince",
+                        "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                    },
+                    "contributors": [
+                        {
+                            "name": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "commits": 1,
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        }
+                    ]
+                }
             }
         },
         {
@@ -73,17 +273,77 @@
                 {
                     "title": "外观设置",
                     "path": "配置详解/外观设置.md",
-                    "children": []
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "date": "2025-04-29",
+                            "time": "20:28:07",
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "v1.0.0",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 1,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            }
+                        ]
+                    }
                 },
                 {
                     "title": "path.json 结构与手动编写",
                     "path": "配置详解/path-json结构.md",
-                    "children": []
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "date": "2025-04-29",
+                            "time": "22:09:11",
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "移除无效说明",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 2,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            }
+                        ]
+                    }
                 }
             ],
             "index": {
                 "title": "配置详解",
-                "path": "配置详解/README.md"
+                "path": "配置详解/README.md",
+                "git": {
+                    "last_modified": {
+                        "date": "2025-04-29",
+                        "time": "22:07:03",
+                        "author": "树梢",
+                        "email": "pfingan@foxmail.com",
+                        "message": "更新文档",
+                        "github_username": "LoosePrince",
+                        "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                    },
+                    "contributors": [
+                        {
+                            "name": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "commits": 2,
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        }
+                    ]
+                }
             }
         }
     ]
