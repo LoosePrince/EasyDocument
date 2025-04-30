@@ -1,12 +1,14 @@
 <header class="bg-white dark:bg-gray-800 shadow-sm h-16" x-data="{ mobileMenuOpen: false }">
         <div class="container mx-auto px-4 h-full relative">
             <div class="flex justify-between items-center h-full">
-                <div class="flex items-center space-x-2">
-                    <img src="assets/img/logo.svg" alt="" class="site-logo h-8 w-8" id="site-logo-img">
-                    <span class="text-lg font-bold" id="site-title">
-                        <span class="text-primary">Easy</span><span class="dark:text-white">Document</span>
-                    </span>
-                </div>
+                <a href="/">
+                    <div class="flex items-center space-x-2">
+                        <img src="assets/img/logo.svg" alt="" class="site-logo h-8 w-8" id="site-logo-img">
+                        <span class="text-lg font-bold" id="site-title">
+                            <span class="text-primary">Easy</span><span class="dark:text-white">Document</span>
+                        </span>
+                    </div>
+                </a>
                 <div class="flex items-center space-x-4">
                     <nav class="hidden md:flex space-x-6" id="desktop-nav">
                         <a href="index.html" class="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors font-medium">首页</a>
@@ -74,85 +76,3 @@
         </div>
     </div>
 </div>
-
-<script>
-// 在页面加载后从config中读取网站名称并更新标题和logo alt属性
-document.addEventListener('DOMContentLoaded', function() {
-    if (window.config && window.config.site && window.config.site.name) {
-        // 更新logo alt属性
-        document.getElementById('site-logo-img').alt = window.config.site.name;
-        
-        // 更新网站标题
-        const siteName = window.config.site.name;
-        // 如果名称包含特定格式（如EasyDocument），则保持样式
-        if (siteName.match(/^Easy/i)) {
-            const firstPart = siteName.substring(0, 4);
-            const restPart = siteName.substring(4);
-            document.getElementById('site-title').innerHTML = 
-                `<span class="text-primary">${firstPart}</span><span class="dark:text-white">${restPart}</span>`;
-        } else {
-            document.getElementById('site-title').innerHTML = 
-                `<span class="text-primary">${siteName}</span>`;
-        }
-        
-        // 更新导航链接
-        if (window.config.navigation && window.config.navigation.nav_links) {
-            const navLinks = window.config.navigation.nav_links;
-            
-            // 更新桌面导航
-            const desktopNav = document.getElementById('desktop-nav');
-            if (desktopNav) {
-                // 清空现有链接
-                desktopNav.innerHTML = '';
-                
-                // 添加配置中的链接
-                navLinks.forEach(link => {
-                    const a = document.createElement('a');
-                    a.href = link.url;
-                    a.className = 'text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors font-medium';
-                    
-                    if (link.external) {
-                        a.target = '_blank';
-                    }
-                    
-                    let html = '';
-                    if (link.icon) {
-                        html += `<i class="fab fa-${link.icon} mr-1"></i> `;
-                    }
-                    html += link.text;
-                    
-                    a.innerHTML = html;
-                    desktopNav.appendChild(a);
-                });
-            }
-            
-            // 更新移动端导航
-            const mobileNav = document.getElementById('mobile-nav');
-            if (mobileNav) {
-                // 清空现有链接
-                mobileNav.innerHTML = '';
-                
-                // 添加配置中的链接
-                navLinks.forEach(link => {
-                    const a = document.createElement('a');
-                    a.href = link.url;
-                    a.className = 'block px-2 py-1 text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors font-medium';
-                    
-                    if (link.external) {
-                        a.target = '_blank';
-                    }
-                    
-                    let html = '';
-                    if (link.icon) {
-                        html += `<i class="fab fa-${link.icon} mr-1"></i> `;
-                    }
-                    html += link.text;
-                    
-                    a.innerHTML = html;
-                    mobileNav.appendChild(a);
-                });
-            }
-        }
-    }
-});
-</script>

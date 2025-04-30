@@ -155,46 +155,5 @@
     
     <!-- 加载底部信息 -->
     <div id="footer-container"></div>
-
-    <script>
-    // 在页面加载后从config中读取网站信息并更新
-    document.addEventListener('DOMContentLoaded', function() {
-        if (window.config) {
-            // 更新logo alt属性
-            const homeLogo = document.getElementById('home-logo');
-            if (homeLogo && window.config.site && window.config.site.name) {
-                homeLogo.alt = window.config.site.name + " Logo";
-            }
-            
-            // 更新网站标题
-            const homeTitle = document.getElementById('home-title');
-            if (homeTitle && window.config.site && window.config.site.name) {
-                const siteName = window.config.site.name;
-                // 如果名称包含特定格式（如EasyDocument），则保持样式
-                if (siteName.match(/^Easy/i)) {
-                    const firstPart = siteName.substring(0, 4);
-                    const restPart = siteName.substring(4);
-                    homeTitle.innerHTML = 
-                        `<span class="text-primary">${firstPart}</span><span class="dark:text-white">${restPart}</span>`;
-                } else {
-                    homeTitle.innerHTML = 
-                        `<span class="text-primary">${siteName}</span>`;
-                }
-            }
-            
-            // 更新副标题
-            const homeSubtitle = document.getElementById('home-subtitle');
-            if (homeSubtitle && window.config.site && window.config.site.title) {
-                homeSubtitle.textContent = window.config.site.title;
-            }
-            
-            // 更新描述
-            const homeDescription = document.getElementById('home-description');
-            if (homeDescription && window.config.site && window.config.site.description) {
-                homeDescription.textContent = window.config.site.description;
-            }
-        }
-    });
-    </script>
 </body>
 </html> 
