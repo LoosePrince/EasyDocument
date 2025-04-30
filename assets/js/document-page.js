@@ -1746,11 +1746,37 @@ function fixInternalLinks(container) {
     });
 }
 
+// 查找文档信息对象（文件节点或索引对象）
+function findDocInfoByPath(node, targetPath) {
+    // 检查当前节点本身是否是目标文件（非索引）
+    if (node.path === targetPath && (!node.children || node.children.length === 0)) { 
+        return node;
+    }
+
+    // 检查当前节点的索引文件是否是目标
+    if (node.index && node.index.path === targetPath) {
+        return node.index; // 返回index对象，它包含git信息
+    }
+
+    // 递归检查子节点
+    if (node.children) {
+        for (const child of node.children) {
+            const found = findDocInfoByPath(child, targetPath);
+            if (found) {
+                return found;
+            }
+        }
+    }
+
+    return null; // 未找到
+}
+
 // 更新Git和GitHub相关信息
 function updateGitInfo(relativePath) {
-    // 查找当前文档的Git信息
-    const docInfo = findNodeByPath(pathData, relativePath);
+    // 查找当前文档的Git信息 - 使用新的查找函数
+    const docInfo = findDocInfoByPath(pathData, relativePath);
     
+    // 检查docInfo是否存在，以及是否有git属性
     if (!docInfo || !docInfo.git) {
         // 隐藏Git信息区域
         hideGitInfoElements();
@@ -1761,12 +1787,14 @@ function updateGitInfo(relativePath) {
     const gitEnabled = config.extensions?.git?.enable !== false;
     const githubEnabled = config.extensions?.github?.enable !== false;
     
+    // 如果Git和GitHub都禁用，则不显示
     if (!gitEnabled && !githubEnabled) {
         hideGitInfoElements();
         return;
     }
     
     // 处理最后修改时间信息
+    // 只有当git启用且显示最后修改时间时才处理
     if (gitEnabled && config.extensions?.git?.show_last_modified !== false && docInfo.git.last_modified) {
         const lastModified = docInfo.git.last_modified;
         const modifiedTime = document.getElementById('modified-time');
@@ -1780,15 +1808,24 @@ function updateGitInfo(relativePath) {
             modifiedTime.textContent = formattedDate;
             modifiedAuthor.textContent = lastModified.author;
             
-            // 显示最后修改时间区域（使用普通DOM操作替代Alpine.js）
+            // 显示最后修改时间区域
             lastModifiedContainer.style.display = 'flex';
+        } else {
+            // 如果元素不存在，确保容器隐藏
+            const lastModifiedContainer = document.getElementById('last-modified');
+            if (lastModifiedContainer) lastModifiedContainer.style.display = 'none';
         }
+    } else {
+        // 如果不显示，确保容器隐藏
+        const lastModifiedContainer = document.getElementById('last-modified');
+        if (lastModifiedContainer) lastModifiedContainer.style.display = 'none';
     }
     
     // 处理贡献者信息
     const contributorsList = document.getElementById('contributors-list');
     const contributorsContainer = document.getElementById('contributors-container');
     
+    // 检查贡献者列表和容器是否存在，以及是否有贡献者数据
     if (contributorsList && contributorsContainer && docInfo.git.contributors && docInfo.git.contributors.length > 0) {
         // 判断是否显示头像 - 受github.enable影响
         const showAvatar = githubEnabled && config.extensions?.github?.show_avatar === true;
@@ -1887,9 +1924,13 @@ function updateGitInfo(relativePath) {
             // 如果不显示贡献者，隐藏容器
             contributorsContainer.style.display = 'none';
         }
+    } else {
+        // 如果没有贡献者数据或元素不存在，确保容器隐藏
+        if (contributorsContainer) contributorsContainer.style.display = 'none';
     }
     
     // 处理GitHub编辑链接
+    // 只有当github启用且显示编辑链接时才处理
     if (githubEnabled && config.extensions?.github?.edit_link !== false) {
         const githubEditLink = document.getElementById('github-edit-link');
         const githubEditContainer = document.getElementById('github-edit-container');
@@ -1906,10 +1947,21 @@ function updateGitInfo(relativePath) {
                 
                 githubEditLink.href = editUrl;
                 
-                // 显示GitHub编辑链接区域（使用普通DOM操作替代Alpine.js）
+                // 显示GitHub编辑链接区域
                 githubEditContainer.style.display = 'flex';
+            } else {
+                 // 如果没有配置repoUrl，隐藏容器
+                 githubEditContainer.style.display = 'none';
             }
+        } else {
+            // 如果元素不存在，确保容器隐藏
+            const githubEditContainer = document.getElementById('github-edit-container');
+            if (githubEditContainer) githubEditContainer.style.display = 'none';
         }
+    } else {
+        // 如果不显示，确保容器隐藏
+        const githubEditContainer = document.getElementById('github-edit-container');
+        if (githubEditContainer) githubEditContainer.style.display = 'none';
     }
 }
 
