@@ -83,12 +83,14 @@ function loadDefaultHeader() {
     <header class="bg-white dark:bg-gray-800 shadow-sm h-16" x-data="{ mobileMenuOpen: false }">
         <div class="container mx-auto px-4 h-full relative">
             <div class="flex justify-between items-center h-full">
-                <div class="flex items-center space-x-2">
-                    <img src="${config.appearance.logo}" alt="${config.site.name}" class="site-logo h-8 w-8">
-                    <span class="text-lg font-bold">
-                        ${formatSiteName(config.site.name)}
-                    </span>
-                </div>
+                <a href="${config.site.base_url}">
+                    <div class="flex items-center space-x-2">
+                        <img src="${config.appearance.logo}" alt="${config.site.name}" class="site-logo h-8 w-8">
+                        <span class="text-lg font-bold">
+                            ${formatSiteName(config.site.name)}
+                        </span>
+                    </div>
+                </a>
                 <div class="flex items-center space-x-4">
                     <nav class="hidden md:flex space-x-6">
                         ${generateNavLinks(config.navigation.nav_links)}

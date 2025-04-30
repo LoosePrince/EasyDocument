@@ -1898,7 +1898,8 @@ function updateGitInfo(relativePath) {
         
         if (modifiedTime && modifiedAuthor && lastModifiedContainer) {
             const date = new Date(lastModified.date + ' ' + lastModified.time);
-            const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+            const formattedDate = date.toLocaleString('zh-CN', options);
             
             modifiedTime.textContent = formattedDate;
             modifiedAuthor.textContent = lastModified.author;
