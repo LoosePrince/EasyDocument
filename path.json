@@ -6,11 +6,11 @@
         "path": "README.md",
         "git": {
             "last_modified": {
-                "date": "2025-04-29",
-                "time": "20:28:07",
+                "date": "2025-04-30",
+                "time": "05:17:33",
                 "author": "树梢",
                 "email": "pfingan@foxmail.com",
-                "message": "v1.0.0",
+                "message": "添加GitHub与Git功能配置文档，更新README以包含新功能链接；\n在路径和搜索索引中添加GitHub与Git功能相关信息，增强文档的可用性和完整性；\n增加自动化脚本。",
                 "github_username": "LoosePrince",
                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
             },
@@ -18,7 +18,7 @@
                 {
                     "name": "树梢",
                     "email": "pfingan@foxmail.com",
-                    "commits": 1,
+                    "commits": 2,
                     "github_username": "LoosePrince",
                     "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                 }
@@ -37,7 +37,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "20:28:07",
+                            "time": "12:28:07",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "v1.0.0",
@@ -62,7 +62,7 @@
                 "git": {
                     "last_modified": {
                         "date": "2025-04-29",
-                        "time": "22:07:03",
+                        "time": "14:07:03",
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
                         "message": "更新文档",
@@ -92,7 +92,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "22:07:03",
+                            "time": "14:07:03",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新文档",
@@ -117,7 +117,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "22:07:03",
+                            "time": "14:07:03",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新文档",
@@ -142,7 +142,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "20:28:07",
+                            "time": "12:28:07",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "v1.0.0",
@@ -166,11 +166,11 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-04-29",
-                            "time": "23:07:22",
+                            "date": "2025-04-30",
+                            "time": "05:17:33",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "添加搜索相关文档",
+                            "message": "添加GitHub与Git功能配置文档，更新README以包含新功能链接；\n在路径和搜索索引中添加GitHub与Git功能相关信息，增强文档的可用性和完整性；\n增加自动化脚本。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -178,7 +178,7 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 1,
+                                "commits": 2,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                             }
@@ -192,7 +192,7 @@
                 "git": {
                     "last_modified": {
                         "date": "2025-04-29",
-                        "time": "20:28:07",
+                        "time": "12:28:07",
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
                         "message": "v1.0.0",
@@ -222,7 +222,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "20:58:29",
+                            "time": "12:58:29",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "修改美化文档",
@@ -247,7 +247,7 @@
                 "git": {
                     "last_modified": {
                         "date": "2025-04-29",
-                        "time": "20:28:07",
+                        "time": "12:28:07",
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
                         "message": "v1.0.0",
@@ -277,7 +277,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "20:28:07",
+                            "time": "12:28:07",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "v1.0.0",
@@ -302,7 +302,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "22:09:11",
+                            "time": "14:09:11",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "移除无效说明",
@@ -323,7 +323,27 @@
                 {
                     "title": "GitHub与Git功能配置",
                     "path": "配置详解/GitHub与Git功能.md",
-                    "children": []
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "date": "2025-04-30",
+                            "time": "05:17:33",
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "添加GitHub与Git功能配置文档，更新README以包含新功能链接；\n在路径和搜索索引中添加GitHub与Git功能相关信息，增强文档的可用性和完整性；\n增加自动化脚本。",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 1,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            }
+                        ]
+                    }
                 }
             ],
             "index": {
@@ -331,11 +351,11 @@
                 "path": "配置详解/README.md",
                 "git": {
                     "last_modified": {
-                        "date": "2025-04-29",
-                        "time": "22:07:03",
+                        "date": "2025-04-30",
+                        "time": "05:17:33",
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
-                        "message": "更新文档",
+                        "message": "添加GitHub与Git功能配置文档，更新README以包含新功能链接；\n在路径和搜索索引中添加GitHub与Git功能相关信息，增强文档的可用性和完整性；\n增加自动化脚本。",
                         "github_username": "LoosePrince",
                         "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                     },
@@ -343,7 +363,7 @@
                         {
                             "name": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "commits": 2,
+                            "commits": 3,
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         }
