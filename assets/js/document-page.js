@@ -994,13 +994,18 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
         // 处理代码块 - 必须在处理数学公式之前执行
         const codeBlocks = markdownBody.querySelectorAll('pre code');
         codeBlocks.forEach(block => {
+            // **首先检查是否是 Mermaid 代码块**
+            if (block.classList.contains('language-mermaid')) {
+                return; // 由 mermaid-handler.js 处理，此处跳过
+            }
+
+            // 获取 pre 元素
+            const preElement = block.parentElement;
+            
             // 应用 highlight.js
             if (config.extensions.highlight) {
                 hljs.highlightElement(block);
             }
-            
-            // 获取 pre 元素
-            const preElement = block.parentElement;
             
             // 创建代码块包装器
             const wrapper = document.createElement('div');
@@ -1090,6 +1095,81 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
             detail: { markdownBody, contentPath: relativePath }
         }));
         
+        // 添加图片点击放大功能
+        const images = contentDiv.querySelectorAll('img:not(a > img)'); // 选择不在链接内的图片
+        
+        // 确保模态框只创建一次
+        let imageModal = document.getElementById('custom-image-modal');
+        if (!imageModal) {
+            // 创建自定义图片放大模态框
+            imageModal = document.createElement('div');
+            imageModal.id = 'custom-image-modal';
+            imageModal.className = 'custom-image-modal';
+            
+            // 添加关闭按钮
+            const closeBtn = document.createElement('div');
+            closeBtn.className = 'close-btn';
+            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            closeBtn.onclick = () => {
+                imageModal.classList.remove('active');
+                setTimeout(() => {
+                    modalImg.src = ''; // 清空图像源，减少内存占用
+                }, 300); // 等待transition完成
+            };
+            
+            // 添加图片元素
+            const modalImg = document.createElement('img');
+            modalImg.alt = '放大图片';
+            
+            // 点击图片也可以关闭模态框
+            modalImg.onclick = () => {
+                imageModal.classList.remove('active');
+                setTimeout(() => {
+                    modalImg.src = ''; // 清空图像源
+                }, 300);
+            };
+            
+            // 按ESC键关闭模态框
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && imageModal.classList.contains('active')) {
+                    imageModal.classList.remove('active');
+                    setTimeout(() => {
+                        modalImg.src = ''; // 清空图像源
+                    }, 300);
+                }
+            });
+            
+            // 组装模态框
+            imageModal.appendChild(modalImg);
+            imageModal.appendChild(closeBtn);
+            document.body.appendChild(imageModal);
+        }
+        
+        // 为每个图片添加点击事件
+        images.forEach(img => {
+            img.style.cursor = 'zoom-in'; // 添加鼠标样式
+            img.addEventListener('click', () => {
+                const modalImg = imageModal.querySelector('img');
+                modalImg.src = img.src;
+                modalImg.alt = img.alt || '放大图片';
+                
+                // 显示模态框（延迟一点点以确保图片已加载）
+                setTimeout(() => {
+                    imageModal.classList.add('active');
+                }, 50);
+            });
+        });
+        
+        // 修正外部链接
+        fixExternalLinks(contentDiv);
+        // 修正外部图片链接（如果需要）
+        fixExternalImageLinks(contentDiv);
+        
+        // 修正内部链接
+        fixInternalLinks(contentDiv);
+
+        // 生成并滚动目录
+        const tocItems = generateToc(contentDiv);
     } catch (error) {
         console.error('渲染文档时出错:', error);
         contentDiv.innerHTML = '<div class="error-message">文档渲染失败</div>';
