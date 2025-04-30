@@ -2,12 +2,11 @@
 name: Deploy static content to Pages
 
 on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: ["main"]
-
-  # Allows you to run this workflow manually from the Actions tab
+  # 只保留手动触发选项，移除push触发
   workflow_dispatch:
+  # 添加自定义事件触发
+  repository_dispatch:
+    types: [deploy-pages]
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -31,6 +30,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # 如果是通过repository_dispatch触发，使用传递的ref
+          ref: ${{ github.event.client_payload.ref || github.ref }}
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

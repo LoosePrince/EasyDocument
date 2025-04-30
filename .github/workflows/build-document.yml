@@ -1,4 +1,4 @@
-name: Build Document
+name: Build Document and Deploy
 
 on:
   push:
@@ -13,6 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # 需要写入权限来提交文件
+      pages: write    # 需要Pages写入权限
+      id-token: write # 需要部署Pages的权限
+
+    # 配置GitHub Pages环境
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: 检出代码
@@ -68,4 +75,17 @@ jobs:
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }} 
+          branch: ${{ github.ref }}
+          
+      # 部署到GitHub Pages的步骤
+      - name: 设置Pages
+        uses: actions/configure-pages@v5
+        
+      - name: 上传构建结果
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+          
+      - name: 部署到GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4 
