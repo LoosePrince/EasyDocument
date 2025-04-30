@@ -374,35 +374,15 @@ export function processMermaidDiagrams() {
             // 获取当前主题
             const isDarkMode = document.documentElement.classList.contains('dark');
             
-            // 确保初始化配置与当前主题匹配
-            // 注意：这里的 re-initialize 可能不是必要的，因为上面已经替换了DOM
-            // 并且 mermaid.init 会处理新找到的 .mermaid 元素
-            // 除非主题切换逻辑需要它，否则可以考虑移除或简化
-            // mermaid.initialize({ 
-            //     startOnLoad: false,
-            //     theme: isDarkMode ? 'dark' : 'default',
-            //     darkMode: isDarkMode,
-            //     themeVariables: {
-            //         dark: {
-            //             mainBkg: '#242424',
-            //             nodeBkg: '#333',
-            //             nodeBorder: '#555',
-            //             lineColor: '#d3d3d3', 
-            //             edgeLabelBackground: '#333',
-            //             textColor: '#e0e0e0'
-            //         }
-            //     }
-            // });
-            
             // 使用新的容器选择器或保持原样（如果 init 仍能找到 .mermaid 类）
             const mermaidElementsToRender = document.querySelectorAll('.mermaid-container .mermaid');
 
             if (mermaidElementsToRender.length > 0) {
                 // 调用 mermaid.init 来渲染图表
                 mermaid.init(undefined, mermaidElementsToRender);
-            } else {
+            } /** else {
                 console.log("No mermaid diagrams found to render after processing.");
-            }
+            }**/
 
         } catch (err) {
             console.error('Mermaid处理或初始化错误:', err);

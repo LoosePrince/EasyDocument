@@ -947,7 +947,7 @@ async function loadDocument(relativePath) {
     // 首先检查缓存中是否有该文档
     const cachedContent = documentCache.get(relativePath);
     if (cachedContent) {
-        console.log(`从缓存加载文档: ${relativePath}`);
+        // console.log(`从缓存加载文档: ${relativePath}`);
         
         // 更新进度条到90%
         updateProgressBar(90);
@@ -1212,7 +1212,7 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
             contentDiv.appendChild(markdownBody);
         } else {
             // Markdown 文件处理
-            console.log('渲染 Markdown 文件:', relativePath);
+            // console.log('渲染 Markdown 文件:', relativePath);
             
             // 预处理Markdown内容，处理块级数学公式
             content = preProcessMathContent(content);
