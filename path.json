@@ -246,11 +246,11 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-04-29",
-                            "time": "12:58:29",
+                            "date": "2025-05-01",
+                            "time": "06:29:23",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "修改美化文档",
+                            "message": "重构嵌入HTML内容功能，支持全屏显示及暗黑模式同步和js执行",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -258,7 +258,7 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 2,
+                                "commits": 3,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                             }
