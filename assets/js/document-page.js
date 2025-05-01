@@ -2489,10 +2489,18 @@ function syncDarkMode(iframeDoc) {
 function generateTocFromIframe(iframeDoc, tocNav) {
     tocNav.innerHTML = '';
     
-    // 查找iframe中的所有标题元素
-    const headings = iframeDoc.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    
+    // 获取配置的目录深度
     const tocDepth = config.document.toc_depth || 3;
+    
+    // 构建标题选择器，仅选择配置的深度内的标题
+    let headingSelector = '';
+    for (let i = 1; i <= tocDepth; i++) {
+        headingSelector += (headingSelector ? ', ' : '') + 'h' + i;
+    }
+    
+    // 查找iframe中符合深度要求的标题元素
+    const headings = iframeDoc.querySelectorAll(headingSelector);
+    
     // 是否显示标题编号
     const showNumbering = config.document.toc_numbering || false;
     
@@ -2509,7 +2517,6 @@ function generateTocFromIframe(iframeDoc, tocNav) {
     
     headingsArray.forEach((heading, index) => {
         const level = parseInt(heading.tagName.substring(1));
-        if (level > tocDepth) return;
 
         // 如果标题没有ID，添加一个
         if (!heading.id) {
@@ -2658,7 +2665,18 @@ function updateIframeTocHighlight(iframe) {
         }
         
         const iframeDoc = iframe.contentWindow.document;
-        const headingElements = iframeDoc.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        
+        // 获取配置的目录深度
+        const tocDepth = config.document.toc_depth || 3;
+        
+        // 构建标题选择器，仅选择配置的深度内的标题
+        let headingSelector = '';
+        for (let i = 1; i <= tocDepth; i++) {
+            headingSelector += (headingSelector ? ', ' : '') + 'h' + i;
+        }
+        
+        // 查找符合深度要求的标题元素
+        const headingElements = iframeDoc.querySelectorAll(headingSelector);
         
         if (headingElements.length === 0) {
             return;
