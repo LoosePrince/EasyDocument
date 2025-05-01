@@ -1328,6 +1328,9 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
                 breaks: true,
                 headerIds: true,
                 mangle: false,
+                highlight(code, lang) {
+                    return hljs.highlight(lang || 'plaintext', code).value;
+                }
             });
             
             // 设置解析后的内容
