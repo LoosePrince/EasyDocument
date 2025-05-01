@@ -710,7 +710,7 @@ function expandParentFolders(element) {
 async function loadContentFromUrl() {
     // 如果已经在加载中，则不重复加载
     if (isLoadingDocument) {
-        console.log('文档正在加载中，跳过重复加载请求');
+        // console.log('文档正在加载中，跳过重复加载请求');
         return;
     }
     
@@ -1088,15 +1088,228 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
         const isHtmlFile = relativePath.toLowerCase().endsWith('.html');
         
         if (isHtmlFile) {
-            // HTML 文件直接渲染
-            console.log('渲染 HTML 文件:', relativePath);
-            markdownBody.innerHTML = content;
+            // HTML 文件使用iframe嵌入
+            // console.log('使用iframe嵌入 HTML 文件:', relativePath);
+            
+            // 创建iframe包装容器
+            const iframeContainer = document.createElement('div');
+            iframeContainer.className = 'iframe-container relative mb-4 rounded-lg';
+            
+            // 创建iframe元素 - 使其成为let，以便于后面可以重新引用
+            let iframeElement = document.createElement('iframe');
+            iframeElement.className = 'w-full';
+            iframeElement.style.minHeight = '500px'; // 默认最小高度
+            iframeElement.title = '嵌入HTML内容';
+            iframeElement.sandbox = 'allow-same-origin'; // 初始沙箱限制，禁止执行JS
+            
+            // 添加iframe加载事件 - 尝试自动调整高度
+            iframeElement.onload = () => {
+                try {
+                    // 尝试获取内容高度并调整
+                    setTimeout(() => {
+                        try {
+                            const iframeDoc = iframeElement.contentWindow.document;
+                            const bodyHeight = iframeDoc.body.scrollHeight;
+                            // 设置iframe高度，最小500px
+                            iframeElement.style.height = Math.max(500, bodyHeight + 50) + 'px';
+                            
+                            // 同步暗黑模式
+                            syncDarkMode(iframeDoc);
+                            
+                            // 生成HTML文件的目录
+                            generateTocFromIframe(iframeDoc, tocNav);
+                        } catch (e) {
+                            console.warn('自动调整iframe高度失败:', e);
+                        }
+                    }, 200);
+                } catch (e) {
+                    console.warn('iframe加载事件处理出错:', e);
+                }
+            };
+            
+            // 创建控制按钮容器
+            const controlsContainer = document.createElement('div');
+            controlsContainer.className = 'controls-container';
+            
+            // 创建加载JS按钮
+            const loadJsButton = document.createElement('button');
+            loadJsButton.className = 'bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm flex items-center';
+            loadJsButton.innerHTML = '<i class="fas fa-play mr-1"></i> 运行脚本';
+            loadJsButton.title = '运行HTML中的JavaScript代码';
+            
+            // 防止重复点击
+            let jsLoaded = false;
+            
+            loadJsButton.addEventListener('click', () => {
+                if (jsLoaded) return; // 防止重复执行
+                jsLoaded = true;
+                
+                // 改变按钮状态为加载中
+                loadJsButton.className = 'bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-sm flex items-center';
+                loadJsButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 加载中...';
+                
+                // 创建新iframe元素
+                const newIframe = document.createElement('iframe');
+                newIframe.className = iframeElement.className;
+                newIframe.style.minHeight = iframeElement.style.minHeight;
+                newIframe.title = iframeElement.title;
+                newIframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals';
+                
+                // 设置加载事件
+                newIframe.onload = () => {
+                    try {
+                        // 如果HTML内容被加载完成
+                        const iframeDoc = newIframe.contentWindow.document;
+                        const iframeWin = newIframe.contentWindow;
+                        
+                        // 同步暗黑模式
+                        syncDarkMode(iframeDoc);
+                        
+                        // 生成HTML文件的目录
+                        setTimeout(() => {
+                            // 从iframe中提取标题元素并生成TOC
+                            generateTocFromIframe(iframeDoc, tocNav);
+                        }, 200);
+                        
+                        // 手动触发DOM和load事件
+                        setTimeout(() => {
+                            try {
+                                // 手动执行脚本
+                                const scriptEvent = new Event('DOMContentLoaded');
+                                iframeDoc.dispatchEvent(scriptEvent);
+                                
+                                const loadEvent = new Event('load');
+                                iframeWin.dispatchEvent(loadEvent);
+                                
+                                // 改变按钮状态为成功
+                                loadJsButton.className = 'bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm flex items-center';
+                                loadJsButton.innerHTML = '<i class="fas fa-check mr-1"></i> 已运行';
+                                
+                                // 自动调整iframe高度函数
+                                const resizeIframe = () => {
+                                    try {
+                                        const bodyHeight = iframeDoc.body.scrollHeight;
+                                        newIframe.style.height = Math.max(500, bodyHeight + 50) + 'px';
+                                    } catch (e) {
+                                        console.warn('调整iframe高度时出错:', e);
+                                    }
+                                };
+                                
+                                // 初始调整高度
+                                resizeIframe();
+                                // 再次尝试调整高度（防止有延迟加载的内容）
+                                setTimeout(resizeIframe, 500);
+                                
+                                // 使用ResizeObserver监听内容变化
+                                try {
+                                    const resizeObserver = new ResizeObserver(debounce(() => {
+                                        resizeIframe();
+                                    }, 100));
+                                    resizeObserver.observe(iframeDoc.body);
+                                } catch (e) {
+                                    console.warn('无法监控iframe内容变化:', e);
+                                    // 降级方案：定时检查高度变化
+                                    const intervalId = setInterval(resizeIframe, 1000);
+                                    // 30秒后停止检查
+                                    setTimeout(() => clearInterval(intervalId), 30000);
+                                }
+                                
+                                // 添加iframe内容变化监听
+                                try {
+                                    const mutationObserver = new MutationObserver(debounce(() => {
+                                        resizeIframe();
+                                    }, 100));
+                                    
+                                    mutationObserver.observe(iframeDoc.body, {
+                                        childList: true,
+                                        subtree: true,
+                                        attributes: true
+                                    });
+                                } catch (e) {
+                                    console.warn('无法监控iframe DOM变化:', e);
+                                }
+                            } catch (e) {
+                                console.error('执行iframe JS时出错:', e);
+                                loadJsButton.className = 'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm flex items-center';
+                                loadJsButton.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i> 执行失败';
+                            }
+                        }, 100);
+                    } catch (e) {
+                        console.error('iframe加载事件处理出错:', e);
+                        loadJsButton.className = 'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm flex items-center';
+                        loadJsButton.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i> 加载失败';
+                    }
+                };
+                
+                // 设置iframe内容
+                newIframe.srcdoc = content;
+                
+                // 替换旧iframe
+                iframeContainer.replaceChild(newIframe, iframeElement);
+                iframeElement = newIframe; // 更新引用
+            });
+            
+            // 创建调整大小按钮
+            const resizeButton = document.createElement('button');
+            resizeButton.className = 'bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded-md text-sm flex items-center';
+            resizeButton.innerHTML = '<i class="fas fa-expand-alt mr-1"></i> 全屏';
+            resizeButton.title = '全屏显示';
+            
+            // 切换全屏显示
+            let isFullscreen = false;
+            resizeButton.addEventListener('click', () => {
+                isFullscreen = !isFullscreen;
+                
+                if (isFullscreen) {
+                    // 仅让iframe全屏
+                    iframeElement.classList.add('iframe-fullscreen');
+                    resizeButton.innerHTML = '<i class="fas fa-compress-alt mr-1"></i> 退出全屏';
+                    
+                    // 添加关闭按钮，以防iframe内无法点击控制按钮
+                    const closeFullscreenBtn = document.createElement('button');
+                    closeFullscreenBtn.id = 'close-fullscreen-btn';
+                    closeFullscreenBtn.className = 'fixed top-4 right-4 z-[9999] bg-white dark:bg-gray-800 text-gray-800 dark:text-white p-2 rounded-full shadow-lg';
+                    closeFullscreenBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    closeFullscreenBtn.addEventListener('click', () => {
+                        iframeElement.classList.remove('iframe-fullscreen');
+                        isFullscreen = false;
+                        resizeButton.innerHTML = '<i class="fas fa-expand-alt mr-1"></i> 全屏';
+                        document.getElementById('close-fullscreen-btn')?.remove();
+                    });
+                    document.body.appendChild(closeFullscreenBtn);
+                } else {
+                    // 退出全屏
+                    iframeElement.classList.remove('iframe-fullscreen');
+                    resizeButton.innerHTML = '<i class="fas fa-expand-alt mr-1"></i> 全屏';
+                    document.getElementById('close-fullscreen-btn')?.remove();
+                }
+            });
+            
+            // 组装控制按钮
+            controlsContainer.appendChild(loadJsButton);
+            
+            controlsContainer.appendChild(resizeButton);
+            
+            // 设置iframe初始内容（不运行JS）
+            iframeElement.srcdoc = content;
+            
+            // 组装整个容器
+            iframeContainer.appendChild(iframeElement);
+            iframeContainer.appendChild(controlsContainer);
+            
+            // 添加提示消息
+            const hintMessage = document.createElement('div');
+            hintMessage.className = 'text-xs text-gray-500 dark:text-gray-400 mt-1 ml-2';
+            hintMessage.textContent = '此HTML内容在沙箱中运行，点击"运行脚本"按钮以启用JavaScript';
+            
+            markdownBody.appendChild(iframeContainer);
+            markdownBody.appendChild(hintMessage);
             
             // 添加到内容区域
             contentDiv.appendChild(markdownBody);
         } else {
             // Markdown 文件处理
-            console.log('渲染 Markdown 文件:', relativePath);
+            // console.log('渲染 Markdown 文件:', relativePath);
             
             // 预处理Markdown内容，处理块级数学公式
             content = preProcessMathContent(content);
@@ -2215,3 +2428,312 @@ document.addEventListener('mdContentLoaded', function(event) {
     // 处理Mermaid图表
     processMermaidDiagrams();
 }); 
+
+// 添加暗黑模式同步功能
+function syncDarkMode(iframeDoc) {
+    if (!iframeDoc || !iframeDoc.documentElement) return;
+    
+    try {
+        // 检查外部文档是否是暗黑模式
+        const isParentDark = document.documentElement.classList.contains('dark');
+        
+        // 将iframe文档的html元素设置为与父文档相同的模式
+        if (isParentDark) {
+            iframeDoc.documentElement.classList.add('dark');
+        } else {
+            iframeDoc.documentElement.classList.remove('dark');
+        }
+        
+        // 监听外部文档暗黑模式变化
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'class') {
+                    const isParentDarkNow = document.documentElement.classList.contains('dark');
+                    if (isParentDarkNow) {
+                        iframeDoc.documentElement.classList.add('dark');
+                    } else {
+                        iframeDoc.documentElement.classList.remove('dark');
+                    }
+                }
+            });
+        });
+        
+        // 设置观察器选项
+        const observerConfig = { attributes: true };
+        
+        // 开始观察document.documentElement的class变化
+        observer.observe(document.documentElement, observerConfig);
+        
+        // 添加暗黑模式样式到iframe中
+        const darkModeStyle = iframeDoc.createElement('style');
+        darkModeStyle.textContent = `
+            /* 基本暗黑模式样式 */
+            .dark {
+                color-scheme: dark;
+            }
+            
+            .dark body {
+                background-color: #1F2937;
+                color: #f3f4f6;
+            }
+        `;
+        
+        // 将样式添加到iframe的head中
+        iframeDoc.head.appendChild(darkModeStyle);
+    } catch (e) {
+        console.warn('同步暗黑模式失败:', e);
+    }
+}
+
+// 从iframe中生成目录
+function generateTocFromIframe(iframeDoc, tocNav) {
+    tocNav.innerHTML = '';
+    
+    // 查找iframe中的所有标题元素
+    const headings = iframeDoc.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    
+    const tocDepth = config.document.toc_depth || 3;
+    // 是否显示标题编号
+    const showNumbering = config.document.toc_numbering || false;
+    
+    // 用于生成标题编号的计数器
+    const counters = [0, 0, 0, 0, 0, 0];
+    let lastLevel = 0;
+    
+    const headingsArray = Array.from(headings);
+    
+    if (headingsArray.length === 0) {
+        tocNav.innerHTML = '<p class="text-gray-400 text-sm">暂无目录</p>';
+        return; // 如果没有标题，直接返回
+    }
+    
+    headingsArray.forEach((heading, index) => {
+        const level = parseInt(heading.tagName.substring(1));
+        if (level > tocDepth) return;
+
+        // 如果标题没有ID，添加一个
+        if (!heading.id) {
+            heading.id = `iframe-heading-${index}`;
+        }
+        const id = heading.id;
+        
+        // 处理标题编号
+        let prefix = '';
+        if (showNumbering) {
+            // 更新计数器
+            if (level > lastLevel) {
+                // 如果新标题级别比上一个大，将所有更深层级的计数器重置为0
+                for (let i = lastLevel; i < level; i++) {
+                    counters[i]++;
+                }
+                for (let i = level; i < counters.length; i++) {
+                    counters[i] = 0;
+                }
+            } else if (level === lastLevel) {
+                // 如果新标题与上一个同级，递增计数器
+                counters[level - 1]++;
+            } else {
+                // 如果新标题比上一个小（更高级别），递增当前级别并重置更低级别
+                counters[level - 1]++;
+                for (let i = level; i < counters.length; i++) {
+                    counters[i] = 0;
+                }
+            }
+            
+            // 生成标题编号
+            prefix = '';
+            for (let i = 0; i < level; i++) {
+                if (counters[i] > 0) {
+                    prefix += counters[i] + '.';
+                }
+            }
+            prefix = prefix ? `${prefix} ` : '';
+        }
+        
+        lastLevel = level;
+
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = `javascript:void(0);`; // 改为使用JavaScript事件而不是锚链接
+        a.innerHTML = prefix + heading.textContent; 
+        a.classList.add('block', 'text-sm', 'py-1', 'hover:text-primary', 'dark:hover:text-primary');
+        a.style.marginLeft = `${(level - 1) * 0.75}rem`; // 缩进
+        a.dataset.headingId = id;
+        
+        // 点击目录条目时滚动到iframe内部对应标题
+        a.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // 获取当前激活的iframe元素
+            const iframes = document.querySelectorAll('.iframe-container iframe');
+            if (iframes.length > 0) {
+                // 查找可见的iframe
+                let activeIframe = null;
+                for (const iframe of iframes) {
+                    if (iframe.offsetParent !== null) { // 检查iframe是否可见
+                        activeIframe = iframe;
+                        break;
+                    }
+                }
+                
+                if (activeIframe) {
+                    try {
+                        // console.log('尝试滚动到标题:', id);
+                        // 使用iframe中的document获取标题元素
+                        const targetHeading = activeIframe.contentWindow.document.getElementById(id);
+                        if (targetHeading) {
+                            // console.log('找到标题元素:', targetHeading);
+                            
+                            // 获取iframe在页面中的位置
+                            const iframeRect = activeIframe.getBoundingClientRect();
+                            // 获取标题在iframe中的位置
+                            const headingRect = targetHeading.getBoundingClientRect();
+                            
+                            // 计算标题在页面中的绝对位置 = iframe在页面中的位置 + 标题在iframe中的位置
+                            const absoluteHeadingTop = window.scrollY + iframeRect.top + headingRect.top;
+                            
+                            // console.log('滚动主页面到位置:', absoluteHeadingTop);
+                            
+                            // 滚动主页面到标题位置
+                            window.scrollTo({
+                                top: absoluteHeadingTop - 80, // 减去一些顶部空间，使标题不会太靠上
+                                behavior: 'smooth'
+                            });
+                            
+                            // 高亮当前目录项
+                            document.querySelectorAll('#toc-nav a').forEach(link => link.classList.remove('active'));
+                            a.classList.add('active');
+                            
+                            // 确保当前目录项在视图中
+                            scrollTocToActiveItem(a);
+                        } else {
+                            console.error('未找到目标标题元素:', id);
+                        }
+                    } catch (error) {
+                        console.error('滚动到iframe标题错误:', error);
+                    }
+                }
+            }
+        });
+        
+        li.appendChild(a);
+        tocNav.appendChild(li);
+    });
+    
+    // 监听iframe滚动事件，高亮当前可见标题的目录项
+    try {
+        const iframe = document.querySelector('.iframe-container iframe');
+        if (iframe) {
+            // 使用setTimeout确保iframe完全加载
+            setTimeout(() => {
+                try {
+                    // 监听iframe的滚动事件
+                    iframe.contentWindow.addEventListener('scroll', debounce(() => {
+                        updateIframeTocHighlight(iframe);
+                    }, 100));
+                    
+                    // 监听主文档的滚动事件
+                    window.addEventListener('scroll', debounce(() => {
+                        updateIframeTocHighlight(iframe);
+                    }, 100));
+                    
+                    // 初始调用一次
+                    updateIframeTocHighlight(iframe);
+                } catch (e) {
+                    console.warn('添加iframe滚动事件监听器失败:', e);
+                }
+            }, 500);
+        }
+    } catch (error) {
+        console.warn('无法监听iframe滚动事件:', error);
+    }
+}
+
+// 更新HTML文档的目录高亮
+function updateIframeTocHighlight(iframe) {
+    try {
+        if (!iframe || !iframe.contentWindow || !iframe.contentWindow.document) {
+            return;
+        }
+        
+        const iframeDoc = iframe.contentWindow.document;
+        const headingElements = iframeDoc.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        
+        if (headingElements.length === 0) {
+            return;
+        }
+        
+        // 获取iframe在页面中的位置
+        const iframeRect = iframe.getBoundingClientRect();
+        
+        // 计算视口中间位置
+        const viewportMiddle = window.innerHeight / 3; // 使用视口上部1/3处作为参考点
+        
+        // 跟踪最接近视口中间的标题及其距离
+        let closestHeading = null;
+        let closestDistance = Infinity;
+        
+        // 遍历所有标题，查找最接近视口中间的标题
+        headingElements.forEach(heading => {
+            // 获取标题在iframe内的位置
+            const headingRect = heading.getBoundingClientRect();
+            
+            // 计算标题在页面中的绝对位置
+            const headingAbsTop = iframeRect.top + headingRect.top;
+            
+            // 计算标题与视口中间的距离
+            const distance = Math.abs(headingAbsTop - viewportMiddle);
+            
+            // 如果这个标题是可见的，并且距离比之前找到的更近
+            if (
+                headingAbsTop > 0 && 
+                headingAbsTop < window.innerHeight && 
+                distance < closestDistance
+            ) {
+                closestHeading = heading;
+                closestDistance = distance;
+            }
+        });
+        
+        // 如果没有找到可见标题，尝试找最后一个已经滚过的标题
+        if (!closestHeading) {
+            let lastPassedHeading = null;
+            
+            // 找出最后一个已经过去的标题
+            for (let i = headingElements.length - 1; i >= 0; i--) {
+                const heading = headingElements[i];
+                const headingRect = heading.getBoundingClientRect();
+                const headingAbsTop = iframeRect.top + headingRect.top;
+                
+                if (headingAbsTop < viewportMiddle) {
+                    lastPassedHeading = heading;
+                    break;
+                }
+            }
+            
+            closestHeading = lastPassedHeading;
+        }
+        
+        // 高亮对应目录项
+        if (closestHeading && closestHeading.id) {
+            const tocLinks = document.querySelectorAll('#toc-nav a');
+            let activeTocLink = null;
+            
+            tocLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.dataset.headingId === closestHeading.id) {
+                    link.classList.add('active');
+                    activeTocLink = link;
+                }
+            });
+            
+            // 确保当前活动的目录项在视图中
+            if (activeTocLink) {
+                scrollTocToActiveItem(activeTocLink);
+            }
+        }
+    } catch (e) {
+        console.warn('更新iframe目录高亮出错:', e);
+    }
+}
