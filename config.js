@@ -67,6 +67,7 @@ const config = {
     supported_extensions: [".md", ".html"], // 支持的文档扩展名
     toc_depth: 3, // 目录深度，显示到几级（h1~hx）标题
     toc_numbering: true, // 目录是否显示编号（如1，2.3，5.1.3）
+    toc_ignore_h1: true, // 生成目录编号时是否忽略h1标题，避免所有标题都以1开头
     code_copy_button: true, // 代码块是否显示复制按钮
   },
 
