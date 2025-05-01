@@ -463,3 +463,85 @@ body {
 .custom-image-modal .close-btn:hover {
     background-color: rgba(255, 0, 0, 0.7);
 }
+
+/* HTML嵌入iframe相关样式 */
+.iframe-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+    background-color: #fff;
+}
+
+.controls-container {
+    display: flex;
+    gap: 10px;
+}
+
+/* iframe全屏模式 */
+.iframe-fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9998 !important; /* 高于大多数元素但低于关闭按钮 */
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: white !important;
+}
+
+.dark .iframe-fullscreen {
+    background-color: #1a1a1a !important;
+}
+
+/* 关闭按钮 */
+#close-fullscreen-btn {
+    transition: all 0.2s ease;
+    width: 35px;
+    height: 35px;
+}
+
+#close-fullscreen-btn:hover {
+    transform: scale(1.1);
+    background-color: #f3f4f6;
+}
+
+.dark #close-fullscreen-btn:hover {
+    background-color: #4b5563;
+}
+
+.iframe-container .close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+    background-color: rgba(0, 0, 0, 0.1);
+    color: #333;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.iframe-container .close-btn:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* 暗黑模式样式 */
+.dark .iframe-container {
+    background-color: #1f2937;
+}
+
+.dark .iframe-container .close-btn {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #eee;
+}
+
+.dark .iframe-container .close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+} 
