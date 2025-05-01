@@ -546,6 +546,8 @@ function createNavLink(item, level, isIndex = false) {
         if (currentRoot) {
             newUrl.searchParams.set('root', currentRoot);
         }
+        // 清除URL中的hash部分，确保不会保留之前的#heading-xx
+        newUrl.hash = '';
         window.history.pushState({path: item.path}, '', newUrl.toString());
         
         // 加载文档
@@ -601,6 +603,8 @@ function navigateToFolderIndex(item) {
     if (currentRoot) {
         url.searchParams.set('root', currentRoot);
     }
+    // 清除URL中的hash部分，确保不会保留之前的#heading-xx
+    url.hash = '';
     window.history.pushState({path: item.index.path}, '', url.toString());
     
     // 加载文档
@@ -752,6 +756,8 @@ async function loadContentFromUrl() {
         if (path && !url.searchParams.has('path')) {
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.set('path', path);
+            // 清除URL中的hash部分，确保不会保留之前的#heading-xx
+            newUrl.hash = '';
             window.history.replaceState({ path: path }, '', newUrl.toString());
         }
         
@@ -768,6 +774,8 @@ async function loadContentFromUrl() {
                 // 更新URL，但不触发新的导航
                 const newUrl = new URL(window.location.href);
                 newUrl.searchParams.set('path', path);
+                // 清除URL中的hash部分，确保不会保留之前的#heading-xx
+                newUrl.hash = '';
                 window.history.replaceState({path: path}, '', newUrl.toString());
             }
         }
@@ -1781,6 +1789,8 @@ function generateToc(contentElement) {
     const tocDepth = config.document.toc_depth || 3;
     // 是否显示标题编号
     const showNumbering = config.document.toc_numbering || false;
+    // 是否忽略h1标题计数
+    const ignoreH1 = config.document.toc_ignore_h1 || false;
     
     // 用于生成标题编号的计数器
     const counters = [0, 0, 0, 0, 0, 0];
@@ -1806,34 +1816,50 @@ function generateToc(contentElement) {
         // 处理标题编号
         let prefix = '';
         if (showNumbering) {
-            // 更新计数器
-            if (level > lastLevel) {
-                // 如果新标题级别比上一个大，将所有更深层级的计数器重置为0
-                for (let i = lastLevel; i < level; i++) {
-                    counters[i]++;
-                }
-                for (let i = level; i < counters.length; i++) {
-                    counters[i] = 0;
-                }
-            } else if (level === lastLevel) {
-                // 如果新标题与上一个同级，递增计数器
-                counters[level - 1]++;
+            // 如果设置了忽略h1并且当前是h1，不生成编号
+            if (ignoreH1 && level === 1) {
+                prefix = '';
             } else {
-                // 如果新标题比上一个小（更高级别），递增当前级别并重置更低级别
-                counters[level - 1]++;
-                for (let i = level; i < counters.length; i++) {
-                    counters[i] = 0;
+                // 更新计数器，对h1做特殊处理
+                if (level > lastLevel) {
+                    // 如果新标题级别比上一个大，将所有更深层级的计数器重置为0
+                    for (let i = lastLevel; i < level; i++) {
+                        // 如果忽略h1，并且是处理h1计数器，则跳过
+                        if (!(ignoreH1 && i === 0)) {
+                            counters[i]++;
+                        }
+                    }
+                    for (let i = level; i < counters.length; i++) {
+                        counters[i] = 0;
+                    }
+                } else if (level === lastLevel) {
+                    // 如果新标题与上一个同级，递增计数器
+                    // 如果忽略h1，并且是处理h1计数器，则跳过
+                    if (!(ignoreH1 && level === 1)) {
+                        counters[level - 1]++;
+                    }
+                } else {
+                    // 如果新标题比上一个小（更高级别），递增当前级别并重置更低级别
+                    // 如果忽略h1，并且是处理h1计数器，则跳过
+                    if (!(ignoreH1 && level === 1)) {
+                        counters[level - 1]++;
+                    }
+                    for (let i = level; i < counters.length; i++) {
+                        counters[i] = 0;
+                    }
                 }
-            }
-            
-            // 生成标题编号
-            prefix = '';
-            for (let i = 0; i < level; i++) {
-                if (counters[i] > 0) {
-                    prefix += counters[i] + '.';
+                
+                // 生成标题编号，注意对h1的特殊处理
+                prefix = '';
+                // 如果忽略h1，则从h2开始计数
+                const startIdx = ignoreH1 ? 1 : 0;
+                for (let i = startIdx; i < level; i++) {
+                    if (counters[i] > 0) {
+                        prefix += counters[i] + '.';
+                    }
                 }
+                prefix = prefix ? `${prefix} ` : '';
             }
-            prefix = prefix ? `${prefix} ` : '';
         }
         
         lastLevel = level;
@@ -2503,6 +2529,8 @@ function generateTocFromIframe(iframeDoc, tocNav) {
     
     // 是否显示标题编号
     const showNumbering = config.document.toc_numbering || false;
+    // 是否忽略h1标题计数
+    const ignoreH1 = config.document.toc_ignore_h1 || false;
     
     // 用于生成标题编号的计数器
     const counters = [0, 0, 0, 0, 0, 0];
@@ -2527,34 +2555,50 @@ function generateTocFromIframe(iframeDoc, tocNav) {
         // 处理标题编号
         let prefix = '';
         if (showNumbering) {
-            // 更新计数器
-            if (level > lastLevel) {
-                // 如果新标题级别比上一个大，将所有更深层级的计数器重置为0
-                for (let i = lastLevel; i < level; i++) {
-                    counters[i]++;
-                }
-                for (let i = level; i < counters.length; i++) {
-                    counters[i] = 0;
-                }
-            } else if (level === lastLevel) {
-                // 如果新标题与上一个同级，递增计数器
-                counters[level - 1]++;
+            // 如果设置了忽略h1并且当前是h1，不生成编号
+            if (ignoreH1 && level === 1) {
+                prefix = '';
             } else {
-                // 如果新标题比上一个小（更高级别），递增当前级别并重置更低级别
-                counters[level - 1]++;
-                for (let i = level; i < counters.length; i++) {
-                    counters[i] = 0;
+                // 更新计数器，对h1做特殊处理
+                if (level > lastLevel) {
+                    // 如果新标题级别比上一个大，将所有更深层级的计数器重置为0
+                    for (let i = lastLevel; i < level; i++) {
+                        // 如果忽略h1，并且是处理h1计数器，则跳过
+                        if (!(ignoreH1 && i === 0)) {
+                            counters[i]++;
+                        }
+                    }
+                    for (let i = level; i < counters.length; i++) {
+                        counters[i] = 0;
+                    }
+                } else if (level === lastLevel) {
+                    // 如果新标题与上一个同级，递增计数器
+                    // 如果忽略h1，并且是处理h1计数器，则跳过
+                    if (!(ignoreH1 && level === 1)) {
+                        counters[level - 1]++;
+                    }
+                } else {
+                    // 如果新标题比上一个小（更高级别），递增当前级别并重置更低级别
+                    // 如果忽略h1，并且是处理h1计数器，则跳过
+                    if (!(ignoreH1 && level === 1)) {
+                        counters[level - 1]++;
+                    }
+                    for (let i = level; i < counters.length; i++) {
+                        counters[i] = 0;
+                    }
                 }
-            }
-            
-            // 生成标题编号
-            prefix = '';
-            for (let i = 0; i < level; i++) {
-                if (counters[i] > 0) {
-                    prefix += counters[i] + '.';
+                
+                // 生成标题编号，注意对h1的特殊处理
+                prefix = '';
+                // 如果忽略h1，则从h2开始计数
+                const startIdx = ignoreH1 ? 1 : 0;
+                for (let i = startIdx; i < level; i++) {
+                    if (counters[i] > 0) {
+                        prefix += counters[i] + '.';
+                    }
                 }
+                prefix = prefix ? `${prefix} ` : '';
             }
-            prefix = prefix ? `${prefix} ` : '';
         }
         
         lastLevel = level;
@@ -2607,6 +2651,9 @@ function generateTocFromIframe(iframeDoc, tocNav) {
                                 top: absoluteHeadingTop - 80, // 减去一些顶部空间，使标题不会太靠上
                                 behavior: 'smooth'
                             });
+                            
+                            // 更新URL hash但不触发页面跳转
+                            history.pushState(null, null, `#${id}`);
                             
                             // 高亮当前目录项
                             document.querySelectorAll('#toc-nav a').forEach(link => link.classList.remove('active'));
