@@ -117,10 +117,10 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-05-02",
-                            "time": "08:58:40",
+                            "time": "12:13:47",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
+                            "message": "新增目录编辑器页面测试工具，支持上传和编辑JSON格式的目录结构。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -128,7 +128,7 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 3,
+                                "commits": 4,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                             }
