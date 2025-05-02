@@ -148,6 +148,9 @@ function applyLayoutConfig() {
     const mainContent = document.getElementById('main-content-area');
     const layoutContainer = document.querySelector('.main-layout');
     
+    // 更新媒体查询断点
+    updateMediaQueryBreakpoint();
+    
     // 添加移动端菜单按钮
     setupMobileMenu();
     
@@ -155,6 +158,62 @@ function applyLayoutConfig() {
     const backToTopButton = document.getElementById('back-to-top');
     if (!config.navigation.back_to_top && backToTopButton) {
         backToTopButton.remove();
+    }
+}
+
+// 更新媒体查询断点
+function updateMediaQueryBreakpoint() {
+    // 判断值是否相同
+    if (config.layout.mobile_breakpoint === '768px') {
+        return;
+    }
+    // 获取所有样式表
+    const styleSheets = document.styleSheets;
+    const mobileBreakpoint = config.layout.mobile_breakpoint;
+    
+    // 遍历所有样式表
+    for (let i = 0; i < styleSheets.length; i++) {
+        const styleSheet = styleSheets[i];
+        
+        try {
+            // 获取所有CSS规则
+            const cssRules = styleSheet.cssRules || styleSheet.rules;
+            if (!cssRules) continue;
+            
+            // 遍历所有规则
+            for (let j = 0; j < cssRules.length; j++) {
+                const rule = cssRules[j];
+                
+                // 检查是否是媒体查询规则
+                if (rule instanceof CSSMediaRule) {
+                    const mediaText = rule.conditionText || rule.media.mediaText;
+                    
+                    // 检查是否包含 max-width: 768px
+                    if (mediaText.includes('max-width: 768px')) {
+                        // 删除旧的媒体查询规则
+                        styleSheet.deleteRule(j);
+                        
+                        // 创建新的媒体查询文本
+                        const newMediaText = mediaText.replace('768px', mobileBreakpoint);
+                        
+                        // 获取原规则的CSS文本
+                        let cssText = '';
+                        for (let k = 0; k < rule.cssRules.length; k++) {
+                            cssText += rule.cssRules[k].cssText;
+                        }
+                        
+                        // 插入新的媒体查询规则
+                        styleSheet.insertRule(`@media ${newMediaText} { ${cssText} }`, j);
+                        
+                        // 由于删除和插入操作会影响索引，需要调整j
+                        j--;
+                    }
+                }
+            }
+        } catch (error) {
+            // 跨域样式表会抛出安全错误，忽略它们
+            continue;
+        }
     }
 }
 
@@ -255,7 +314,7 @@ function setupMobileMenu() {
     // 创建移动端左侧菜单按钮（文档树）
     const menuButton = document.createElement('button');
     menuButton.id = 'mobile-menu-toggle';
-    menuButton.className = 'fixed z-50 bg-white dark:bg-gray-800 text-gray-800 dark:text-white p-2 rounded-md shadow-md md:hidden';
+    menuButton.className = 'fixed z-50 bg-white dark:bg-gray-800 text-gray-800 dark:text-white p-2 rounded-md shadow-md';
     menuButton.innerHTML = '<i class="fas fa-bars text-xl"></i>';
     document.body.appendChild(menuButton);
     
@@ -286,14 +345,6 @@ function setupMobileMenu() {
         // 切换左侧菜单
         sidebar.classList.toggle('active');
         backdrop.classList.toggle('active');
-        
-        // 切换图标
-        const icon = menuButton.querySelector('i');
-        if (sidebar.classList.contains('active')) {
-            icon.className = 'fas fa-times text-xl';
-        } else {
-            icon.className = 'fas fa-bars text-xl';
-        }
     });
     
     // 右侧目录按钮点击事件
