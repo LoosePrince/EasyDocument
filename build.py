@@ -16,6 +16,7 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 from html.parser import HTMLParser
+import io
 
 # 导入Git相关库
 try:
@@ -41,6 +42,17 @@ DEFAULT_CONFIG = {
         "enable": True,                                 # 是否启用GitHub相关功能
         "edit_link": True,                              # 显示编辑链接
         "show_avatar": False                            # 显示头像而非名称
+    },
+    "site": {
+        "title": "",
+        "description": "",
+        "keywords": "",
+        "base_url": ""
+    },
+    "appearance": {
+        "favicon": "",
+        "logo": "",
+        "theme_color": ""
     }
 }
 
@@ -66,7 +78,9 @@ class HTMLTextExtractor(HTMLParser):
 
     def handle_data(self, data):
         if not self.skip and data.strip():
-            self.result.append(data.strip())
+            # 移除多余的换行符和空格
+            cleaned_data = ' '.join(data.split())
+            self.result.append(cleaned_data)
 
     def get_text(self):
         return " ".join(self.result)
@@ -612,16 +626,53 @@ def main():
         try:
             with open(args.config, 'r', encoding='utf-8') as f:
                 content = f.read()
-                # 尝试从JS配置中提取数据
-                match = re.search(r'document:\s*{([^}]+)}', content, re.DOTALL)
-                if match:
-                    doc_config = match.group(1)
+                
+                # 移除注释以简化解析
+                content_no_comments = re.sub(r'//.*', '', content)
+                content_no_comments = re.sub(r'/\*.*?\*/', '', content_no_comments, flags=re.DOTALL)
+
+                # 提取 site 对象内容
+                site_match = re.search(r'site:\s*{([^}]+)}', content_no_comments, re.DOTALL)
+                if site_match:
+                    site_config = site_match.group(1)
+                    # 提取 site 内的具体字段
+                    title_match = re.search(r'title:\s*["\'](.*?)["\']', site_config)
+                    if title_match: config["site"]["title"] = title_match.group(1)
+                    
+                    desc_match = re.search(r'description:\s*["\'](.*?)["\']', site_config)
+                    if desc_match: config["site"]["description"] = desc_match.group(1)
+                    
+                    keywords_match = re.search(r'keywords:\s*["\'](.*?)["\']', site_config)
+                    if keywords_match: config["site"]["keywords"] = keywords_match.group(1)
+                    
+                    base_url_match = re.search(r'base_url:\s*["\'](.*?)["\']', site_config)
+                    if base_url_match: config["site"]["base_url"] = base_url_match.group(1)
+
+                # 提取 appearance 对象内容
+                appearance_match = re.search(r'appearance:\s*{([^}]+)}', content_no_comments, re.DOTALL)
+                if appearance_match:
+                    appearance_config = appearance_match.group(1)
+                    # 提取 appearance 内的具体字段
+                    favicon_match = re.search(r'favicon:\s*["\'](.*?)["\']', appearance_config)
+                    if favicon_match: config["appearance"]["favicon"] = favicon_match.group(1)
+                    
+                    # 添加 logo 和 theme_color 的提取
+                    logo_match = re.search(r'logo:\s*["\'](.*?)["\']', appearance_config)
+                    if logo_match: config["appearance"]["logo"] = logo_match.group(1)
+                    
+                    theme_color_match = re.search(r'theme_color:\s*["\'](.*?)["\']', appearance_config)
+                    if theme_color_match: config["appearance"]["theme_color"] = theme_color_match.group(1)
+
+                # 提取 document 对象内容 (主要为了 root_dir)
+                document_match = re.search(r'document:\s*{([^}]+)}', content_no_comments, re.DOTALL)
+                if document_match:
+                    doc_config = document_match.group(1)
                     root_dir_match = re.search(r'root_dir:\s*[\'"]([^\'"]+)[\'"]', doc_config)
                     if root_dir_match:
                         config["root_dir"] = root_dir_match.group(1)
                 
                 # 提取Git相关配置
-                git_match = re.search(r'git:\s*{([^}]+)}', content, re.DOTALL)
+                git_match = re.search(r'git:\s*{([^}]+)}', content_no_comments, re.DOTALL)
                 if git_match:
                     git_config = git_match.group(1)
                     
@@ -638,7 +689,7 @@ def main():
                         config["git"]["show_contributors"] = contributors_match.group(1).lower() == 'true'
                 
                 # 提取GitHub相关配置
-                github_match = re.search(r'github:\s*{([^}]+)}', content, re.DOTALL)
+                github_match = re.search(r'github:\s*{([^}]+)}', content_no_comments, re.DOTALL)
                 if github_match:
                     github_config = github_match.group(1)
                     
@@ -743,6 +794,11 @@ def main():
     
     total_files = count_files(structure)
     total_dirs = count_dirs(structure)
+    
+    # 更新HTML元数据
+    html_files_to_update = ['index.html', 'main.html']
+    update_html_metadata(html_files_to_update, config)
+    
     print(f"文档扫描完成: 共 {total_files} 个文件, {total_dirs} 个目录")
 
 def count_files(structure):
@@ -781,6 +837,45 @@ def count_dirs(structure):
             count += count_dirs(child)
     
     return count
+
+def update_html_metadata(html_files, config):
+    """
+    根据 config.js 中的 site 和 appearance 设置更新 HTML 文件中的元数据。
+    """
+    site_config = config.get("site", {})
+    appearance_config = config.get("appearance", {})
+
+    title = site_config.get("title")
+    description = site_config.get("description")
+    keywords = site_config.get("keywords")
+    favicon = appearance_config.get("favicon")
+
+    for filepath in html_files:
+        if not os.path.exists(filepath):
+            print(f"警告: HTML文件未找到，跳过更新: {filepath}")
+            continue
+
+        try:
+            with io.open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # 使用正则表达式进行替换
+            if title:
+                content = re.sub(r'(<title>)(.*?)(</title>)', r'\g<1>' + title + r'\g<3>', content, flags=re.IGNORECASE)
+            if description:
+                content = re.sub(r'(<meta\s+name=["\']description["\']\s+content=["\'])(.*?)(["\'])', r'\g<1>' + description + r'\g<3>', content, flags=re.IGNORECASE | re.DOTALL)
+            if keywords:
+                content = re.sub(r'(<meta\s+name=["\']keywords["\']\s+content=["\'])(.*?)(["\'])', r'\g<1>' + keywords + r'\g<3>', content, flags=re.IGNORECASE | re.DOTALL)
+            if favicon:
+                content = re.sub(r'(<link\s+rel=["\']icon["\']\s+href=["\'])(.*?)(["\'])', r'\g<1>' + favicon + r'\g<3>', content, flags=re.IGNORECASE | re.DOTALL)
+
+            with io.open(filepath, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            print(f"已更新元数据: {filepath}")
+
+        except Exception as e:
+            print(f"更新HTML文件 {filepath} 时出错: {e}")
 
 if __name__ == "__main__":
     main() 

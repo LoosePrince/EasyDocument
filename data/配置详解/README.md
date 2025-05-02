@@ -23,7 +23,7 @@ const config = {
     title: "简易静态文档系统", // 网站标题，显示在浏览器标签页
     description: "一个轻量级、免编译的纯静态前端文档系统", // 网站描述，用于SEO
     keywords: "文档,静态网站,Markdown,Alpine.js", // 网站关键词，用于SEO
-    base_url: "/" // 网站基础URL，如果部署在子目录则需要修改
+    base_url: "index.html" // 网站基础URL，如果部署在子目录则需要修改
   },
 
   // 外观设置
@@ -81,21 +81,37 @@ const config = {
     supported_extensions: [".md", ".html"], // 支持的文档扩展名
     toc_depth: 3, // 目录深度，显示到几级（h1~hx）标题
     toc_numbering: true, // 目录是否显示编号（如1，2.3，5.1.3）
+    toc_ignore_h1: true, // 生成目录编号时是否忽略h1标题，避免所有标题都以1开头
     code_copy_button: true, // 代码块是否显示复制按钮
   },
 
   // 搜索功能
   search: {
-    enable: false, // 是否启用搜索
+    enable: true, // 已启用搜索
     min_chars: 2, // 最小搜索字符数
     max_results: 20, // 最大结果数
-    placeholder: "搜索文档..." // 搜索框占位符文本
+    placeholder: "搜索文档...", // 搜索框占位符文本
+    search_cached: true, // 是否搜索缓存的文档内容
+    search_on_type: false // 是否在输入时自动搜索（暂未实现）
   },
 
   // 插件与扩展
   extensions: {
     math: true, // 数学公式支持(KaTeX)
     highlight: true, // 语法高亮
+    mermaid: true, // Mermaid图表渲染
+    github: {
+      enable: true, // 是否启用GitHub相关功能
+      repo_url: "https://github.com/LoosePrince/EasyDocument", // GitHub仓库地址
+      edit_link: true, // 是否启用参与编辑链接（点击一键跳转github的编辑）
+      branch: "main", // 默认分支名称
+      show_avatar: true // 显示参与编辑者的github头像而不是名称
+    },
+    git: {
+      enable: true, // 是否启用Git相关功能
+      show_last_modified: true, // 启用文档最后编辑时间显示
+      show_contributors: true // 启用参与者名称显示
+    }
   },
 
   // 页脚设置
@@ -176,6 +192,10 @@ layout: {
 
 查看各分类的详细配置说明，了解每个配置项的功能和可选值：
 
+- [站点与页脚配置](?path=配置详解/站点与页脚.md)
 - [外观设置](?path=配置详解/外观设置.md)
+- [布局与导航配置](?path=配置详解/layout与导航.md)
+- [文档与插件配置](?path=配置详解/文档与插件.md)
+- [搜索功能配置](?path=配置详解/搜索功能.md)
 - [path.json 结构与手动编写](?path=配置详解/path-json结构.md)
 - [GitHub与Git功能](?path=配置详解/GitHub与Git功能.md) 

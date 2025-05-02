@@ -26,7 +26,7 @@ EasyDocument 是一个纯前端静态系统，几乎没有特殊的系统要求�
    
 ### 快速配置
 
-您可以通过修改 `config.yaml` 文件来自定义 EasyDocument：
+您可以通过修改 `config.js` 文件来自定义 EasyDocument：
 
 - **网站信息**: 修改网站名称、标题、描述等
 - **外观设置**: 调整主题色、字体等
