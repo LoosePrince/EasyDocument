@@ -4,7 +4,7 @@
     --text-color: #24292e;
     --text-muted: #6a737d;
     --heading-color: #24292e;
-    --link-color: #0366d6;
+    --link-color: var(--color-primary, #0366d6);
     --bg-color: #fff;
     --border-color: #e1e4e8;
     
@@ -34,7 +34,7 @@
     --text-color: #c9d1d9;
     --text-muted: #8b949e;
     --heading-color: #c9d1d9;
-    --link-color: #58a6ff;
+    --link-color: var(--color-primary, #58a6ff);
     --bg-color: #0d1117;
     --border-color: #30363d;
     

@@ -117,33 +117,33 @@ function showNotification(message, type = 'info') {
     }
     
     // 设置图标和颜色
-    let icon, bgColor, textColor;
+    let icon, bgClass, textClass;
     switch (type) {
         case 'success':
             icon = 'fa-check-circle';
-            bgColor = 'bg-green-100 dark:bg-green-900';
-            textColor = 'text-green-700 dark:text-green-300';
+            bgClass = 'bg-green-100 dark:bg-green-900';
+            textClass = 'text-green-700 dark:text-green-300';
             break;
         case 'error':
             icon = 'fa-exclamation-circle';
-            bgColor = 'bg-red-100 dark:bg-red-900';
-            textColor = 'text-red-700 dark:text-red-300';
+            bgClass = 'bg-red-100 dark:bg-red-900';
+            textClass = 'text-red-700 dark:text-red-300';
             break;
         case 'warning':
             icon = 'fa-exclamation-triangle';
-            bgColor = 'bg-yellow-100 dark:bg-yellow-900';
-            textColor = 'text-yellow-700 dark:text-yellow-300';
+            bgClass = 'bg-yellow-100 dark:bg-yellow-900';
+            textClass = 'text-yellow-700 dark:text-yellow-300';
             break;
         default: // info
             icon = 'fa-info-circle';
-            bgColor = 'bg-blue-100 dark:bg-blue-900';
-            textColor = 'text-blue-700 dark:text-blue-300';
+            bgClass = 'bg-opacity-10 bg-primary dark:bg-opacity-20';
+            textClass = 'text-primary dark:text-primary';
     }
     
     // 创建通知元素
     const notification = document.createElement('div');
     notification.id = 'cache-notification';
-    notification.className = `fixed top-4 right-4 ${bgColor} ${textColor} px-4 py-3 rounded shadow-md z-50`;
+    notification.className = `fixed top-4 right-4 ${bgClass} ${textClass} px-4 py-3 rounded shadow-md z-50`;
     notification.innerHTML = `
         <div class="flex items-center">
             <i class="fas ${icon} mr-2"></i>
@@ -180,7 +180,7 @@ function updateCacheList() {
                 <li class="flex items-center justify-between py-1">
                     <span class="truncate flex-1" title="${path}">${path}</span>
                     <div class="flex items-center">
-                        <span class="text-xs text-purple-500 mr-2">
+                        <span class="text-xs text-primary mr-2">
                             <i class="fas fa-bolt"></i> 预加载
                         </span>
                         <button class="remove-preload text-red-500 hover:text-red-700" data-path="${path}">
@@ -202,7 +202,7 @@ function updateCacheList() {
                 });
             });
         } else {
-            preloadedList.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center">无预加载文档</p>';
+            preloadedList.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-2">无预加载文档</p>';
         }
     }
     
@@ -213,16 +213,17 @@ function updateCacheList() {
             let html = '<ul class="text-gray-700 dark:text-gray-300">';
             
             persistentCachedPaths.forEach(path => {
-                const cachedTime = new Date(documentCache.cache[path].timestamp).toLocaleString();
+                const cacheItem = documentCache.cache[path];
+                const timeAgo = cacheItem ? formatTimeAgo(cacheItem.timestamp) : '未知';
                 
                 html += `
                 <li class="flex items-center justify-between py-1">
                     <span class="truncate flex-1" title="${path}">${path}</span>
                     <div class="flex items-center">
-                        <span class="text-xs text-gray-500 mr-2" title="${cachedTime}">
-                            <i class="fas fa-clock"></i> ${formatTimeAgo(documentCache.cache[path].timestamp)}
+                        <span class="text-xs text-primary mr-2" title="缓存时间">
+                            <i class="fas fa-clock"></i> ${timeAgo}
                         </span>
-                        <button class="remove-cache text-red-500 hover:text-red-700" data-path="${path}" title="删除缓存">
+                        <button class="remove-cache text-red-500 hover:text-red-700" data-path="${path}">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -232,26 +233,24 @@ function updateCacheList() {
             html += '</ul>';
             cachedList.innerHTML = html;
             
-            // 为删除缓存按钮添加事件
+            // 为删除按钮添加事件
             document.querySelectorAll('.remove-cache').forEach(button => {
                 button.addEventListener('click', function() {
                     const path = this.getAttribute('data-path');
-                    delete documentCache.cache[path];
-                    documentCache._saveToLocalStorage();
+                    documentCache.removeFromCache(path);
                     updateCacheList();
                 });
             });
         } else {
-            cachedList.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center">无缓存文档</p>';
+            cachedList.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-2">无缓存文档</p>';
         }
     }
     
-    // 更新统计信息
+    // 更新缓存统计
     const cacheStats = document.getElementById('cache-stats');
     if (cacheStats) {
         cacheStats.innerHTML = `
-            <p>预加载文档: <span class="font-medium">${preloadedPaths.length}</span> 个，持久缓存: <span class="font-medium">${persistentCachedPaths.length}</span> 个</p>
-        `;
+        <p>预加载文档: <span class="font-medium">${preloadedPaths.length}</span> 个，持久缓存: <span class="font-medium">${persistentCachedPaths.length}</span> 个</p>`;
     }
 }
 
