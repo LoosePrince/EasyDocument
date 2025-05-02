@@ -31,7 +31,7 @@ const config = {
     footer_file: "footer.html", // 自定义底栏文件路径
     sidebar_width: "250px", // 侧边栏宽度
     toc_width: "220px", // 目录宽度
-    mobile_breakpoint: "768px" // 移动设备断点
+    mobile_breakpoint: "1024px" // 移动设备断点
   },
 
   // 导航设置
