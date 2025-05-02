@@ -1415,6 +1415,27 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
             preElement.parentNode.insertBefore(wrapper, preElement);
             wrapper.appendChild(preElement);
             
+            // 处理行号
+            if (config.document.code_block?.line_numbers) {
+                // 获取代码内容
+                const codeLines = block.textContent.split('\n');
+                // 如果最后一行是空行，移除它
+                if (codeLines[codeLines.length - 1] === '') {
+                    codeLines.pop();
+                }
+                
+                // 生成行号
+                const startLine = config.document.code_block.start_line || 1;
+                const lineNumbers = Array.from(
+                    { length: codeLines.length }, 
+                    (_, i) => startLine + i
+                ).join('\n');
+                
+                // 添加行号
+                preElement.classList.add('has-line-numbers');
+                preElement.setAttribute('data-line-numbers', lineNumbers);
+            }
+            
             // 如果启用了代码复制按钮，添加复制功能
             if (config.document.code_copy_button) {
                 // 创建复制按钮容器

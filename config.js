@@ -69,6 +69,14 @@ const config = {
     toc_numbering: true, // 目录是否显示编号（如1，2.3，5.1.3）
     toc_ignore_h1: true, // 生成目录编号时是否忽略h1标题，避免所有标题都以1开头
     code_copy_button: true, // 代码块是否显示复制按钮
+    code_block: {
+      line_numbers: true, // 是否显示行号
+      start_line: 1, // 起始行号
+      theme: {
+        light: "github", // 亮色主题
+        dark: "github-dark" // 暗色主题
+      }
+    }
   },
 
   // 搜索功能
