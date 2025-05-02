@@ -7,7 +7,7 @@
         "git": {
             "last_modified": {
                 "date": "2025-04-30",
-                "time": "05:17:33",
+                "time": "13:17:33",
                 "author": "树梢",
                 "email": "pfingan@foxmail.com",
                 "message": "添加GitHub与Git功能配置文档，更新README以包含新功能链接；\n在路径和搜索索引中添加GitHub与Git功能相关信息，增强文档的可用性和完整性；\n增加自动化脚本。",
@@ -37,7 +37,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "12:28:07",
+                            "time": "20:28:07",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "v1.0.0",
@@ -62,7 +62,7 @@
                 "git": {
                     "last_modified": {
                         "date": "2025-04-29",
-                        "time": "14:07:03",
+                        "time": "22:07:03",
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
                         "message": "更新文档",
@@ -92,7 +92,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "14:07:03",
+                            "time": "22:07:03",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新文档",
@@ -117,7 +117,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "14:07:03",
+                            "time": "22:07:03",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新文档",
@@ -142,7 +142,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "12:28:07",
+                            "time": "20:28:07",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "v1.0.0",
@@ -167,7 +167,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-30",
-                            "time": "14:33:56",
+                            "time": "22:33:56",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新功能说明文档",
@@ -192,7 +192,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-30",
-                            "time": "14:33:56",
+                            "time": "22:33:56",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新功能说明文档",
@@ -217,7 +217,7 @@
                 "git": {
                     "last_modified": {
                         "date": "2025-04-29",
-                        "time": "12:28:07",
+                        "time": "20:28:07",
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
                         "message": "v1.0.0",
@@ -247,7 +247,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-05-01",
-                            "time": "06:29:23",
+                            "time": "14:29:23",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "重构嵌入HTML内容功能，支持全屏显示及暗黑模式同步和js执行",
@@ -272,7 +272,7 @@
                 "git": {
                     "last_modified": {
                         "date": "2025-04-29",
-                        "time": "12:28:07",
+                        "time": "20:28:07",
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
                         "message": "v1.0.0",
@@ -302,7 +302,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "12:28:07",
+                            "time": "20:28:07",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "v1.0.0",
@@ -327,7 +327,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-29",
-                            "time": "14:09:11",
+                            "time": "22:09:11",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "移除无效说明",
@@ -352,7 +352,7 @@
                     "git": {
                         "last_modified": {
                             "date": "2025-04-30",
-                            "time": "05:17:33",
+                            "time": "13:17:33",
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "添加GitHub与Git功能配置文档，更新README以包含新功能链接；\n在路径和搜索索引中添加GitHub与Git功能相关信息，增强文档的可用性和完整性；\n增加自动化脚本。",
@@ -369,6 +369,26 @@
                             }
                         ]
                     }
+                },
+                {
+                    "title": "布局与导航配置",
+                    "path": "配置详解/layout与导航.md",
+                    "children": []
+                },
+                {
+                    "title": "搜索功能配置",
+                    "path": "配置详解/搜索功能.md",
+                    "children": []
+                },
+                {
+                    "title": "文档与插件配置",
+                    "path": "配置详解/文档与插件.md",
+                    "children": []
+                },
+                {
+                    "title": "站点与页脚配置",
+                    "path": "配置详解/站点与页脚.md",
+                    "children": []
                 }
             ],
             "index": {
@@ -377,7 +397,7 @@
                 "git": {
                     "last_modified": {
                         "date": "2025-04-30",
-                        "time": "05:17:33",
+                        "time": "13:17:33",
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
                         "message": "添加GitHub与Git功能配置文档，更新README以包含新功能链接；\n在路径和搜索索引中添加GitHub与Git功能相关信息，增强文档的可用性和完整性；\n增加自动化脚本。",
