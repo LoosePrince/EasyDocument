@@ -4,21 +4,49 @@ body {
     color: #1f2937;
 }
 
+/* 全局文本选择颜色 */
+::selection {
+    background-color: rgba(var(--color-primary-rgb, 59, 130, 246), 0.3);
+    color: inherit;
+}
+
+/* 表单元素聚焦效果 */
+input:focus, select:focus, textarea:focus, button:focus {
+    outline: 2px solid rgba(var(--color-primary-rgb, 59, 130, 246), 0.5);
+    box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb, 59, 130, 246), 0.25);
+}
+
+/* 按钮高亮状态 */
+button.active, .button.active {
+    background-color: var(--color-primary, #3b82f6);
+    color: #fff;
+}
+
+/* 缓存状态指示器样式 */
+.cache-status-preloaded, .cache-status-cached {
+    color: var(--color-primary, #3b82f6);
+}
+
+.dark .cache-status-preloaded, .dark .cache-status-cached {
+    color: var(--color-primary, #3b82f6);
+    opacity: 0.9;
+}
+
 /* 几何形状和装饰元素 - 来自index.html */
 .geometric-shape {
     border-radius: 12px;
-    box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 10px 25px -5px rgba(var(--color-primary-rgb, 59, 130, 246), 0.1);
     transition: all 0.3s ease;
 }
 
 .geometric-shape:hover {
     transform: translateY(-5px);
-    box-shadow: 0 20px 35px -10px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 20px 35px -10px rgba(var(--color-primary-rgb, 59, 130, 246), 0.2);
 }
 
 .blob-shape {
     border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-    background-color: rgba(59, 130, 246, 0.1);
+    background-color: rgba(var(--color-primary-rgb, 59, 130, 246), 0.1);
     position: absolute;
     z-index: -1;
 }
@@ -88,7 +116,7 @@ body {
 
 /* 文件夹标题高亮样式 */
 #sidebar-nav div.folder-title.active-folder {
-    background-color: rgba(59, 130, 246, 0.1);
+    background-color: rgba(var(--color-primary-rgb, 59, 130, 246), 0.1);
 }
 
 #sidebar-nav div.folder-title.active-folder span {
@@ -164,7 +192,7 @@ body {
 }
 
 #sidebar-nav a.active, #toc-nav a.active {
-    background-color: rgba(59, 130, 246, 0.1);
+    background-color: rgba(var(--color-primary-rgb, 59, 130, 246), 0.1);
     font-weight: 600;
     color: var(--color-primary, #3b82f6);
 }
@@ -302,7 +330,7 @@ body {
     }
     
     .dark #toc-toggle {
-        background-color: #2563eb;
+        background-color: var(--color-primary, #2563eb);
     }
 }
 
@@ -322,16 +350,12 @@ body {
 }
 
 .dark .blob-shape {
-    background-color: rgba(29, 78, 216, 0.15);
+    background-color: rgba(var(--color-primary-rgb, 29, 78, 216), 0.15);
 }
 
 .dark a:not(.text-primary) {
     color: #e5e7eb;
     stroke: #fff;
-}
-
-.dark a:hover:not(.text-primary) {
-    color: #3b82f6;
 }
 
 .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
@@ -380,7 +404,7 @@ body {
 }
 
 .dark #sidebar-nav a.active, .dark #toc-nav a.active, .dark #sidebar-nav div.folder-title.active-folder {
-    background-color: rgba(59, 130, 246, 0.15);
+    background-color: rgba(var(--color-primary-rgb, 59, 130, 246), 0.15);
 }
 
 .dark #toc-container h3, .dark #sidebar-container h3 {
@@ -405,7 +429,7 @@ body {
 }
 
 .dark #sidebar-nav div.folder-title.active-folder {
-    background-color: rgba(59, 130, 246, 0.15);
+    background-color: rgba(var(--color-primary-rgb, 59, 130, 246), 0.15);
 }
 
 /* 自定义图片放大模态框样式 */

@@ -1029,13 +1029,13 @@ function addCacheStatusIndicator(contentDiv, cacheType) {
     
     switch(cacheType) {
         case 'preloaded':
-            className = 'text-purple-600 dark:text-purple-400';
+            className = 'cache-status-preloaded';
             icon = 'fas fa-bolt';
             text = '预加载';
             color = 'purple';
             break;
         case 'cached':
-            className = 'text-blue-600 dark:text-blue-400';
+            className = 'cache-status-cached';
             icon = 'fas fa-database';
             text = '已缓存';
             color = 'blue';

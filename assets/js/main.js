@@ -22,7 +22,14 @@ export async function initApp() {
     initDarkMode(config);
     
     // 应用主题色
-    document.documentElement.style.setProperty('--color-primary', config.appearance.theme_color);
+    const themeColor = config.appearance.theme_color;
+    document.documentElement.style.setProperty('--color-primary', themeColor);
+    
+    // 提取主题色的RGB值并设置为CSS变量
+    const rgbValues = hexToRgb(themeColor);
+    if (rgbValues) {
+        document.documentElement.style.setProperty('--color-primary-rgb', `${rgbValues.r}, ${rgbValues.g}, ${rgbValues.b}`);
+    }
     
     // 应用字体设置
     if (config.appearance.font_family) {
@@ -37,6 +44,25 @@ export async function initApp() {
     
     // Alpine.js初始化问题修复
     fixAlpineInit();
+}
+
+// 将十六进制颜色转换为RGB
+function hexToRgb(hex) {
+    // 移除#前缀（如果有）
+    hex = hex.replace(/^#/, '');
+    
+    // 解析短格式（例如 #fff）
+    if (hex.length === 3) {
+        hex = hex.split('').map(char => char + char).join('');
+    }
+    
+    // 解析十六进制颜色值
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    // 返回RGB对象
+    return { r, g, b };
 }
 
 // 加载头部和底部

@@ -33,7 +33,7 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#3b82f6', // 默认配置，将在DOM加载后被覆盖
+                        primary: 'var(--color-primary, #3b82f6)', // 使用CSS变量
                     },
                     fontFamily: {
                         sans: ['system-ui', '-apple-system', 'sans-serif'],
@@ -47,7 +47,7 @@
 <body class="bg-gray-50 font-sans">
     <!-- 装饰性几何图形 -->
     <div class="blob-shape w-96 h-96 top-0 right-0"></div>
-    <div class="blob-shape w-64 h-64 bottom-0 left-0" style="background-color: rgba(249, 115, 22, 0.05);"></div>
+    <div class="blob-shape w-64 h-64 bottom-0 left-0" style="background-color: rgba(var(--color-primary-rgb, 249, 115, 22), 0.05);"></div>
     
     <!-- 加载顶部导航 -->
     <div id="header-container"></div>
@@ -66,7 +66,7 @@
             <p class="text-lg text-gray-500 dark:text-gray-400 mb-10 max-w-2xl mx-auto" id="home-description">
                 一个轻量级、免编译的纯静态前端文档系统。简单添加 Markdown 或 HTML 文件，即可生成美观、结构化的文档网站。
             </p>
-            <a href="main.html" class="inline-block bg-primary hover:bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105">
+            <a href="main.html" class="inline-block bg-primary hover:bg-primary text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105">
                 查看文档
                 <i class="fas fa-arrow-right ml-2"></i>
             </a>
