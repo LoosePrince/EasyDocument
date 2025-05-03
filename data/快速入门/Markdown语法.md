@@ -138,26 +138,23 @@ Markdown 支持两种类型的链接：
 可以使用三个反引号（```）或四个空格缩进来创建代码块：
 
 ````markdown
-
 ```
+
 function test() {
   console.log("这是一个代码块");
 }
-
 ```
-
 ````
 
 或者指定语言以启用语法高亮：
 
 ````markdown
-
 ```javascript
+
 function test() {
   console.log("这是一个带有语法高亮的JavaScript代码块");
 }
 ```
-
 ````
 
 效果如下：

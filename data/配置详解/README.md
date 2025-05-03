@@ -45,7 +45,7 @@ const config = {
     footer_file: "footer.html", // 自定义底栏文件路径
     sidebar_width: "250px", // 侧边栏宽度
     toc_width: "220px", // 目录宽度
-    mobile_breakpoint: "768px" // 移动设备断点
+    mobile_breakpoint: "1024px" // 移动设备断点
   },
 
   // 导航设置
@@ -83,6 +83,14 @@ const config = {
     toc_numbering: true, // 目录是否显示编号（如1，2.3，5.1.3）
     toc_ignore_h1: true, // 生成目录编号时是否忽略h1标题，避免所有标题都以1开头
     code_copy_button: true, // 代码块是否显示复制按钮
+    code_block: {
+      line_numbers: true, // 是否显示行号
+      start_line: 1, // 起始行号
+      theme: {
+        light: "github", // 亮色主题
+        dark: "github-dark" // 暗色主题
+      }
+    }
   },
 
   // 搜索功能
@@ -132,7 +140,7 @@ const config = {
 };
 
 // 导出配置
-export default config;
+export default config; 
 ```
 
 ## 配置修改方法

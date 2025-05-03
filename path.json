@@ -6,8 +6,7 @@
         "path": "README.md",
         "git": {
             "last_modified": {
-                "date": "2025-04-30",
-                "time": "05:17:33",
+                "timestamp": 1745990253,
                 "author": "树梢",
                 "email": "pfingan@foxmail.com",
                 "message": "添加GitHub与Git功能配置文档，更新README以包含新功能链接；\n在路径和搜索索引中添加GitHub与Git功能相关信息，增强文档的可用性和完整性；\n增加自动化脚本。",
@@ -20,7 +19,8 @@
                     "email": "pfingan@foxmail.com",
                     "commits": 2,
                     "github_username": "LoosePrince",
-                    "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                    "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                    "last_commit_timestamp": 1745990253
                 }
             ]
         }
@@ -36,8 +36,7 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-05-02",
-                            "time": "08:58:40",
+                            "timestamp": 1746176320,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
@@ -50,7 +49,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 2,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1746176320
                             }
                         ]
                     }
@@ -61,8 +61,7 @@
                 "path": "快速入门/README.md",
                 "git": {
                     "last_modified": {
-                        "date": "2025-05-02",
-                        "time": "08:58:40",
+                        "timestamp": 1746176320,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
                         "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
@@ -75,7 +74,8 @@
                             "email": "pfingan@foxmail.com",
                             "commits": 4,
                             "github_username": "LoosePrince",
-                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                            "last_commit_timestamp": 1746176320
                         }
                     ]
                 }
@@ -91,8 +91,7 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-05-02",
-                            "time": "08:58:40",
+                            "timestamp": 1746176320,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
@@ -105,7 +104,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 3,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1746176320
                             }
                         ]
                     }
@@ -116,8 +116,7 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-05-02",
-                            "time": "12:13:47",
+                            "timestamp": 1746188027,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "新增目录编辑器页面测试工具，支持上传和编辑JSON格式的目录结构。",
@@ -130,7 +129,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 4,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1746188027
                             }
                         ]
                     }
@@ -141,8 +141,7 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-04-29",
-                            "time": "12:28:07",
+                            "timestamp": 1745929687,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "v1.0.0",
@@ -155,7 +154,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 1,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1745929687
                             }
                         ]
                     }
@@ -166,8 +166,7 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-05-02",
-                            "time": "08:58:40",
+                            "timestamp": 1746176320,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
@@ -180,7 +179,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 2,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1746176320
                             }
                         ]
                     }
@@ -191,8 +191,7 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-05-02",
-                            "time": "08:58:40",
+                            "timestamp": 1746176320,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
@@ -205,7 +204,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 2,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1746176320
                             }
                         ]
                     }
@@ -216,8 +216,7 @@
                 "path": "使用指南/README.md",
                 "git": {
                     "last_modified": {
-                        "date": "2025-04-29",
-                        "time": "12:28:07",
+                        "timestamp": 1745929687,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
                         "message": "v1.0.0",
@@ -230,7 +229,8 @@
                             "email": "pfingan@foxmail.com",
                             "commits": 1,
                             "github_username": "LoosePrince",
-                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                            "last_commit_timestamp": 1745929687
                         }
                     ]
                 }
@@ -241,13 +241,37 @@
             "path": "配置详解",
             "children": [
                 {
+                    "title": "站点与页脚配置",
+                    "path": "配置详解/站点与页脚.md",
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "timestamp": 1746176320,
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 1,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1746176320
+                            }
+                        ]
+                    }
+                },
+                {
                     "title": "外观设置",
                     "path": "配置详解/外观设置.md",
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-04-29",
-                            "time": "12:28:07",
+                            "timestamp": 1745929687,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "v1.0.0",
@@ -260,7 +284,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 1,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1745929687
                             }
                         ]
                     }
@@ -271,8 +296,7 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-05-02",
-                            "time": "08:58:40",
+                            "timestamp": 1746176320,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
@@ -285,7 +309,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 1,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1746176320
                             }
                         ]
                     }
@@ -296,8 +321,7 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-05-02",
-                            "time": "08:58:40",
+                            "timestamp": 1746176320,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
@@ -310,7 +334,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 1,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1746176320
                             }
                         ]
                     }
@@ -321,8 +346,7 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-05-02",
-                            "time": "08:58:40",
+                            "timestamp": 1746176320,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
@@ -335,32 +359,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 1,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
-                            }
-                        ]
-                    }
-                },
-                {
-                    "title": "站点与页脚配置",
-                    "path": "配置详解/站点与页脚.md",
-                    "children": [],
-                    "git": {
-                        "last_modified": {
-                            "date": "2025-05-02",
-                            "time": "08:58:40",
-                            "author": "树梢",
-                            "email": "pfingan@foxmail.com",
-                            "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
-                            "github_username": "LoosePrince",
-                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
-                        },
-                        "contributors": [
-                            {
-                                "name": "树梢",
-                                "email": "pfingan@foxmail.com",
-                                "commits": 1,
-                                "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1746176320
                             }
                         ]
                     }
@@ -371,8 +371,7 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-04-30",
-                            "time": "05:17:33",
+                            "timestamp": 1745990253,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "添加GitHub与Git功能配置文档，更新README以包含新功能链接；\n在路径和搜索索引中添加GitHub与Git功能相关信息，增强文档的可用性和完整性；\n增加自动化脚本。",
@@ -385,7 +384,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 1,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1745990253
                             }
                         ]
                     }
@@ -396,8 +396,7 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-04-29",
-                            "time": "14:09:11",
+                            "timestamp": 1745935751,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "移除无效说明",
@@ -410,7 +409,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 2,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1745935751
                             }
                         ]
                     }
@@ -421,8 +421,7 @@
                 "path": "配置详解/README.md",
                 "git": {
                     "last_modified": {
-                        "date": "2025-05-02",
-                        "time": "08:58:40",
+                        "timestamp": 1746176320,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
                         "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
@@ -435,7 +434,8 @@
                             "email": "pfingan@foxmail.com",
                             "commits": 4,
                             "github_username": "LoosePrince",
-                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                            "last_commit_timestamp": 1746176320
                         }
                     ]
                 }
@@ -451,8 +451,7 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "date": "2025-05-01",
-                            "time": "06:29:23",
+                            "timestamp": 1746080963,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
                             "message": "重构嵌入HTML内容功能，支持全屏显示及暗黑模式同步和js执行",
@@ -465,7 +464,8 @@
                                 "email": "pfingan@foxmail.com",
                                 "commits": 3,
                                 "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1746080963
                             }
                         ]
                     }
@@ -476,8 +476,7 @@
                 "path": "示例与模板/README.md",
                 "git": {
                     "last_modified": {
-                        "date": "2025-04-29",
-                        "time": "12:28:07",
+                        "timestamp": 1745929687,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
                         "message": "v1.0.0",
@@ -490,7 +489,8 @@
                             "email": "pfingan@foxmail.com",
                             "commits": 1,
                             "github_username": "LoosePrince",
-                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                            "last_commit_timestamp": 1745929687
                         }
                     ]
                 }

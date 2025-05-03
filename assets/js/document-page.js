@@ -2310,9 +2310,51 @@ function findDocInfoByPath(node, targetPath) {
     return null; // 未找到
 }
 
+// 格式化时间戳
+function formatTimestamp(timestamp, options = {}) {
+    const date = new Date(timestamp * 1000); // Git时间戳是秒级的
+    const now = new Date();
+    const diff = now - date;
+    
+    // 如果是当前时区的时间，使用相对时间
+    if (options.relative) {
+        // 1分钟内
+        if (diff < 60 * 1000) {
+            return '刚刚';
+        }
+        // 1小时内
+        if (diff < 60 * 60 * 1000) {
+            const minutes = Math.floor(diff / (60 * 1000));
+            return `${minutes}分钟前`;
+        }
+        // 24小时内
+        if (diff < 24 * 60 * 60 * 1000) {
+            const hours = Math.floor(diff / (60 * 60 * 1000));
+            return `${hours}小时前`;
+        }
+        // 30天内
+        if (diff < 30 * 24 * 60 * 60 * 1000) {
+            const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+            return `${days}天前`;
+        }
+    }
+    
+    // 默认使用完整日期时间格式
+    const userLocale = navigator.language || 'zh-CN';
+    return date.toLocaleString(userLocale, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+}
+
 // 更新Git和GitHub相关信息
 function updateGitInfo(relativePath) {
-    // 查找当前文档的Git信息 - 使用新的查找函数
+    // 查找当前文档的Git信息
     const docInfo = findDocInfoByPath(pathData, relativePath);
     
     // 检查docInfo是否存在，以及是否有git属性
@@ -2341,12 +2383,14 @@ function updateGitInfo(relativePath) {
         const lastModifiedContainer = document.getElementById('last-modified');
         
         if (modifiedTime && modifiedAuthor && lastModifiedContainer) {
-            const date = new Date(lastModified.date + ' ' + lastModified.time);
-            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-            const formattedDate = date.toLocaleString('zh-CN', options);
+            // 格式化时间戳，使用相对时间
+            const formattedDate = formatTimestamp(lastModified.timestamp, { relative: true });
             
             modifiedTime.textContent = formattedDate;
             modifiedAuthor.textContent = lastModified.author;
+            
+            // 添加完整时间提示
+            modifiedTime.title = formatTimestamp(lastModified.timestamp);
             
             // 显示最后修改时间区域
             lastModifiedContainer.style.display = 'flex';
@@ -2386,7 +2430,7 @@ function updateGitInfo(relativePath) {
                         const avatar = document.createElement('img');
                         avatar.src = contributor.github_avatar;
                         avatar.alt = contributor.name;
-                        avatar.title = `${contributor.name} (${contributor.commits} commits)`;
+                        avatar.title = `${contributor.name} (${contributor.commits} commits) - 最后贡献: ${formatTimestamp(contributor.last_commit_timestamp)}`;
                         avatar.className = 'w-6 h-6 rounded-full';
                         
                         // 图片加载失败时的处理
@@ -2397,7 +2441,7 @@ function updateGitInfo(relativePath) {
                             // 创建替代的昵称标签
                             const nameSpan = document.createElement('span');
                             nameSpan.textContent = contributor.name;
-                            nameSpan.title = `${contributor.commits} commits`;
+                            nameSpan.title = `${contributor.commits} commits - 最后贡献: ${formatTimestamp(contributor.last_commit_timestamp)}`;
                             nameSpan.className = 'px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs';
                             
                             // 如果是链接内的图片，将标签加入链接
@@ -2413,7 +2457,7 @@ function updateGitInfo(relativePath) {
                             const avatarLink = document.createElement('a');
                             avatarLink.href = `https://github.com/${contributor.github_username}`;
                             avatarLink.target = '_blank';
-                            avatarLink.title = `${contributor.name} (${contributor.commits} commits)`;
+                            avatarLink.title = `${contributor.name} (${contributor.commits} commits) - 最后贡献: ${formatTimestamp(contributor.last_commit_timestamp)}`;
                             avatarLink.appendChild(avatar);
                             contributorsList.appendChild(avatarLink);
                         } else {
@@ -2423,7 +2467,7 @@ function updateGitInfo(relativePath) {
                         // 没有GitHub头像，直接显示昵称
                         const nameSpan = document.createElement('span');
                         nameSpan.textContent = contributor.name;
-                        nameSpan.title = `${contributor.commits} commits`;
+                        nameSpan.title = `${contributor.commits} commits - 最后贡献: ${formatTimestamp(contributor.last_commit_timestamp)}`;
                         nameSpan.className = 'px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs';
                         
                         // 如果有GitHub用户名，添加链接
@@ -2442,7 +2486,7 @@ function updateGitInfo(relativePath) {
                     // 创建名称标签
                     const nameSpan = document.createElement('span');
                     nameSpan.textContent = contributor.name;
-                    nameSpan.title = `${contributor.commits} commits`;
+                    nameSpan.title = `${contributor.commits} commits - 最后贡献: ${formatTimestamp(contributor.last_commit_timestamp)}`;
                     nameSpan.className = 'px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs';
                     
                     // 如果有GitHub用户名，创建链接
