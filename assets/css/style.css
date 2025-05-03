@@ -32,6 +32,32 @@ button.active, .button.active {
     opacity: 0.9;
 }
 
+.search-results-list .search-match {
+    position: relative;
+    transition: all 0.2s ease;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+}
+.search-results-list .search-match:hover {
+    background-color: #E8F0FE;
+    border-radius: 5px;
+}
+.search-preview {
+    max-height: 300px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+.search-preview::-webkit-scrollbar {
+    width: 6px;
+}
+.search-preview::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 3px;
+}
+.dark .search-preview::-webkit-scrollbar-thumb {
+    background-color: rgba(255,255,255,0.2);
+}
+
 /* 几何形状和装饰元素 - 来自index.html */
 .geometric-shape {
     border-radius: 12px;

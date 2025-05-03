@@ -233,7 +233,7 @@ const documentCache = {
         // 限制数量并开始预加载
         const limitedPaths = filteredPaths.slice(0, maxPreload);
         if (limitedPaths.length > 0) {
-            console.log(`自动预加载 ${limitedPaths.length} 个相关文档:`, limitedPaths);
+            // console.log(`自动预加载 ${limitedPaths.length} 个相关文档:`, limitedPaths);
             limitedPaths.forEach(path => this.preloadDocument(path));
         }
     },
