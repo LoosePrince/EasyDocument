@@ -193,7 +193,6 @@ def get_git_info(repo, file_path, config):
             commits = list(repo.iter_commits(paths=file_rel_path, max_count=1))
             if commits:
                 last_commit = commits[0]
-                timestamp = datetime.datetime.fromtimestamp(last_commit.committed_date)
                 
                 # 获取GitHub用户名和头像
                 github_username = get_github_username_by_email(last_commit.author.email, repo)
@@ -202,8 +201,7 @@ def get_git_info(repo, file_path, config):
                     github_avatar = get_github_avatar_url(github_username)
                 
                 git_info["last_modified"] = {
-                    "date": timestamp.strftime("%Y-%m-%d"),
-                    "time": timestamp.strftime("%H:%M:%S"),
+                    "timestamp": last_commit.committed_date,  # Unix时间戳
                     "author": last_commit.author.name,
                     "email": last_commit.author.email,
                     "message": last_commit.message.strip(),
@@ -231,9 +229,13 @@ def get_git_info(repo, file_path, config):
                         "email": author_email,
                         "commits": 0,
                         "github_username": github_username,
-                        "github_avatar": github_avatar
+                        "github_avatar": github_avatar,
+                        "last_commit_timestamp": commit.committed_date  # 添加最后提交时间戳
                     }
                 authors[author_name]["commits"] += 1
+                # 更新最后提交时间戳（如果当前提交更新）
+                if commit.committed_date > authors[author_name]["last_commit_timestamp"]:
+                    authors[author_name]["last_commit_timestamp"] = commit.committed_date
             
             # 按提交次数排序
             git_info["contributors"] = sorted(
