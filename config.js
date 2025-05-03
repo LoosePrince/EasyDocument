@@ -86,7 +86,8 @@ const config = {
     max_results: 20, // 最大结果数
     placeholder: "搜索文档...", // 搜索框占位符文本
     search_cached: true, // 是否搜索缓存的文档内容
-    search_on_type: false // 是否在输入时自动搜索（暂未实现）
+    search_on_type: true, // 是否在输入时自动搜索
+    match_distance: 50 // 搜索结果中多个匹配项之间的最小字符距离
   },
 
   // 插件与扩展

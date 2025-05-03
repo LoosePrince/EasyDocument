@@ -774,6 +774,10 @@ async function loadContentFromUrl() {
     let path = url.searchParams.get('path') || ''; // 使用let，因为可能需要修改
     const root = url.searchParams.get('root') || null;
     
+    // 获取搜索参数
+    const searchQuery = url.searchParams.get('search');
+    const searchOccurrence = url.searchParams.get('occurrence');
+    
     // 如果root参数更改或从无到有，需要重新生成侧边栏
     if (root !== currentRoot) {
         currentRoot = root;
@@ -881,6 +885,13 @@ async function loadContentFromUrl() {
         // 加载文档
         await loadDocument(decodedPath);
         
+        // 处理搜索高亮和跳转
+        if (searchQuery) {
+            setTimeout(() => {
+                highlightSearchTerms(searchQuery, searchOccurrence);
+            }, 500); // 等待文档渲染完成
+        }
+        
         // 完成加载，隐藏进度条
         hideProgressBar();
     } catch (error) {
@@ -891,6 +902,9 @@ async function loadContentFromUrl() {
         isLoadingDocument = false;
     }
 }
+
+// 将loadContentFromUrl函数导出到window对象
+window.loadContentFromUrl = loadContentFromUrl;
 
 // 折叠所有文件夹
 function collapseAllFolders() {
@@ -1117,10 +1131,10 @@ function addCacheStatusIndicator(contentDiv, cacheType) {
         }
     });
     
-    // 3秒后自动隐藏
+    // 5秒后自动隐藏
     setTimeout(() => {
         statusIndicator.classList.add('opacity-50');
-    }, 3000);
+    }, 5000);
     
     // 鼠标进入时恢复透明度
     statusIndicator.addEventListener('mouseenter', () => {
@@ -2920,4 +2934,233 @@ function updateIframeTocHighlight(iframe) {
     } catch (e) {
         console.warn('更新iframe目录高亮出错:', e);
     }
+}
+
+// 高亮搜索关键词并跳转到指定位置
+function highlightSearchTerms(searchQuery, occurrence = null) {
+    const contentElement = document.getElementById('document-content');
+    if (!contentElement || !searchQuery) return;
+    
+    // 跟踪匹配次数
+    let occurrenceCount = 0;
+    let targetElement = null;
+    
+    // 查找所有文本节点
+    const textNodes = [];
+    const walker = document.createTreeWalker(
+        contentElement,
+        NodeFilter.SHOW_TEXT,
+        { 
+            acceptNode: function(node) {
+                // 忽略script和style标签内的文本节点
+                if (node.parentNode.nodeName === 'SCRIPT' || 
+                    node.parentNode.nodeName === 'STYLE' ||
+                    node.parentNode.classList.contains('hljs') || // 忽略代码高亮中的文本
+                    node.parentNode.nodeName === 'CODE') { 
+                    return NodeFilter.FILTER_REJECT;
+                }
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        }
+    );
+    
+    // 收集所有文本节点
+    let currentNode;
+    while (currentNode = walker.nextNode()) {
+        textNodes.push(currentNode);
+    }
+    
+    // 存储所有创建的高亮元素，以便后续移除
+    const highlightSpans = [];
+    
+    // 在节点中查找并高亮搜索关键词
+    const targetOccurrence = occurrence ? parseInt(occurrence) : null;
+    for (let i = 0; i < textNodes.length; i++) {
+        const node = textNodes[i];
+        const text = node.nodeValue;
+        
+        // 查找当前节点中的所有匹配项
+        let lastIndex = 0;
+        let match;
+        const searchRegex = new RegExp(searchQuery.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
+        
+        // 收集当前节点中的所有匹配
+        const matches = [];
+        while ((match = searchRegex.exec(text)) !== null) {
+            matches.push({
+                index: match.index,
+                length: searchQuery.length
+            });
+        }
+        
+        // 如果有匹配项，处理高亮
+        if (matches.length > 0) {
+            // 从后向前处理替换，避免索引变化
+            const fragment = document.createDocumentFragment();
+            let lastPos = text.length;
+            
+            for (let j = matches.length - 1; j >= 0; j--) {
+                const match = matches[j];
+                occurrenceCount++;
+                
+                // 检查是否是目标匹配项
+                const isTargetMatch = targetOccurrence && occurrenceCount === targetOccurrence;
+                
+                // 创建后面的文本节点
+                if (match.index + match.length < lastPos) {
+                    const textAfter = document.createTextNode(
+                        text.substring(match.index + match.length, lastPos)
+                    );
+                    fragment.prepend(textAfter);
+                }
+                
+                // 创建高亮的匹配文本
+                const matchText = text.substring(match.index, match.index + match.length);
+                const highlightSpan = document.createElement('span');
+                highlightSpan.textContent = matchText;
+                highlightSpan.className = `bg-yellow-200 dark:bg-yellow-800 search-highlight occurrence-${occurrenceCount}`;
+                highlightSpan.setAttribute('data-occurrence', occurrenceCount);
+                
+                // 添加过渡效果
+                highlightSpan.style.transition = 'background-color 0.5s ease';
+                
+                // 存储到数组中
+                highlightSpans.push(highlightSpan);
+                
+                // 如果是目标匹配项，记录元素引用
+                if (isTargetMatch) {
+                    targetElement = highlightSpan;
+                    highlightSpan.classList.add('target-highlight');
+                }
+                
+                fragment.prepend(highlightSpan);
+                
+                // 更新lastPos
+                lastPos = match.index;
+            }
+            
+            // 添加最前面的文本
+            if (lastPos > 0) {
+                const textBefore = document.createTextNode(text.substring(0, lastPos));
+                fragment.prepend(textBefore);
+            }
+            
+            // 替换原节点
+            node.parentNode.replaceChild(fragment, node);
+        }
+    }
+    
+    // 显示一个搜索结果摘要
+    const summaryElement = showSearchSummary(searchQuery, occurrenceCount);
+    
+    // 如果有目标元素，滚动到目标位置
+    if (targetElement) {
+        setTimeout(() => {
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // 为目标元素添加临时闪烁动画
+            targetElement.style.animation = 'highlight-pulse 1.5s 3';
+            targetElement.style.animationTimingFunction = 'ease-in-out';
+            
+            // 创建新的样式元素，而不是尝试访问现有样式表
+            const styleElement = document.createElement('style');
+            styleElement.textContent = `
+                @keyframes highlight-pulse {
+                    0% { background-color: var(--color-primary); color: white; }
+                    50% { background-color: var(--bg-yellow-200, #fef9c3); color: var(--text-gray-900, #111827); }
+                    100% { background-color: var(--color-primary); color: white; }
+                }
+                
+                .dark @keyframes highlight-pulse {
+                    0% { background-color: var(--color-primary); color: white; }
+                    50% { background-color: var(--bg-yellow-800, #854d0e); color: var(--text-gray-100, #f3f4f6); }
+                    100% { background-color: var(--color-primary); color: white; }
+                }
+            `;
+            
+            // 将样式添加到文档头部
+            document.head.appendChild(styleElement);
+        }, 300);
+    } else if (occurrenceCount > 0) {
+        // 如果没有指定目标但有匹配项，滚动到第一个匹配项
+        const firstMatch = document.querySelector('.search-highlight');
+        if (firstMatch) {
+            setTimeout(() => {
+                firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        }
+    }
+    
+    // 5秒后移除高亮
+    setTimeout(() => {
+        // 淡出效果
+        highlightSpans.forEach(span => {
+            span.style.backgroundColor = 'transparent';
+            span.style.color = span.parentNode ? 
+                window.getComputedStyle(span.parentNode).color : 
+                (isDarkMode() ? '#f3f4f6' : '#111827');
+        });
+        
+        // 淡出完成后完全移除高亮标记
+        setTimeout(() => {
+            // 检查元素是否还在DOM中，避免错误
+            highlightSpans.forEach(span => {
+                if (span && span.parentNode) {
+                    const parent = span.parentNode;
+                    const textNode = document.createTextNode(span.textContent);
+                    parent.replaceChild(textNode, span);
+                }
+            });
+            
+            // 如果摘要元素还存在，移除它
+            if (summaryElement && summaryElement.parentNode) {
+                summaryElement.remove();
+            }
+        }, 500); // 等待0.5秒淡出动画完成
+    }, 5000); // 5秒后开始移除
+}
+
+// 显示搜索结果摘要
+function showSearchSummary(searchQuery, totalOccurrences) {
+    // 只有在有匹配项时才显示摘要
+    if (totalOccurrences === 0) return null;
+    
+    // 创建摘要元素
+    const summaryDiv = document.createElement('div');
+    summaryDiv.className = 'search-summary fixed top-16 left-1/2 transform -translate-x-1/2 bg-white dark:bg-gray-800 z-40 py-2 px-4 rounded-full shadow-md flex items-center';
+    summaryDiv.style.maxWidth = '90%';
+    summaryDiv.style.transition = 'opacity 0.5s ease-out';
+    
+    // 创建摘要内容
+    summaryDiv.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-search text-primary mr-2"></i>
+            <span class="text-sm">找到 <strong>${totalOccurrences}</strong> 处匹配 "<span class="text-primary">${searchQuery}</span>"</span>
+            <span class="ml-1 text-xs text-gray-500">(5秒后自动消失)</span>
+            <button class="ml-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    // 添加到文档中
+    document.body.appendChild(summaryDiv);
+    
+    // 添加关闭按钮事件
+    const closeButton = summaryDiv.querySelector('button');
+    closeButton.addEventListener('click', () => {
+        summaryDiv.remove();
+    });
+    
+    // 5秒后自动淡出
+    setTimeout(() => {
+        summaryDiv.style.opacity = '0';
+        setTimeout(() => {
+            if (summaryDiv.parentNode) {
+                summaryDiv.remove();
+            }
+        }, 500);
+    }, 5000);
+    
+    return summaryDiv;
 }

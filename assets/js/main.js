@@ -251,14 +251,34 @@ function bindSearchEvents() {
         doSearchButton.addEventListener('click', performSearch);
     }
     
-    // 输入框回车键事件
+    // 输入框事件
     const searchInput = document.getElementById('search-input');
     if (searchInput) {
+        // 回车键事件
         searchInput.addEventListener('keydown', function(event) {
             if (event.key === 'Enter') {
                 performSearch();
             }
         });
+        
+        // 如果启用了实时搜索，添加输入事件监听器
+        if (config.search.search_on_type) {
+            // 使用防抖函数包装搜索功能，避免频繁搜索
+            const debouncedSearch = debounce(function() {
+                if (searchInput.value.trim().length >= config.search.min_chars) {
+                    performSearch();
+                } else {
+                    // 清空搜索结果
+                    const searchResultsContainer = document.getElementById('search-results');
+                    if (searchResultsContainer) {
+                        searchResultsContainer.innerHTML = `<p class="text-gray-500 dark:text-gray-400 text-center py-4">请输入至少${config.search.min_chars}个字符</p>`;
+                    }
+                }
+            }, 300); // 300ms的防抖延迟
+            
+            // 在输入时执行防抖搜索
+            searchInput.addEventListener('input', debouncedSearch);
+        }
     }
     
     // 点击模态窗口外部关闭
@@ -270,6 +290,19 @@ function bindSearchEvents() {
             }
         });
     }
+}
+
+// 防抖函数，用于限制高频率事件的触发
+function debounce(func, wait) {
+    let timeout;
+    return function() {
+        const context = this;
+        const args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(function() {
+            func.apply(context, args);
+        }, wait);
+    };
 }
 
 // 打开搜索模态窗口
@@ -485,7 +518,7 @@ function displaySearchResults(results, query, searchResultsContainer) {
     if (results.length === 0) {
         searchResultsContainer.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-4">未找到匹配的结果</p>';
     } else {
-        let html = '<ul class="space-y-3">';
+        let html = '<ul class="space-y-3 search-results-list">';
         
         // 限制结果数量
         const maxResults = config.search.max_results || 20;
@@ -504,25 +537,27 @@ function displaySearchResults(results, query, searchResultsContainer) {
             if (result.fromCache) {
                 if (result.cacheType === 'preloaded') {
                     cacheIcon = '<span class="text-purple-500 dark:text-purple-400 ml-1" title="预加载文档"><i class="fas fa-bolt"></i></span>';
-                    cacheClass = 'border-purple-100 dark:border-purple-900';
+                    cacheClass = 'border-l-purple-400 dark:border-l-purple-500';
                 } else {
                     cacheIcon = '<span class="text-blue-500 dark:text-blue-400 ml-1" title="缓存文档"><i class="fas fa-database"></i></span>';
-                    cacheClass = 'border-blue-100 dark:border-blue-900';
+                    cacheClass = 'border-l-blue-400 dark:border-l-blue-500';
                 }
+            } else {
+                cacheClass = 'border-l-gray-300 dark:border-l-gray-600';
             }
             
             html += `
-            <li class="border-b dark:border-gray-700 ${cacheClass} pb-3">
-                <a href="${url}" class="block hover:bg-gray-50 dark:hover:bg-gray-700 rounded p-2" onclick="closeSearchModal()">
-                    <div class="flex items-center">
-                        <h4 class="text-primary font-medium">${highlightText(result.title, query)}</h4>
+            <li class="border dark:border-gray-700 ${cacheClass} border-l-4 rounded-md shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                <div class="block hover:bg-gray-50 dark:hover:bg-gray-700 search-result-item p-0" data-path="${result.path}" data-query="${query}">
+                    <div class="flex items-center p-3 pb-2 border-b border-gray-100 dark:border-gray-700">
+                        <h4 class="text-primary font-medium flex-grow">${highlightText(result.title, query)}</h4>
                         ${cacheIcon}
                     </div>
-                    <p class="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mt-1">${contentPreview}</p>
-                    <div class="text-gray-500 dark:text-gray-400 text-xs mt-1 flex items-center">
+                    <div class="text-gray-600 dark:text-gray-300 text-sm p-3 search-preview">${contentPreview}</div>
+                    <div class="text-gray-500 dark:text-gray-400 text-xs p-2 pt-0 flex items-center bg-gray-50 dark:bg-gray-800">
                         <i class="fas fa-file-alt mr-1"></i> ${result.path}
                     </div>
-                </a>
+                </div>
             </li>`;
         });
         
@@ -536,10 +571,56 @@ function displaySearchResults(results, query, searchResultsContainer) {
         html += '</ul>';
         searchResultsContainer.innerHTML = html;
         
-        // 为搜索结果中的链接添加点击事件
-        searchResultsContainer.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', function() {
+        // 为搜索结果中的项添加点击事件
+        document.querySelectorAll('.search-result-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const path = this.getAttribute('data-path');
+                const query = this.getAttribute('data-query');
+                
+                // 检查是否点击了特定的匹配项
+                let occurrenceTarget = null;
+                if (e.target.classList.contains('search-match') || e.target.closest('.search-match')) {
+                    const matchElement = e.target.classList.contains('search-match') ? 
+                                        e.target : e.target.closest('.search-match');
+                    occurrenceTarget = matchElement.getAttribute('data-occurrence');
+                }
+                
+                // 构建URL，添加搜索参数
+                let url = new URL(window.location.href);
+                url.searchParams.set('path', path);
+                url.searchParams.set('search', query);
+                
+                // 如果点击了特定匹配项，添加occurrence参数
+                if (occurrenceTarget) {
+                    url.searchParams.set('occurrence', occurrenceTarget);
+                } else {
+                    url.searchParams.delete('occurrence');
+                }
+                
+                // 关闭搜索模态窗口
                 closeSearchModal();
+                
+                // 使用history.pushState而不是直接跳转，避免页面刷新
+                window.history.pushState({path, search: query, occurrence: occurrenceTarget}, '', url.toString());
+                
+                // 手动触发内容加载
+                // 从document-page.js导入loadContentFromUrl函数
+                if (typeof window.loadContentFromUrl === 'function') {
+                    window.loadContentFromUrl();
+                    
+                    // 15秒后移除URL中的search和occurrence参数
+                    setTimeout(() => {
+                        const cleanUrl = new URL(window.location.href);
+                        cleanUrl.searchParams.delete('search');
+                        cleanUrl.searchParams.delete('occurrence');
+                        window.history.replaceState({path}, '', cleanUrl.toString());
+                    }, 15000);
+                } else {
+                    // 如果函数不可用，退回到传统跳转方式
+                    window.location.href = url.toString();
+                }
             });
         });
     }
@@ -550,28 +631,77 @@ function extractContentPreview(content, query) {
     if (!content) return '';
     
     const lowerContent = content.toLowerCase();
-    const queryIndex = lowerContent.indexOf(query.toLowerCase());
+    const lowerQuery = query.toLowerCase();
     
-    if (queryIndex === -1) return content.slice(0, 150) + '...';
+    // 找出所有匹配位置
+    let allMatches = [];
+    let lastIndex = 0;
+    let occurrenceCount = 0;
     
-    // 尝试提取包含查询词的上下文
-    const startIndex = Math.max(0, queryIndex - 60);
-    const endIndex = Math.min(content.length, queryIndex + query.length + 60);
-    let preview = content.slice(startIndex, endIndex);
+    while ((lastIndex = lowerContent.indexOf(lowerQuery, lastIndex)) !== -1) {
+        occurrenceCount++;
+        allMatches.push({
+            index: lastIndex,
+            occurrence: occurrenceCount // 记录这是文章中的第几个匹配项
+        });
+        lastIndex += lowerQuery.length;
+    }
     
-    // 在开头和结尾添加省略号
-    if (startIndex > 0) preview = '...' + preview;
-    if (endIndex < content.length) preview = preview + '...';
+    // 如果没有匹配项，返回文章开头的内容
+    if (allMatches.length === 0) return content.slice(0, 150) + '...';
     
-    return highlightText(preview, query);
+    // 获取配置中设置的最小匹配距离，默认为50
+    const minMatchDistance = config.search.match_distance || 50;
+    
+    // 筛选相距至少minMatchDistance个字符的匹配项
+    let filteredMatches = [allMatches[0]];
+    for (let i = 1; i < allMatches.length; i++) {
+        const prevMatch = filteredMatches[filteredMatches.length - 1];
+        if (allMatches[i].index - (prevMatch.index + lowerQuery.length) >= minMatchDistance) {
+            filteredMatches.push(allMatches[i]);
+        }
+    }
+    
+    // 限制最多显示5个匹配项
+    if (filteredMatches.length > 5) {
+        filteredMatches = filteredMatches.slice(0, 5);
+    }
+    
+    // 为每个匹配项生成预览内容，添加编号
+    let previews = filteredMatches.map(match => {
+        const startIndex = Math.max(0, match.index - 30);
+        const endIndex = Math.min(content.length, match.index + query.length + 30);
+        let preview = content.slice(startIndex, endIndex);
+        
+        // 在开头和结尾添加省略号
+        if (startIndex > 0) preview = '...' + preview;
+        if (endIndex < content.length) preview = preview + '...';
+        
+        // 高亮显示匹配词并添加编号
+        const highlightedPreview = highlightText(preview, query, match.occurrence);
+        
+        return `<div class="search-match" data-occurrence="${match.occurrence}">
+                  <span class="text-xs bg-gray-200 dark:bg-gray-600 rounded px-1 mr-1">第${match.occurrence}个</span>
+                  ${highlightedPreview}
+                </div>`;
+    });
+    
+    return previews.join('');
 }
 
 // 高亮显示文本中的匹配部分
-function highlightText(text, query) {
+function highlightText(text, query, occurrence = null) {
     if (!text || !query) return text;
     
     const regex = new RegExp('(' + query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + ')', 'gi');
-    return text.replace(regex, '<span class="bg-yellow-200 dark:bg-yellow-800">$1</span>');
+    
+    // 如果提供了匹配序号，则添加data-occurrence属性用于跳转
+    if (occurrence !== null) {
+        return text.replace(regex, `<span class="bg-yellow-200 dark:bg-yellow-800 occurrence-${occurrence}" 
+                                    data-occurrence="${occurrence}">$1</span>`);
+    } else {
+        return text.replace(regex, '<span class="bg-yellow-200 dark:bg-yellow-800">$1</span>');
+    }
 }
 
 // 处理主题切换点击事件
