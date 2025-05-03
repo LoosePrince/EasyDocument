@@ -36,10 +36,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1746176320,
+                            "timestamp": 1746252008,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
+                            "message": "更新支持时间戳格式化，添加相对时间显示功能；",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -47,10 +47,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 2,
+                                "commits": 3,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746176320
+                                "last_commit_timestamp": 1746252008
                             }
                         ]
                     }
@@ -421,10 +421,10 @@
                 "path": "配置详解/README.md",
                 "git": {
                     "last_modified": {
-                        "timestamp": 1746176320,
+                        "timestamp": 1746252008,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
-                        "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
+                        "message": "更新支持时间戳格式化，添加相对时间显示功能；",
                         "github_username": "LoosePrince",
                         "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                     },
@@ -432,10 +432,10 @@
                         {
                             "name": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "commits": 4,
+                            "commits": 5,
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                            "last_commit_timestamp": 1746176320
+                            "last_commit_timestamp": 1746252008
                         }
                     ]
                 }
@@ -451,10 +451,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1746080963,
+                            "timestamp": 1746252008,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "重构嵌入HTML内容功能，支持全屏显示及暗黑模式同步和js执行",
+                            "message": "更新支持时间戳格式化，添加相对时间显示功能；",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -462,10 +462,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 3,
+                                "commits": 4,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746080963
+                                "last_commit_timestamp": 1746252008
                             }
                         ]
                     }
