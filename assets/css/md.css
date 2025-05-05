@@ -212,6 +212,11 @@ li:has(> input[type="checkbox"]) {
     font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
 }
 
+.markdown-body pre code {
+    display: block;
+    padding: 1em;
+}
+
 /* 代码块滚动条美化 */
 .markdown-body pre,
 .markdown-body code {
