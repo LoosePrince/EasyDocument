@@ -58,16 +58,39 @@ const config = {
     nav_links: [ // 导航栏链接
       {
         text: "首页",
-        url: "index.html"
+        url: "index.html",
+        icon: "fas fa-house"
       },
       {
         text: "文档",
-        url: "main.html"
+        url: "main.html",
+        icon: "fas fa-file-lines"
+      },
+      {
+        text: "教程",
+        url: [
+          {
+            text: "快速开始",
+            url: "main.html?root=快速入门",
+            icon: "fas fa-rocket"
+          },
+          {
+            text: "使用指南",
+            url: "main.html?root=使用指南",
+            icon: "fas fa-book"
+          },
+          {
+            text: "详细配置",
+            url: "main.html?root=配置详解",
+            icon: "fas fa-cog"
+          }
+        ],
+        icon: "fas fa-graduation-cap"
       },
       {
         text: "GitHub",
         url: "https://github.com/LoosePrince/EasyDocument",
-        icon: "github",
+        icon: "fab fa-github",
         external: true
       }
     ]
