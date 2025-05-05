@@ -18,7 +18,7 @@
 | `footer_file` | 字符串 | `"footer.html"` | 自定义底栏文件路径 |
 | `sidebar_width` | 字符串 | `"250px"` | 侧边栏宽度 |
 | `toc_width` | 字符串 | `"220px"` | 目录宽度 |
-| `mobile_breakpoint` | 字符串 | `"768px"` | 移动设备断点 |
+| `mobile_breakpoint` | 字符串 | `"1024px"` | 移动设备断点 |
 
 ### 详细说明
 
@@ -138,9 +138,35 @@ navigation: {
 定义显示在顶部导航栏中的链接。每个链接项可以包含以下属性：
 
 - `text`: 链接显示文本
-- `url`: 链接目标URL
-- `icon`: 可选的图标名称（支持的值取决于图标库）
+- `url`: 链接目标URL或下拉菜单项数组（支持折叠菜单）
+- `icon`: 可选的图标名称（支持的值取决于FontAwesome 6图标库）
 - `external`: 布尔值，指示链接是否应在新标签页中打开
+
+##### 图标使用说明
+
+EasyDocument使用FontAwesome 6图标库，在配置中使用图标时需注意：
+
+1. 图标名称直接使用FontAwesome的名称，**需要**添加如`fas`、`fab`等前缀，例如：
+   - `fas fa-house` - 首页图标
+   - `fab fa-github` - GitHub图标
+2. 注意FontAwesome 6中一些图标名称与之前版本不同，如：
+   - `home` → `house`
+   - `file-alt` → `file-lines` 
+
+3. 常用图标参考：
+   - `house` - 首页图标
+   - `file-lines` - 文档图标
+   - `graduation-cap` - 教程图标
+   - `book` - 书籍图标
+   - `cog` - 设置图标
+   - `rocket` - 火箭图标
+   - `github` - GitHub图标
+   - `user` - 用户图标
+   - `download` - 下载图标
+
+4. 可以在[FontAwesome官网](https://fontawesome.com/icons)查找更多图标
+
+##### 基本链接配置
 
 ```javascript
 navigation: {
@@ -154,18 +180,54 @@ navigation: {
       url: "main.html"
     },
     {
-      text: "API参考",
-      url: "api/index.html"
-    },
-    {
       text: "GitHub",
       url: "https://github.com/LoosePrince/EasyDocument",
-      icon: "github",
+      icon: "fab fa-github",
       external: true
     }
   ]
 }
 ```
+
+##### 折叠下拉菜单配置
+
+您可以通过将`url`设置为链接数组来创建折叠式下拉菜单：
+
+```javascript
+navigation: {
+  nav_links: [
+    // 基本链接
+    {
+      text: "首页",
+      url: "index.html",
+      icon: "fas fa-house"
+    },
+    // 折叠下拉菜单
+    {
+      text: "教程",
+      icon: "fas fa-graduation-cap",
+      url: [
+        {
+          text: "快速开始",
+          url: "main.html?path=快速入门/README.md",
+          icon: "fas fa-rocket"
+        },
+        {
+          text: "使用指南",
+          url: "main.html?path=高级功能/README.md",
+          icon: "fas fa-book"
+        }
+      ]
+    }
+  ]
+}
+```
+
+折叠下拉菜单支持以下特性：
+- 点击菜单标题展开/折叠子菜单
+- 点击页面其他区域自动折叠子菜单
+- 支持在桌面端和移动端不同显示方式的适配
+- 子菜单项支持图标和外部链接
 
 您可以添加任意数量的导航链接，但请注意过多的链接可能会影响布局，特别是在移动设备上。
 
@@ -217,12 +279,41 @@ layout: {
 }
 ```
 
+### 导航菜单与下拉组合
+
+组合使用普通链接与下拉菜单创建丰富的导航体验：
+
+```javascript
+navigation: {
+  nav_links: [
+    { text: "首页", url: "index.html" },
+    { text: "文档", url: "main.html" },
+    {
+      text: "教程",
+      url: [
+        { text: "快速开始", url: "main.html?path=快速入门/README.md" },
+        { text: "高级功能", url: "main.html?path=高级功能/README.md" }
+      ]
+    },
+    {
+      text: "资源",
+      url: [
+        { text: "下载", url: "downloads.html" },
+        { text: "社区", url: "https://github.com/LoosePrince/EasyDocument/discussions", external: true }
+      ]
+    }
+  ]
+}
+```
+
 ## 最佳实践
 
 1. **屏幕适配**: 确保在设置宽度时考虑到不同的屏幕尺寸，测试您的文档在各种设备上的显示效果
 2. **导航清晰度**: 为复杂文档启用面包屑和自动折叠，帮助用户理解文档结构
 3. **自定义顶栏底栏**: 仅在有特殊需求时使用自定义HTML，否则使用默认设置以保持一致性
 4. **导航链接**: 保持顶部导航链接的简洁，仅包含最重要的链接
+5. **下拉菜单**: 使用下拉菜单对相关链接进行分组，而不是在顶部导航栏中放置过多链接
+6. **响应式设计**: 确保您的导航在移动设备上同样易于使用，测试不同断点的显示效果
 
 ## 相关文档
 

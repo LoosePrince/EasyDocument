@@ -726,20 +726,58 @@ async function loadCustomFooter() {
 function loadDefaultFooter() {
     document.getElementById('footer-container').innerHTML = `
     <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-16">
-        <div class="container mx-auto px-4 py-6 text-center">
-            <p class="text-gray-600 dark:text-gray-300 copyright-text">${config.footer.copyright || '© 2024 EasyDocument'}</p>
-            ${config.footer.show_powered_by ? 
-            `<p class="text-gray-500 dark:text-gray-400 text-sm mt-2 powered-by-text">
-                使用 <a href="https://tailwindcss.com" class="text-primary hover:underline">TailwindCSS</a> 和 
-                <a href="https://alpinejs.dev" class="text-primary hover:underline">Alpine.js</a> 构建
-            </p>` : ''}
-            <p class="text-gray-500 dark:text-gray-400 text-sm mt-1 site-description">${config.site.description}</p>
-        </div>
-        
-        <!-- 添加隐藏的导航链接和页脚链接容器，以便JS可以操作 -->
-        <div class="hidden">
-            <ul class="nav-links"></ul>
-            <ul class="footer-links"></ul>
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex flex-col md:flex-row md:justify-between md:items-center">
+                <!-- 版权信息 -->
+                <div class="mb-6 md:mb-0">
+                    <div class="flex items-center space-x-2 mb-3">
+                        <img src="assets/img/logo.svg" alt="EasyDocument" class="site-logo h-8 w-8" onerror="this.src='data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'%3E%3Crect width=\\'100\\' height=\\'100\\' rx=\\'20\\' fill=\\'%233b82f6\\'/%3E%3Cpath d=\\'M30 40 L70 40 M30 50 L60 50 M30 60 L50 60\\' stroke=\\'%23fff\\' stroke-width=\\'8\\' stroke-linecap=\\'round\\'/%3E%3C/svg%3E'">
+                        <span class="text-lg font-bold text-gray-800 dark:text-white">
+                            <span class="text-primary">Easy</span>Document
+                        </span>
+                    </div>
+                    <p class="text-gray-600 dark:text-gray-300 copyright-text">${config.footer.copyright || '© 2024 EasyDocument'}</p>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1 site-description">${config.site.description || '一个轻量级、免编译的纯静态前端文档系统'}</p>
+                </div>
+                
+                <!-- 链接区域 -->
+                <div class="grid grid-cols-2 gap-8 sm:grid-cols-2">
+                    <!-- 导航链接 -->
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-800 dark:text-white tracking-wider uppercase mb-4">导航</h3>
+                        <ul class="space-y-3 nav-links">
+                            <!-- 由JS动态填充 -->
+                        </ul>
+                    </div>
+                    
+                    <!-- 相关资源 -->
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-800 dark:text-white tracking-wider uppercase mb-4">资源</h3>
+                        <ul class="space-y-3 footer-links">
+                            <!-- 由JS动态填充 -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 底部信息 -->
+            <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 flex flex-col-reverse md:flex-row md:justify-between md:items-center">
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-4 md:mt-0 powered-by-text">
+                    ${config.footer.show_powered_by ? 
+                    `使用 
+                    <a href="https://tailwindcss.com" target="_blank" class="text-primary hover:underline">TailwindCSS</a>, 
+                    <a href="https://alpinejs.dev" target="_blank" class="text-primary hover:underline">Alpine.js</a>, 
+                    <a href="https://fontawesome.com" target="_blank" class="text-primary hover:underline">FontAwesome</a> 
+                    构建` : ''}
+                </p>
+                
+                <div class="flex space-x-6">
+                    ${config.extensions.github.repo_url ? 
+                    `<a href="${config.extensions.github.repo_url}" target="_blank" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                        <i class="fab fa-github text-xl"></i>
+                    </a>` : ''}
+                </div>
+            </div>
         </div>
     </footer>`;
     

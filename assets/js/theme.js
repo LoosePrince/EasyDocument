@@ -53,6 +53,9 @@ export function applyTheme(theme) {
     window.dispatchEvent(new CustomEvent('themeChanged', {
         detail: { theme }
     }));
+    
+    // 直接更新按钮图标状态
+    updateThemeToggleButton();
 }
 
 // 更新主题按钮的状态
@@ -86,6 +89,9 @@ export function toggleDarkMode() {
     // 保存设置
     const isDarkMode = document.documentElement.classList.contains('dark');
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    
+    // 立即更新按钮图标状态
+    updateThemeToggleButton();
     
     // 触发全局事件，用于通知其他组件
     window.dispatchEvent(new CustomEvent('themeChanged', {
