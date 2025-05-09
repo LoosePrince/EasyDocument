@@ -73,6 +73,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // 初始加载内容
     loadContentFromUrl();
+    
+    // 添加浏览器原生hash变化处理，用于处理浏览器中使用后退按钮等操作导致的hash变化
+    window.addEventListener('hashchange', function(e) {
+        // 获取新的哈希值
+        const newHash = window.location.hash;
+        if (newHash && newHash.length > 1) {
+            // 处理哈希变化
+            handleUrlHash(newHash);
+        }
+    });
 });
 
 // 创建顶部进度条
@@ -846,6 +856,9 @@ async function loadContentFromUrl() {
     const searchQuery = url.searchParams.get('search');
     const searchOccurrence = url.searchParams.get('occurrence');
     
+    // 保存URL中的hash部分以便稍后处理
+    const urlHash = window.location.hash;
+    
     // 如果root参数更改或从无到有，需要重新生成侧边栏
     if (root !== currentRoot) {
         currentRoot = root;
@@ -958,6 +971,13 @@ async function loadContentFromUrl() {
             setTimeout(() => {
                 highlightSearchTerms(searchQuery, searchOccurrence);
             }, 500); // 等待文档渲染完成
+        }
+        
+        // 处理URL中的锚点，应用自定义滚动偏移
+        if (urlHash && urlHash.length > 1) {
+            setTimeout(() => {
+                handleUrlHash(urlHash);
+            }, 300); // 等待内容渲染完成再滚动
         }
         
         // 完成加载，隐藏进度条
@@ -1077,6 +1097,9 @@ async function loadDocument(relativePath) {
     const fetchPath = `${config.document.root_dir}/${relativePath}`;
     let successfullyLoaded = false; // 标记是否成功加载了内容
     
+    // 保存当前URL中的hash
+    const currentHash = window.location.hash;
+    
     // 首先检查缓存中是否有该文档
     const cachedContent = documentCache.get(relativePath);
     if (cachedContent) {
@@ -1132,16 +1155,13 @@ async function loadDocument(relativePath) {
         }, 1000);
     }
 
-    // 滚动到页面顶部或锚点
-    if (window.location.hash && window.location.hash.length > 1) {
-        const targetId = window.location.hash.substring(1);
-        const targetElement = document.getElementById(targetId);
-        if (targetElement) {
-            setTimeout(() => {
-                targetElement.scrollIntoView({ behavior: 'smooth' });
-            }, 300); // 给内容渲染一点时间
-        }
+    // 如果URL中有hash，处理滚动到指定位置
+    if (currentHash && currentHash.length > 1) {
+        setTimeout(() => {
+            handleUrlHash(currentHash);
+        }, 300); // 给内容渲染一点时间
     } else {
+        // 没有hash时滚动到页面顶部
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
@@ -1954,6 +1974,8 @@ function generateToc(contentElement) {
     const showNumbering = config.document.toc_numbering || false;
     // 是否忽略h1标题计数
     const ignoreH1 = config.document.toc_ignore_h1 || false;
+    // 是否启用动态展开功能
+    const dynamicExpand = config.document.toc_dynamic_expand !== false;
     
     // 用于生成标题编号的计数器
     const counters = [0, 0, 0, 0, 0, 0];
@@ -1966,9 +1988,12 @@ function generateToc(contentElement) {
         return; // 如果没有标题，直接返回
     }
     
+    // 记录标题层级结构，用于后续动态展开功能
+    const headingHierarchy = {};
+    let currentParents = [null, null, null, null, null, null]; // 每个级别的当前父级标题
+    
     headingsArray.forEach((heading, index) => { // 使用转换后的数组
         const level = parseInt(heading.tagName.substring(1));
-        if (level > tocDepth) return;
 
         // 如果标题没有ID，添加一个
         if (!heading.id) {
@@ -2028,12 +2053,30 @@ function generateToc(contentElement) {
         lastLevel = level;
 
         const li = document.createElement('li');
+        li.classList.add('toc-item', `toc-level-${level}`);
         const a = document.createElement('a');
         a.href = `#${id}`; // 直接跳转到ID
         a.innerHTML = prefix + heading.textContent;  // 使用innerHTML以支持编号+标题文本
         a.classList.add('block', 'text-sm', 'py-1', 'hover:text-primary', 'dark:hover:text-primary');
         a.style.marginLeft = `${(level - 1) * 0.75}rem`; // 缩进
         a.dataset.headingId = id;
+        a.dataset.level = level;
+        
+        // 如果级别大于tocDepth且动态展开功能开启，则隐藏（但仍然生成）
+        if (level > tocDepth && dynamicExpand) {
+            li.classList.add('hidden');
+            li.dataset.hidden = 'true';
+        }
+        
+        // 记录当前标题的层级关系，用于后续动态展开
+        currentParents[level-1] = id;
+        if (level > 1 && currentParents[level-2]) {
+            // 记录该标题的父级标题
+            headingHierarchy[id] = {
+                parent: currentParents[level-2],
+                level: level
+            };
+        }
         
         // 点击目录条目时滚动到对应标题
         a.addEventListener('click', (e) => {
@@ -2058,6 +2101,11 @@ function generateToc(contentElement) {
                 
                 // 确保当前目录项在视图中
                 scrollTocToActiveItem(a);
+                
+                // 如果启用了动态展开功能，展开下一级标题
+                if (dynamicExpand) {
+                    expandChildHeadings(id, level);
+                }
             }
         });
         
@@ -2065,10 +2113,202 @@ function generateToc(contentElement) {
         tocNav.appendChild(li);
     });
     
+    // 保存标题层级结构到window对象，方便其他函数访问
+    window.headingHierarchy = headingHierarchy;
+    
     // 移除旧的滚动监听器（如果有）
     window.removeEventListener('scroll', handleTocScrollHighlight);
     // 添加滚动监听，高亮当前章节
     window.addEventListener('scroll', handleTocScrollHighlight);
+}
+
+// 展开指定标题的子标题
+function expandChildHeadings(headingId, level) {
+    if (!config.document.toc_dynamic_expand) return;
+    
+    const tocNav = document.getElementById('toc-nav');
+    if (!tocNav) return;
+    
+    // 查找所有相关的父级标题ID（形成一个路径）
+    const relevantParentIds = new Set([headingId]);
+    const activeHeadings = new Set();
+    
+    // 获取当前活动的标题
+    const activeLink = tocNav.querySelector('a.active');
+    if (activeLink) {
+        const activeId = activeLink.dataset.headingId;
+        if (activeId) {
+            activeHeadings.add(activeId);
+            
+            // 向上收集所有父级标题
+            let currentId = activeId;
+            while (currentId && window.headingHierarchy && window.headingHierarchy[currentId]) {
+                const parentId = window.headingHierarchy[currentId].parent;
+                if (parentId) {
+                    relevantParentIds.add(parentId);
+                    currentId = parentId;
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+    
+    // 首先隐藏所有当前可见的深层级标题，但保留相关的标题
+    const visibleDeepHeadings = tocNav.querySelectorAll('.toc-item[data-hidden="true"]:not(.hidden)');
+    
+    visibleDeepHeadings.forEach(item => {
+        const itemLink = item.querySelector('a');
+        if (!itemLink) return;
+        
+        const itemId = itemLink.dataset.headingId;
+        const itemLevel = parseInt(itemLink.dataset.level || '0');
+        
+        // 检查是否是需要保留的标题
+        let shouldKeep = false;
+        
+        // 获取标题的层级链
+        let headingChain = [];
+        let currentId = itemId;
+        
+        // 收集父级链
+        while (currentId && window.headingHierarchy && window.headingHierarchy[currentId]) {
+            headingChain.unshift(currentId);
+            currentId = window.headingHierarchy[currentId].parent;
+        }
+        
+        // 如果是当前展开标题的直接子标题，保留它
+        if (window.headingHierarchy && 
+            window.headingHierarchy[itemId] && 
+            window.headingHierarchy[itemId].parent === headingId &&
+            window.headingHierarchy[itemId].level === level + 1) {
+            shouldKeep = true;
+        }
+        
+        // 如果是相关标题路径上的标题，也保留它
+        for (const parentId of relevantParentIds) {
+            if (window.headingHierarchy && 
+                window.headingHierarchy[itemId] && 
+                window.headingHierarchy[itemId].parent === parentId) {
+                shouldKeep = true;
+                break;
+            }
+        }
+        
+        // 如果是活动标题的子标题，也保留它
+        for (const activeId of activeHeadings) {
+            if (window.headingHierarchy && 
+                window.headingHierarchy[itemId] && 
+                window.headingHierarchy[itemId].parent === activeId) {
+                shouldKeep = true;
+                break;
+            }
+        }
+        
+        // 如果不需要保留，则隐藏
+        if (!shouldKeep) {
+            item.classList.add('hidden');
+        }
+    });
+    
+    // 查找当前标题的直接子标题
+    const childLevel = level + 1;
+    const allHeadings = Array.from(tocNav.querySelectorAll('.toc-item'));
+    
+    // 遍历所有标题，找到当前标题的子标题并显示它们
+    let foundChildren = false;
+    let isWithinSameSection = false;
+    
+    for (let i = 0; i < allHeadings.length; i++) {
+        const item = allHeadings[i];
+        const itemLink = item.querySelector('a');
+        if (!itemLink) continue;
+        
+        const itemId = itemLink.dataset.headingId;
+        const itemLevel = parseInt(itemLink.dataset.level);
+        
+        // 如果找到了当前标题
+        if (itemId === headingId) {
+            isWithinSameSection = true;
+            continue; // 跳过当前标题自身
+        }
+        
+        // 如果遇到了同级或更高级的标题，说明当前标题的区域已经结束
+        if (isWithinSameSection && itemLevel <= level) {
+            isWithinSameSection = false;
+            break; // 退出循环，不再处理后续标题
+        }
+        
+        // 如果在当前标题区域内，且是直接子标题
+        if (isWithinSameSection && itemLevel === childLevel) {
+            // 如果是隐藏的，则显示出来
+            if (item.dataset.hidden === 'true') {
+                item.classList.remove('hidden');
+                foundChildren = true;
+            }
+        }
+    }
+    
+    return foundChildren;
+}
+
+// 当标题激活时，确保其父级标题的子标题都可见
+function ensureParentHeadingChildrenVisible(headingId) {
+    if (!config.document.toc_dynamic_expand) return;
+    
+    const headingHierarchy = window.headingHierarchy;
+    if (!headingHierarchy || !headingHierarchy[headingId]) return;
+    
+    // 获取当前标题的父级标题
+    const parentId = headingHierarchy[headingId].parent;
+    const currentLevel = headingHierarchy[headingId].level;
+    
+    // 确保父级标题的子标题可见
+    if (parentId) {
+        expandChildHeadings(parentId, currentLevel - 1);
+        
+        // 递归确保所有父级标题链都展开
+        ensureParentHeadingChildrenVisible(parentId);
+    }
+}
+
+// 更新活动标题
+function updateActiveHeading(id) {
+    if (!id) return;
+    
+    // 更新目录高亮
+    document.querySelectorAll('#toc-nav a').forEach(link => {
+        const isActive = link.dataset.headingId === id;
+        link.classList.toggle('active', isActive);
+        
+        // 如果是活动链接，确保它在视图中
+        if (isActive) {
+            // 如果标题项是隐藏的，确保其父级标题的子标题可见
+            const tocItem = link.closest('.toc-item');
+            if (tocItem && tocItem.classList.contains('hidden')) {
+                ensureParentHeadingChildrenVisible(id);
+            }
+            
+            // 如果动态展开功能开启，处理当前标题
+            if (config.document.toc_dynamic_expand) {
+                const level = parseInt(link.dataset.level || '0');
+                
+                // 如果当前标题有父级，先展开父级的所有子标题（即当前标题的所有同级标题）
+                const headingHierarchy = window.headingHierarchy;
+                if (headingHierarchy && headingHierarchy[id] && headingHierarchy[id].parent) {
+                    const parentId = headingHierarchy[id].parent;
+                    const parentLevel = headingHierarchy[id].level - 1;
+                    expandChildHeadings(parentId, parentLevel);
+                }
+                
+                // 然后再展开当前标题的子标题
+                expandChildHeadings(id, level);
+            }
+            
+            // 确保当前目录项在视图中
+            scrollTocToActiveItem(link);
+        }
+    });
 }
 
 // 处理TOC滚动高亮的函数
@@ -2078,7 +2318,6 @@ const handleTocScrollHighlight = debounce(() => {
 
     const scrollPosition = window.scrollY;
     let currentHeadingId = null;
-    let activeLink = null;
     let headingFound = false;
 
     // 获取所有内容标题元素
@@ -2091,62 +2330,139 @@ const handleTocScrollHighlight = debounce(() => {
     const windowHeight = window.innerHeight;
     const viewportTop = scrollPosition;
     const viewportMiddle = viewportTop + (windowHeight * 0.3); // 使用视口上部30%作为参考点
+    
+    // 获取当前活动的标题ID和级别
+    let currentActiveHeadingId = null;
+    let currentActiveHeadingLevel = 0;
+    const activeLink = tocNav.querySelector('a.active');
+    if (activeLink) {
+        currentActiveHeadingId = activeLink.dataset.headingId;
+        currentActiveHeadingLevel = parseInt(activeLink.dataset.level || '0');
+    }
 
-    // 查找当前在视口中的标题
+    // 查找视口范围内的所有标题
+    const visibleHeadings = [];
     for (let i = 0; i < headingElements.length; i++) {
         const heading = headingElements[i];
         const headingTop = heading.getBoundingClientRect().top + scrollPosition;
         const headingBottom = headingTop + heading.offsetHeight;
         
-        // 检查标题是否在视口区域内
-        if (headingTop <= viewportMiddle && headingBottom >= viewportTop) {
-            currentHeadingId = heading.id;
-            headingFound = true;
-            break; // 找到第一个可见标题后停止
-        }
-        
-        // 如果标题在视口下方，记住上一个标题
-        if (headingTop > viewportMiddle && i > 0) {
-            currentHeadingId = headingElements[i-1].id;
-            headingFound = true;
-            break;
+        // 检查标题是否在视口区域内或刚刚通过视口上方
+        if ((headingTop <= viewportMiddle && headingBottom >= viewportTop) || 
+            (i > 0 && headingTop > viewportMiddle && headingElements[i-1].getBoundingClientRect().top + scrollPosition < viewportMiddle)) {
+            
+            visibleHeadings.push({
+                id: heading.id,
+                level: parseInt(heading.tagName.substring(1)),
+                top: headingTop,
+                element: heading
+            });
         }
     }
     
-    // 特殊情况处理：如果在页面底部，且没有找到可见标题
-    if (!headingFound && scrollPosition + windowHeight > document.body.offsetHeight - 100) {
-        // 使用最后一个标题
-        currentHeadingId = headingElements[headingElements.length - 1].id;
-    }
-    // 特殊情况处理：如果在页面顶部
-    else if (!headingFound && scrollPosition < 100) {
-        // 使用第一个标题
-        currentHeadingId = headingElements[0].id;
-    }
-    // 如果没有找到可见标题，尝试找最后一个已经滚过的标题
-    else if (!headingFound) {
-        for (let i = headingElements.length - 1; i >= 0; i--) {
-            const heading = headingElements[i];
-            const headingTop = heading.getBoundingClientRect().top + scrollPosition;
+    // 没有找到可见标题，尝试确定最接近的标题
+    if (visibleHeadings.length === 0) {
+        // 特殊情况处理：如果在页面底部
+        if (scrollPosition + windowHeight > document.body.offsetHeight - 100) {
+            // 使用最后一个标题
+            const lastHeading = headingElements[headingElements.length - 1];
+            currentHeadingId = lastHeading.id;
+        }
+        // 特殊情况处理：如果在页面顶部
+        else if (scrollPosition < 100) {
+            // 使用第一个标题
+            currentHeadingId = headingElements[0].id;
+        }
+        // 如果没有找到可见标题，尝试找最后一个已经滚过的标题
+        else {
+            let closestHeading = null;
+            let closestDistance = Infinity;
             
-            if (headingTop < viewportMiddle) {
-                currentHeadingId = heading.id;
-                break;
+            for (let i = 0; i < headingElements.length; i++) {
+                const heading = headingElements[i];
+                const headingTop = heading.getBoundingClientRect().top + scrollPosition;
+                const distance = viewportMiddle - headingTop;
+                
+                // 如果标题已经过去（在视口上方），且距离比当前找到的最近
+                if (distance > 0 && distance < closestDistance) {
+                    closestHeading = heading;
+                    closestDistance = distance;
+                }
             }
+            
+            if (closestHeading) {
+                currentHeadingId = closestHeading.id;
+            }
+        }
+    } else {
+        // 有可见标题，按以下优先级处理：
+        // 1. 优先选择与当前活动标题相同的标题，避免频繁切换
+        // 2. 优先选择更高层级的标题（如h2优先于h3）
+        // 3. 优先选择位置更靠前的标题
+        
+        let selectedHeading = null;
+        
+        // 如果当前有活动标题，查找它是否在可见标题中
+        if (currentActiveHeadingId) {
+            for (const heading of visibleHeadings) {
+                if (heading.id === currentActiveHeadingId) {
+                    selectedHeading = heading;
+                    break;
+                }
+            }
+        }
+        
+        // 如果没有找到当前活动标题或没有活动标题，应用优先级规则
+        if (!selectedHeading) {
+            // 优先选择更高级别的标题
+            visibleHeadings.sort((a, b) => {
+                // 先按级别排序（更低的数字表示更高级别，如h2比h3更高级）
+                if (a.level !== b.level) {
+                    return a.level - b.level;
+                }
+                // 级别相同时，按位置排序
+                return a.top - b.top;
+            });
+            
+            // 选择排序后的第一个标题
+            selectedHeading = visibleHeadings[0];
+        }
+        
+        // 平滑过渡：如果选中的标题与当前活动标题不同，检查是否需要应用防跳动策略
+        if (selectedHeading && selectedHeading.id !== currentActiveHeadingId) {
+            // 获取选中标题和当前活动标题的层级关系
+            const selectedLevel = selectedHeading.level;
+            
+            // 标题之间的层级差异很大时，允许直接切换
+            const levelDifference = Math.abs(selectedLevel - currentActiveHeadingLevel);
+            
+            // 如果当前活动的是父标题，且选中的是其子标题，且两者非常接近，保持父标题高亮
+            if (currentActiveHeadingLevel < selectedLevel && levelDifference === 1) {
+                // 检查两个标题的距离是否很近
+                const activeHeadingElement = document.getElementById(currentActiveHeadingId);
+                if (activeHeadingElement) {
+                    const activeHeadingTop = activeHeadingElement.getBoundingClientRect().top + scrollPosition;
+                    const selectedHeadingTop = selectedHeading.top;
+                    const distance = Math.abs(selectedHeadingTop - activeHeadingTop);
+                    
+                    // 如果距离很近（例如小于视口高度的30%），保持当前活动标题不变
+                    if (distance < windowHeight * 0.15) {
+                        // 保持当前高亮不变
+                        return;
+                    }
+                }
+            }
+            
+            // 普通情况：采用新选择的标题
+            currentHeadingId = selectedHeading.id;
+        } else if (selectedHeading) {
+            currentHeadingId = selectedHeading.id;
         }
     }
 
     // 更新目录高亮
     if (currentHeadingId) {
-        document.querySelectorAll('#toc-nav a').forEach(link => {
-            const isActive = link.dataset.headingId === currentHeadingId;
-            link.classList.toggle('active', isActive);
-            
-            // 如果是活动链接，确保它在视图中
-            if (isActive) {
-                scrollTocToActiveItem(link);
-            }
-        });
+        updateActiveHeading(currentHeadingId);
     }
 }, 100);
 
@@ -3279,29 +3595,75 @@ function setupHeadingIntersectionObserver(contentElement) {
         threshold: 0  // 当有任何部分可见时触发
     };
     
+    // 用于记录上次激活的标题和激活时间
+    let lastActivatedHeading = null;
+    let lastActivationTime = 0;
+    const activationDelay = 150; // 最短激活间隔时间（毫秒）
+    
     // 创建观察器
     headingObserver = new IntersectionObserver((entries) => {
+        // 如果正在通过scroll事件处理高亮，忽略交叉观察器的调用
+        if (window.isHandlingTocScroll) return;
+        
+        // 当前时间
+        const now = Date.now();
+        
         // 找到所有当前可见的标题
         const visibleHeadings = entries
             .filter(entry => entry.isIntersecting)
-            .map(entry => entry.target);
+            .map(entry => {
+                return {
+                    id: entry.target.id,
+                    level: parseInt(entry.target.tagName.substring(1)),
+                    ratio: entry.intersectionRatio,
+                    target: entry.target
+                };
+            });
         
         // 如果有可见标题，更新活动标题
         if (visibleHeadings.length > 0) {
-            // 获取位置最靠前的可见标题
-            let topHeading = visibleHeadings[0];
-            let topPosition = topHeading.getBoundingClientRect().top;
-            
-            visibleHeadings.forEach(heading => {
-                const position = heading.getBoundingClientRect().top;
-                if (position < topPosition) {
-                    topHeading = heading;
-                    topPosition = position;
+            // 优先选择层级更高的标题
+            visibleHeadings.sort((a, b) => {
+                // 先按级别排序（h1, h2比h3优先）
+                if (a.level !== b.level) {
+                    return a.level - b.level;
                 }
+                // 再按可见比例排序
+                return b.ratio - a.ratio;
             });
+            
+            // 获取最优先的标题
+            const topHeading = visibleHeadings[0];
+            
+            // 防止频繁切换：检查是否与上次激活的标题相同且时间间隔很短
+            if (lastActivatedHeading === topHeading.id && now - lastActivationTime < activationDelay) {
+                return; // 时间间隔太短，忽略此次更新
+            }
+            
+            // 防止相邻标题快速切换：如果当前有激活标题，检查层级关系
+            const activeLink = document.querySelector('#toc-nav a.active');
+            if (activeLink && lastActivatedHeading) {
+                const activeHeadingId = activeLink.dataset.headingId;
+                const activeHeadingLevel = parseInt(activeLink.dataset.level || '0');
+                
+                // 如果当前激活的是更高级别的标题（如h2），且新标题是其子级（如h3）且时间间隔很短
+                if (activeHeadingLevel < topHeading.level && now - lastActivationTime < activationDelay * 2) {
+                    // 检查层级关系
+                    if (window.headingHierarchy && 
+                        window.headingHierarchy[topHeading.id] && 
+                        window.headingHierarchy[topHeading.id].parent === activeHeadingId) {
+                        // 保持父级标题的高亮
+                        return;
+                    }
+                }
+            }
             
             // 更新活动标题
             updateActiveHeading(topHeading.id);
+            
+            // 更新最后激活的标题和时间
+            lastActivatedHeading = topHeading.id;
+            lastActivationTime = now;
         }
     }, options);
     
@@ -3311,18 +3673,40 @@ function setupHeadingIntersectionObserver(contentElement) {
     });
 }
 
-// 更新活动标题
-function updateActiveHeading(id) {
-    if (!id) return;
+// 处理URL中的锚点，应用自定义滚动偏移
+function handleUrlHash(hash) {
+    if (!hash || hash.length <= 1) return;
     
-    // 更新目录高亮
-    document.querySelectorAll('#toc-nav a').forEach(link => {
-        const isActive = link.dataset.headingId === id;
-        link.classList.toggle('active', isActive);
+    // 移除开头的#号
+    const targetId = hash.substring(1);
+    const targetElement = document.getElementById(targetId);
+    
+    if (targetElement) {
+        // 计算目标位置，使标题显示在屏幕上方30%的位置
+        const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset;
+        const offset = window.innerHeight * 0.3; // 屏幕高度的30%
         
-        // 如果是活动链接，确保它在视图中
-        if (isActive) {
-            scrollTocToActiveItem(link);
+        // 平滑滚动到目标位置
+        window.scrollTo({
+            top: targetPosition - offset,
+            behavior: 'smooth'
+        });
+        
+        // 高亮对应的目录项
+        const tocItem = document.querySelector(`#toc-nav a[data-heading-id="${targetId}"]`);
+        if (tocItem) {
+            document.querySelectorAll('#toc-nav a').forEach(link => link.classList.remove('active'));
+            tocItem.classList.add('active');
+            scrollTocToActiveItem(tocItem);
+            
+            // 如果启用了动态展开功能，展开目录
+            if (config.document.toc_dynamic_expand) {
+                const level = parseInt(tocItem.dataset.level || '0');
+                // 展开父级目录
+                ensureParentHeadingChildrenVisible(targetId);
+                // 展开子目录
+                expandChildHeadings(targetId, level);
+            }
         }
-    });
+    }
 }
