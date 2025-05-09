@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 创建顶部进度条
     createProgressBar();
     
+    // 添加阅读进度条
+    createReadingProgressBar();
+    
     // 加载文档结构
     try {
         const response = await fetch('path.json');
@@ -88,6 +91,71 @@ function createProgressBar() {
     // 组装进度条
     progressBar.appendChild(progressFill);
     document.body.appendChild(progressBar);
+}
+
+// 创建阅读进度条
+function createReadingProgressBar() {
+    // 创建进度条容器
+    const readingProgressBar = document.createElement('div');
+    readingProgressBar.id = 'reading-progress-bar';
+    readingProgressBar.className = 'fixed top-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700 z-40';
+    
+    // 创建进度条内部填充
+    const progressFill = document.createElement('div');
+    progressFill.id = 'reading-progress-fill';
+    progressFill.className = 'h-full bg-primary transition-all duration-100 ease-out';
+    progressFill.style.width = '0%';
+    
+    // 组装进度条
+    readingProgressBar.appendChild(progressFill);
+    document.body.appendChild(readingProgressBar);
+    
+    // 添加滚动监听器
+    window.addEventListener('scroll', updateReadingProgress);
+    
+    // 初始更新一次进度
+    setTimeout(updateReadingProgress, 500);
+}
+
+// 更新阅读进度
+function updateReadingProgress() {
+    const contentDiv = document.getElementById('document-content');
+    if (!contentDiv) return;
+
+    // 获取文档内容区域的位置和尺寸
+    const contentRect = contentDiv.getBoundingClientRect();
+    const contentTop = contentRect.top + window.pageYOffset;
+    const contentHeight = contentDiv.offsetHeight;
+    
+    // 如果内容高度太小，不显示进度条
+    if (contentHeight < window.innerHeight * 1.5) {
+        const progressBar = document.getElementById('reading-progress-bar');
+        if (progressBar) progressBar.style.opacity = '0';
+        return;
+    } else {
+        const progressBar = document.getElementById('reading-progress-bar');
+        if (progressBar) progressBar.style.opacity = '1';
+    }
+    
+    // 获取当前滚动位置
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    
+    // 计算阅读进度
+    // 考虑到窗口高度，我们应该在用户接近底部时显示为100%
+    const viewportHeight = window.innerHeight;
+    const readableHeight = contentHeight - viewportHeight;
+    
+    // 计算已阅读的高度（当前滚动位置减去内容区域顶部位置）
+    const readHeight = Math.max(0, scrollTop - contentTop);
+    
+    // 计算阅读进度百分比
+    const progress = Math.min(100, Math.round((readHeight / readableHeight) * 100));
+    
+    // 更新进度条
+    const progressFill = document.getElementById('reading-progress-fill');
+    if (progressFill) {
+        progressFill.style.width = `${progress}%`;
+    }
 }
 
 // 显示进度条
@@ -1513,6 +1581,12 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
         // 生成目录
         generateToc(markdownBody);
         
+        // 设置标题观察器(使用交叉观察API提高准确性)
+        setupHeadingIntersectionObserver(contentDiv);
+        
+        // 初始化一次处理目录高亮
+        handleTocScrollHighlight();
+        
         // 更新页面标题
         updatePageTitle(relativePath);
         
@@ -1603,8 +1677,8 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
         // 修正内部链接
         fixInternalLinks(contentDiv);
 
-        // 生成并滚动目录
-        const tocItems = generateToc(contentDiv);
+        // 更新阅读进度
+        updateReadingProgress();
     } catch (error) {
         console.error('渲染文档时出错:', error);
         contentDiv.innerHTML = '<div class="error-message">文档渲染失败</div>';
@@ -2005,56 +2079,75 @@ const handleTocScrollHighlight = debounce(() => {
     const scrollPosition = window.scrollY;
     let currentHeadingId = null;
     let activeLink = null;
+    let headingFound = false;
 
-    // 特殊处理：当滚动到页面顶部时
-    if (scrollPosition <= 50) { // 使用一个小的阈值，而不是严格的0
-        // 找到第一个目录项
-        const firstLink = tocNav.querySelector('a');
-        if (firstLink) {
-            currentHeadingId = firstLink.dataset.headingId;
-            activeLink = firstLink;
-        }
-    } else {
-        // 获取所有内容标题元素
-        const contentElement = document.getElementById('document-content');
-        const headingElements = contentElement ? Array.from(contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')) : [];
+    // 获取所有内容标题元素
+    const contentElement = document.getElementById('document-content');
+    const headingElements = contentElement ? Array.from(contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')) : [];
 
-        if (headingElements.length === 0) return;
+    if (headingElements.length === 0) return;
 
-        // 找到当前可见的标题
-        // 增加偏移量，使标题在屏幕靠上的位置时就被选中
-        const offset = window.innerHeight * 0.3;
+    // 计算视口的位置
+    const windowHeight = window.innerHeight;
+    const viewportTop = scrollPosition;
+    const viewportMiddle = viewportTop + (windowHeight * 0.3); // 使用视口上部30%作为参考点
 
-        for (let i = 0; i < headingElements.length; i++) {
-            const heading = headingElements[i];
-            const headingTop = heading.offsetTop;
-
-            // 如果标题顶部在当前滚动位置+偏移量之上
-            if (headingTop <= scrollPosition + offset) {
-                currentHeadingId = heading.id;
-            } else {
-                // 一旦找到第一个低于滚动位置的标题，就停止
-                break;
-            }
+    // 查找当前在视口中的标题
+    for (let i = 0; i < headingElements.length; i++) {
+        const heading = headingElements[i];
+        const headingTop = heading.getBoundingClientRect().top + scrollPosition;
+        const headingBottom = headingTop + heading.offsetHeight;
+        
+        // 检查标题是否在视口区域内
+        if (headingTop <= viewportMiddle && headingBottom >= viewportTop) {
+            currentHeadingId = heading.id;
+            headingFound = true;
+            break; // 找到第一个可见标题后停止
         }
         
-        // 如果循环结束仍然没有找到currentHeadingId（可能滚动太快或页面结构问题），
-        // 尝试选择第一个标题
-        if (!currentHeadingId && headingElements.length > 0) {
-            currentHeadingId = headingElements[0].id;
+        // 如果标题在视口下方，记住上一个标题
+        if (headingTop > viewportMiddle && i > 0) {
+            currentHeadingId = headingElements[i-1].id;
+            headingFound = true;
+            break;
+        }
+    }
+    
+    // 特殊情况处理：如果在页面底部，且没有找到可见标题
+    if (!headingFound && scrollPosition + windowHeight > document.body.offsetHeight - 100) {
+        // 使用最后一个标题
+        currentHeadingId = headingElements[headingElements.length - 1].id;
+    }
+    // 特殊情况处理：如果在页面顶部
+    else if (!headingFound && scrollPosition < 100) {
+        // 使用第一个标题
+        currentHeadingId = headingElements[0].id;
+    }
+    // 如果没有找到可见标题，尝试找最后一个已经滚过的标题
+    else if (!headingFound) {
+        for (let i = headingElements.length - 1; i >= 0; i--) {
+            const heading = headingElements[i];
+            const headingTop = heading.getBoundingClientRect().top + scrollPosition;
+            
+            if (headingTop < viewportMiddle) {
+                currentHeadingId = heading.id;
+                break;
+            }
         }
     }
 
     // 更新目录高亮
-    document.querySelectorAll('#toc-nav a').forEach(link => {
-        const isActive = link.dataset.headingId === currentHeadingId;
-        link.classList.toggle('active', isActive);
-        
-        // 如果是活动链接，确保它在视图中
-        if (isActive) {
-            scrollTocToActiveItem(link);
-        }
-    });
+    if (currentHeadingId) {
+        document.querySelectorAll('#toc-nav a').forEach(link => {
+            const isActive = link.dataset.headingId === currentHeadingId;
+            link.classList.toggle('active', isActive);
+            
+            // 如果是活动链接，确保它在视图中
+            if (isActive) {
+                scrollTocToActiveItem(link);
+            }
+        });
+    }
 }, 100);
 
 // 滚动TOC，确保活动项在视图中
@@ -3163,4 +3256,73 @@ function showSearchSummary(searchQuery, totalOccurrences) {
     }, 5000);
     
     return summaryDiv;
+}
+
+// 初始化交叉观察器，用于更精确地检测标题的可见性
+let headingObserver = null;
+
+// 创建交叉观察器来监听标题元素
+function setupHeadingIntersectionObserver(contentElement) {
+    // 先断开之前的观察器
+    if (headingObserver) {
+        headingObserver.disconnect();
+    }
+    
+    // 获取所有标题元素
+    const headingElements = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    if (headingElements.length === 0) return;
+    
+    // 创建观察选项
+    const options = {
+        root: null,  // 使用视口作为根
+        rootMargin: '-10% 0px -80% 0px',  // 标题在视口上方20%到下方80%之间时被视为可见
+        threshold: 0  // 当有任何部分可见时触发
+    };
+    
+    // 创建观察器
+    headingObserver = new IntersectionObserver((entries) => {
+        // 找到所有当前可见的标题
+        const visibleHeadings = entries
+            .filter(entry => entry.isIntersecting)
+            .map(entry => entry.target);
+        
+        // 如果有可见标题，更新活动标题
+        if (visibleHeadings.length > 0) {
+            // 获取位置最靠前的可见标题
+            let topHeading = visibleHeadings[0];
+            let topPosition = topHeading.getBoundingClientRect().top;
+            
+            visibleHeadings.forEach(heading => {
+                const position = heading.getBoundingClientRect().top;
+                if (position < topPosition) {
+                    topHeading = heading;
+                    topPosition = position;
+                }
+            });
+            
+            // 更新活动标题
+            updateActiveHeading(topHeading.id);
+        }
+    }, options);
+    
+    // 观察所有标题元素
+    headingElements.forEach(heading => {
+        headingObserver.observe(heading);
+    });
+}
+
+// 更新活动标题
+function updateActiveHeading(id) {
+    if (!id) return;
+    
+    // 更新目录高亮
+    document.querySelectorAll('#toc-nav a').forEach(link => {
+        const isActive = link.dataset.headingId === id;
+        link.classList.toggle('active', isActive);
+        
+        // 如果是活动链接，确保它在视图中
+        if (isActive) {
+            scrollTocToActiveItem(link);
+        }
+    });
 }
