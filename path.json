@@ -346,10 +346,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1746176320,
+                            "timestamp": 1746797343,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
+                            "message": "更新目录动态展开功能的说明",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -357,10 +357,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 1,
+                                "commits": 2,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746176320
+                                "last_commit_timestamp": 1746797343
                             }
                         ]
                     }
@@ -421,10 +421,10 @@
                 "path": "配置详解/README.md",
                 "git": {
                     "last_modified": {
-                        "timestamp": 1746450416,
+                        "timestamp": 1746797343,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
-                        "message": "更新导航栏配置，支持折叠菜单功能；优化底部信息展示样式。",
+                        "message": "更新目录动态展开功能的说明",
                         "github_username": "LoosePrince",
                         "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                     },
@@ -432,10 +432,10 @@
                         {
                             "name": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "commits": 7,
+                            "commits": 8,
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                            "last_commit_timestamp": 1746450416
+                            "last_commit_timestamp": 1746797343
                         }
                     ]
                 }
