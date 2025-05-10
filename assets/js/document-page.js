@@ -83,6 +83,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             handleUrlHash(newHash);
         }
     });
+
+    // 设置目录宽度调整功能
+    setupTocResizer();
 });
 
 // 创建顶部进度条
@@ -3709,4 +3712,59 @@ function handleUrlHash(hash) {
             }
         }
     }
+}
+
+// 设置目录宽度调整功能
+function setupTocResizer() {
+    const tocContainer = document.getElementById('toc-container');
+    if (!tocContainer) return;
+
+    // 创建拖动器元素
+    const resizer = document.createElement('div');
+    resizer.className = 'toc-resizer';
+    tocContainer.appendChild(resizer);
+
+    let startX, startWidth;
+
+    // 鼠标按下事件
+    resizer.addEventListener('mousedown', (e) => {
+        startX = e.clientX;
+        let cssVar = getComputedStyle(document.documentElement).getPropertyValue('--toc-width');
+        if (cssVar) {
+            startWidth = parseInt(cssVar, 10);
+        } else {
+            startWidth = parseInt(getComputedStyle(tocContainer).width, 10);
+        }
+        tocContainer.classList.add('resizing');
+        resizer.classList.add('resizing');
+        
+        // 添加临时事件监听器
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    });
+
+    // 鼠标移动事件处理
+    function handleMouseMove(e) {
+        const width = startWidth - (e.clientX - startX);
+        if (width >= 150 && width <= 400) { // 限制最小和最大宽度
+            document.documentElement.style.setProperty('--toc-width', `${width}px`);
+        }
+    }
+
+    // 鼠标释放事件处理
+    function handleMouseUp() {
+        tocContainer.classList.remove('resizing');
+        resizer.classList.remove('resizing');
+        
+        // 移除临时事件监听器
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+    }
+
+    // 双击恢复默认宽度
+    resizer.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        // 直接恢复为配置的默认宽度
+        document.documentElement.style.setProperty('--toc-width', config.layout.toc_width);
+    });
 }
