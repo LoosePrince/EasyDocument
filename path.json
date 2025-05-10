@@ -296,10 +296,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1746450416,
+                            "timestamp": 1746856355,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新导航栏配置，支持折叠菜单功能；优化底部信息展示样式。",
+                            "message": "添加toc_width配置的补充说明",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -307,10 +307,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 2,
+                                "commits": 3,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746450416
+                                "last_commit_timestamp": 1746856355
                             }
                         ]
                     }
