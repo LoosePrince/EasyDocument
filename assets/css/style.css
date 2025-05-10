@@ -233,6 +233,32 @@ button.active, .button.active {
     color: #111827;
 }
 
+.toc-resizer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: col-resize;
+    background-color: transparent;
+    transition: background-color 0.2s;
+    z-index: 10;
+}
+
+.toc-resizer:hover, .toc-resizer.resizing {
+    background-color: var(--color-primary-lighter, rgba(0, 123, 255, 0.2));
+}
+
+#toc-container {
+    position: relative;
+    transition: width 0.1s ease;
+}
+
+#toc-container.resizing {
+    transition: none;
+    user-select: none;
+}
+
 /* 响应式布局 */
 @media (max-width: 768px) {
     .main-layout {
