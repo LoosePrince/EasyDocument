@@ -50,6 +50,8 @@ layout: {
 
 控制左侧导航栏和右侧目录的宽度。可以使用任何有效的CSS宽度值（如`px`、`em`、`rem`、`%`等）。
 
+*右侧目录支持宽度拖动调整，双击拖动条可恢复为默认宽度（由`toc_width`配置项决定）。*
+
 ```javascript
 layout: {
   sidebar_width: "300px", // 更宽的侧边栏
