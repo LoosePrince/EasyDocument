@@ -104,6 +104,9 @@ def get_github_username_by_email(email, repo):
     noreply_match = re.match(r'(\d+)\+(.+)@users\.noreply\.github\.com', email)
     if noreply_match:
         username = noreply_match.group(2)
+        # 修正：如果用户名中包含'+'，只取'+'后部分
+        if '+' in username:
+            username = username.split('+')[-1]
         EMAIL_TO_USERNAME_MAP[email] = username
         return username
         
@@ -111,6 +114,9 @@ def get_github_username_by_email(email, repo):
     noreply_match2 = re.match(r'(.+)@users\.noreply\.github\.com', email)
     if noreply_match2:
         username = noreply_match2.group(1)
+        # 修正：如果用户名中包含'+'，只取'+'后部分
+        if '+' in username:
+            username = username.split('+')[-1]
         EMAIL_TO_USERNAME_MAP[email] = username
         return username
     
@@ -126,12 +132,16 @@ def get_github_username_by_email(email, repo):
                         noreply_match = re.match(r'(\d+)\+(.+)@users\.noreply\.github\.com', other_commit.author.email)
                         if noreply_match:
                             username = noreply_match.group(2)
+                            if '+' in username:
+                                username = username.split('+')[-1]
                             EMAIL_TO_USERNAME_MAP[email] = username
                             return username
                         
-                        noreply_match2 = re.match(r'(.+)@users\.noreply\.github\.com', other_commit.author.email)
+                        noreply_match2 = re.match(r'(.+)@users.noreply.github.com', other_commit.author.email)
                         if noreply_match2:
                             username = noreply_match2.group(1)
+                            if '+' in username:
+                                username = username.split('+')[-1]
                             EMAIL_TO_USERNAME_MAP[email] = username
                             return username
     except Exception as e:
@@ -749,11 +759,15 @@ def main():
                             noreply_match = re.match(r'(\d+)\+(.+)@users\.noreply\.github\.com', email)
                             if noreply_match:
                                 username = noreply_match.group(2)
+                                if '+' in username:
+                                    username = username.split('+')[-1]
                                 EMAIL_TO_USERNAME_MAP[email] = username
                             
                             noreply_match2 = re.match(r'(.+)@users\.noreply\.github\.com', email)
                             if noreply_match2:
                                 username = noreply_match2.group(1)
+                                if '+' in username:
+                                    username = username.split('+')[-1]
                                 EMAIL_TO_USERNAME_MAP[email] = username
                 except Exception as e:
                     print(f"预加载邮箱映射失败: {e}")
