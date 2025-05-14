@@ -458,29 +458,153 @@ function generateSidebar(node) {
         // 查找指定的根目录节点
         const rootNode = findNodeByPath(node, currentRoot);
         if (rootNode) {
+            // 添加当前根目录标题到导航顶部
+            const rootHeader = document.createElement('div');
+            rootHeader.className = 'py-2 px-3 mb-4 bg-gray-100 dark:bg-gray-800 rounded-md font-medium text-gray-800 dark:text-gray-200 flex items-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700';
+            
+            // 创建根目录标题内容
+            rootHeader.innerHTML = `
+                <i class="fas fa-folder-open mr-2 text-primary"></i>
+                <span>${rootNode.title || currentRoot}</span>
+            `;
+            
+            // 添加点击事件，跳转到根目录索引页
+            rootHeader.addEventListener('click', () => {
+                if (rootNode.index) {
+                    navigateToFolderIndex(rootNode);
+                }
+            });
+            
+            nav.appendChild(rootHeader);
+            
             // 显示该节点下的内容
             const ul = createNavList(rootNode.children, 0);
             nav.appendChild(ul);
             
             // 添加返回完整目录的链接
             const backDiv = document.createElement('div');
-            backDiv.className = 'py-2 px-3 mb-4 border-b border-gray-200 dark:border-gray-700';
+            backDiv.className = 'py-2 px-3 mb-4 border-t border-gray-200 dark:border-gray-700 mt-4';
             
             const backLink = document.createElement('a');
             backLink.href = 'main.html'; // 直接跳转到main.html，不带任何参数
             backLink.className = 'flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-primary';
             backLink.innerHTML = '<i class="fas fa-arrow-left mr-2"></i> 返回完整目录';
             
+            // 添加点击事件处理，重置侧边栏状态
+            backLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // 移除所有激活状态
+                document.querySelectorAll('#sidebar-nav a').forEach(a => a.classList.remove('active'));
+                document.querySelectorAll('#sidebar-nav div.folder-title').forEach(div => div.classList.remove('active-folder'));
+                
+                // 重置文件夹展开状态
+                collapseAllFolders();
+                
+                // 跳转到完整目录页面
+                window.location.href = 'main.html';
+            });
+            
             backDiv.appendChild(backLink);
-            nav.insertBefore(backDiv, nav.firstChild);
+            nav.appendChild(backDiv);
+            
+            // 根据配置处理默认文件夹展开
+            handleFolderExpandMode(true);
             
             return;
         }
     }
     
     // 没有指定root参数或root参数无效，显示完整目录
+    
+    // 添加根目录标题到导航顶部
+    const rootHeader = document.createElement('div');
+    rootHeader.className = 'py-2 px-3 mb-4 bg-gray-100 dark:bg-gray-800 rounded-md font-medium text-gray-800 dark:text-gray-200 flex items-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700';
+    
+    // 创建根目录标题内容
+    rootHeader.innerHTML = `
+        <i class="fas fa-book mr-2 text-primary"></i>
+        <span>文档目录</span>
+    `;
+    
+    // 添加点击事件，跳转到总根目录索引页
+    rootHeader.addEventListener('click', () => {
+        if (node.index) {
+            // 创建一个临时对象，模拟folder结构，用于导航到根索引页
+            const rootFolder = {
+                index: node.index
+            };
+            navigateToFolderIndex(rootFolder);
+        } else {
+            // 如果没有索引页，直接跳转到首页
+            window.location.href = 'main.html';
+        }
+    });
+    
+    nav.appendChild(rootHeader);
+    
     const ul = createNavList(node.children, 0);
     nav.appendChild(ul);
+    
+    // 根据配置处理默认文件夹展开
+    handleFolderExpandMode(false);
+}
+
+// 处理默认文件夹展开模式
+function handleFolderExpandMode(isSubRoot) {
+    // 获取配置的展开模式
+    const expandMode = config.navigation.folder_expand_mode || 5;
+    
+    // 如果设置为不默认展开任何文件夹，直接返回
+    if (expandMode === 5) {
+        return;
+    }
+    
+    // 获取所有顶级文件夹
+    const folderDivs = document.querySelectorAll('#sidebar-nav > ul.level-0 > li > div.folder-title');
+    
+    switch(expandMode) {
+        case 1: // 展开全部第一级文件夹
+            folderDivs.forEach(folderDiv => {
+                toggleFolder(folderDiv, true);
+            });
+            break;
+            
+        case 2: // 展开全部文件夹（所有层级）
+            expandAllFolders();
+            break;
+            
+        case 3: // 展开第一个文件夹的第一级（在root_dir或根目录时）
+            if (folderDivs.length > 0) {
+                toggleFolder(folderDivs[0], true);
+            }
+            break;
+            
+        case 4: // 展开第一个文件夹的全部文件夹（在root_dir或根目录时）
+            if (folderDivs.length > 0) {
+                // 先展开第一个顶级文件夹
+                toggleFolder(folderDivs[0], true);
+                
+                // 然后展开该文件夹下的所有子文件夹
+                const firstFolder = folderDivs[0].closest('li');
+                if (firstFolder) {
+                    const subFolders = firstFolder.querySelectorAll('div.folder-title');
+                    subFolders.forEach(subFolder => {
+                        toggleFolder(subFolder, true);
+                    });
+                }
+            }
+            break;
+    }
+}
+
+// 递归展开所有文件夹
+function expandAllFolders() {
+    const allFolderDivs = document.querySelectorAll('#sidebar-nav div.folder-title');
+    
+    allFolderDivs.forEach(folderDiv => {
+        toggleFolder(folderDiv, true);
+    });
 }
 
 // 根据路径查找节点
@@ -658,8 +782,16 @@ function createNavLink(item, level, isIndex = false) {
         e.preventDefault();
         
         // 如果启用了自动折叠功能，先折叠所有目录
-        if (config.navigation.auto_collapse) {
+        if (config.navigation.auto_collapse && config.navigation.folder_expand_mode === 5) {
             collapseAllFolders();
+        } 
+        // 如果启用了自动折叠但同时设置了展开模式，先折叠后根据展开模式重新展开
+        else if (config.navigation.auto_collapse && config.navigation.folder_expand_mode !== 5) {
+            collapseAllFolders();
+            // 延迟一点点再重新应用展开模式
+            setTimeout(() => {
+                handleFolderExpandMode(!!currentRoot);
+            }, 50);
         }
         
         // 清除所有高亮状态
@@ -697,8 +829,16 @@ function createNavLink(item, level, isIndex = false) {
 // 点击文件夹名称切换到文件夹描述页面的处理函数
 function navigateToFolderIndex(item) {
     // 如果启用了自动折叠功能，先折叠所有目录
-    if (config.navigation.auto_collapse) {
+    if (config.navigation.auto_collapse && config.navigation.folder_expand_mode === 5) {
         collapseAllFolders();
+    }
+    // 如果启用了自动折叠但同时设置了展开模式，先折叠后根据展开模式重新展开
+    else if (config.navigation.auto_collapse && config.navigation.folder_expand_mode !== 5) {
+        collapseAllFolders();
+        // 延迟一点点再重新应用展开模式
+        setTimeout(() => {
+            handleFolderExpandMode(!!currentRoot);
+        }, 50);
     }
     
     // 清除所有高亮状态
@@ -707,15 +847,27 @@ function navigateToFolderIndex(item) {
     
     // 添加文件夹的高亮状态
     const folderPath = getFolderPathFromIndexPath(item.index.path);
-    const folderDiv = document.querySelector(`#sidebar-nav div.folder-title[data-folder-path="${folderPath}"]`);
-    if (folderDiv) {
+    let folderDiv = document.querySelector(`#sidebar-nav div.folder-title[data-folder-path="${folderPath}"]`);
+    
+    // 检查是否是根目录标题
+    if (!folderDiv) {
+        // 如果在侧边栏中找不到对应的文件夹div，可能是点击了根目录标题
+        const rootTitles = document.querySelectorAll('#sidebar-nav > div');
+        if (rootTitles.length > 0) {
+            // 找到第一个根目录标题，通常是第一个div
+            folderDiv = rootTitles[0];
+            folderDiv.classList.add('active-folder');
+        }
+    } else {
         folderDiv.classList.add('active-folder');
         // 确保文件夹展开
         toggleFolder(folderDiv, true);
         // 展开所有父级文件夹
         expandParentFolders(folderDiv);
-        
-        // 自动滚动侧边栏，确保文件夹在视图中
+    }
+    
+    // 自动滚动侧边栏，确保文件夹在视图中
+    if (folderDiv) {
         const sidebarContainer = document.getElementById('sidebar-container');
         if (sidebarContainer) {
             // 计算需要滚动的位置
@@ -1876,14 +2028,44 @@ function generateBreadcrumb(path) {
         text: config.navigation.home_text || '首页',
         path: '',
         url: homeUrl,
-        isLast: false
+        isLast: false,
+        isHome: true
     });
+    
+    // 如果有root参数，添加根目录面包屑
+    if (currentRoot) {
+        const rootNode = findNodeByPath(pathData, currentRoot);
+        if (rootNode) {
+            // 构建根目录URL
+            let rootUrl = '?';
+            if (rootNode.index) {
+                rootUrl = `?path=${encodeURIComponent(rootNode.index.path)}`;
+            } else {
+                rootUrl = `?root=${encodeURIComponent(currentRoot)}`;
+            }
+            
+            breadcrumbParts.push({
+                text: rootNode.title || currentRoot,
+                path: currentRoot,
+                url: rootUrl,
+                isRoot: true,
+                isLast: parts.length === 1 && isIndexFile(parts[0])
+            });
+        }
+    }
     
     // 构建去重后的面包屑路径
     let currentPath = '';
     let lastTitle = '';
     
-    for (let i = 0; i < parts.length; i++) {
+    // 确定起始索引，如果有root参数，从该目录之后开始
+    let startIndex = 0;
+    if (currentRoot) {
+        const rootParts = currentRoot.split('/');
+        startIndex = rootParts.length;
+    }
+    
+    for (let i = startIndex; i < parts.length; i++) {
         const part = parts[i];
         
         // 如果是README.md或类似索引文件，跳过
@@ -1891,7 +2073,12 @@ function generateBreadcrumb(path) {
             continue;
         }
         
-        currentPath += (i > 0 ? '/' : '') + part;
+        // 构建当前路径，需要考虑root参数
+        if (currentRoot) {
+            currentPath = currentRoot + '/' + parts.slice(startIndex, i + 1).join('/');
+        } else {
+            currentPath += (i > 0 ? '/' : '') + part;
+        }
         
         // 获取当前路径的标题
         const title = getTitleFromPath(currentPath) || part;
@@ -1929,7 +2116,49 @@ function generateBreadcrumb(path) {
             const link = document.createElement('a');
             link.href = item.url;
             link.textContent = item.text;
-            link.classList.add('hover:text-primary');
+            
+            // 为根目录添加特殊样式
+            if (item.isRoot) {
+                link.classList.add('hover:text-primary', 'font-medium');
+                // 添加文件夹图标
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-folder-open mr-1 text-primary';
+                link.insertBefore(icon, link.firstChild);
+            } else if (index === 0) {
+                // 首页添加首页图标
+                link.classList.add('hover:text-primary');
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-home mr-1 text-primary';
+                link.insertBefore(icon, link.firstChild);
+            } else {
+                link.classList.add('hover:text-primary');
+            }
+            
+            // 添加点击事件处理程序
+            if (item.isHome) {
+                // 首页需要特殊处理，点击时重置侧边栏状态
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // 移除所有激活状态
+                    document.querySelectorAll('#sidebar-nav a').forEach(a => a.classList.remove('active'));
+                    document.querySelectorAll('#sidebar-nav div.folder-title').forEach(div => div.classList.remove('active-folder'));
+                    
+                    // 根据配置，判断是否需要折叠所有目录
+                    if (config.navigation.auto_collapse && config.navigation.folder_expand_mode === 5) {
+                        collapseAllFolders();
+                    } else if (config.navigation.auto_collapse && config.navigation.folder_expand_mode !== 5) {
+                        collapseAllFolders();
+                        setTimeout(() => {
+                            handleFolderExpandMode(!!currentRoot);
+                        }, 50);
+                    }
+                    
+                    // 跳转到首页
+                    window.location.href = item.url;
+                });
+            }
+            
             container.appendChild(link);
         }
     });
