@@ -2925,8 +2925,8 @@ function fixInternalLinks(container) {
         const href = link.getAttribute('href');
         if (!href) return;
         
-        // 如果已经是完整URL或锚点链接，不处理
-        if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('#')) {
+        // 如果已经是完整URL或仅锚点链接，不处理
+        if (href.startsWith('http://') || href.startsWith('https://') || href === '#' || (href.startsWith('#') && !href.includes('?'))) {
             // 标记为外部链接
             if (href.startsWith('http')) {
                 if (!link.classList.contains('external-link') && !link.querySelector('.external-link-icon')) {
@@ -2951,8 +2951,15 @@ function fixInternalLinks(container) {
         
         // 处理相对路径链接 - 支持常规Markdown格式的链接
         if (!href.startsWith('?')) {
-            // 尝试从href中提取相对路径
+            // 提取链接中的锚点部分(如果有)
             let path = href;
+            let hashPart = '';
+            
+            if (href.includes('#')) {
+                const parts = href.split('#');
+                path = parts[0];
+                hashPart = parts.length > 1 ? `#${parts[1]}` : '';
+            }
             
             // 如果链接有扩展名，保留；否则尝试推断为目录
             const hasExtension = /\.(md|html)$/i.test(path);
@@ -2975,6 +2982,12 @@ function fixInternalLinks(container) {
             if (currentRoot) {
                 newHref += `&root=${encodeURIComponent(currentRoot)}`;
             }
+            
+            // 附加锚点部分到URL
+            if (hashPart) {
+                newHref += hashPart;
+            }
+            
             link.setAttribute('href', newHref);
             
             // 标记为内部链接
@@ -2982,14 +2995,21 @@ function fixInternalLinks(container) {
                 link.classList.add('internal-link');
             }
             
-        } else if (href.includes('path=') && currentRoot && !href.includes('root=')) {
-            // 已有path参数但没有root参数
-            link.setAttribute('href', `${href}&root=${encodeURIComponent(currentRoot)}`);
+        } else if (href.includes('path=')) {
+            // 处理已有path参数的链接
+            let newHref = href;
+            
+            // 添加root参数(如果尚未添加)
+            if (currentRoot && !href.includes('root=')) {
+                newHref = `${href}&root=${encodeURIComponent(currentRoot)}`;
+            }
             
             // 标记为内部链接
             if (!link.classList.contains('internal-link')) {
                 link.classList.add('internal-link');
             }
+            
+            link.setAttribute('href', newHref);
         } else {
             // 其他?开头的链接也标记为内部链接
             if (!link.classList.contains('internal-link')) {

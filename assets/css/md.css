@@ -272,6 +272,7 @@ a.external-link:hover .external-link-icon {
     margin: 1.5625em 0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     transition: box-shadow 0.3s ease;
+    border-radius: 10px;
 }
 
 .admonition:hover {
@@ -287,24 +288,24 @@ a.external-link:hover .external-link-icon {
 }
 
 /* 提示卡片类型的特定颜色 */
-.dark .admonition-note {
+.admonition-note {
     background-color: rgba(59, 130, 246, 0.1);
 }
 
-.dark .admonition-tip {
+.admonition-tip {
     background-color: rgba(16, 185, 129, 0.1);
 }
 
-.dark .admonition-important {
+.admonition-important {
     background-color: rgba(139, 92, 246, 0.1);
 }
 
-.dark .admonition-warning, 
-.dark .admonition-caution {
+.admonition-warning, 
+.admonition-caution {
     background-color: rgba(249, 115, 22, 0.1);
 }
 
-.dark .admonition-danger {
+.admonition-danger {
     background-color: rgba(239, 68, 68, 0.1);
 }
 
