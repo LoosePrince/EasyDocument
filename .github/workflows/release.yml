@@ -1,0 +1,85 @@
+name: Create Release
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'meta.json'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build_and_release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 需要写入权限以创建release
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # 获取完整历史以用于版本比较
+      
+      - name: 设置Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install gitpython
+      
+      - name: 提取版本信息
+        id: get_version
+        run: |
+          VERSION=$(python -c "import json; print(json.load(open('meta.json'))['version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "版本号: $VERSION"
+          
+          # 检查该版本是否已存在Release
+          if gh release view v$VERSION &>/dev/null; then
+            echo "ERROR: Release 版本 v$VERSION 已存在，请更新版本号" 
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+      
+      - name: 获取更新日期
+        id: get_date
+        run: |
+          UPDATE_DATE=$(python -c "import json; print(json.load(open('meta.json')).get('updateDate', ''))")
+          echo "UPDATE_DATE=$UPDATE_DATE" >> $GITHUB_ENV
+      
+      - name: 创建更新包
+        run: python build.py --package --yes
+      
+      - name: 读取发布说明
+        id: release_notes
+        run: |
+          NOTES=$(python -c "import json; print(json.load(open('meta.json'))['releaseNotes'])")
+          NOTES="${NOTES//'%'/'%25'}"
+          NOTES="${NOTES//$'\n'/'%0A'}"
+          NOTES="${NOTES//$'\r'/'%0D'}"
+          echo "notes=$NOTES" >> $GITHUB_OUTPUT
+      
+      - name: 创建Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: EasyDocument v${{ steps.get_version.outputs.version }}
+          body: |
+            ${{ steps.release_notes.outputs.notes }}
+            
+            更新日期: ${{ env.UPDATE_DATE }}
+            
+            ### 更新包
+            - 包含了此版本的所有静态文件和资源
+            - 解压后可直接覆盖原有文件进行更新
+          files: |
+            EasyDocument-update.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ github.token }} 
