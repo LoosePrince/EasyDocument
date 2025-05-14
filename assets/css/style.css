@@ -404,7 +404,6 @@ button.active, .button.active {
 }
 
 .dark a:not(.text-primary) {
-    color: #e5e7eb;
     stroke: #fff;
 }
 
