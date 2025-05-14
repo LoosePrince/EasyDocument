@@ -6,10 +6,10 @@
         "path": "README.md",
         "git": {
             "last_modified": {
-                "timestamp": 1745990253,
+                "timestamp": 1747222507,
                 "author": "树梢",
                 "email": "pfingan@foxmail.com",
-                "message": "添加GitHub与Git功能配置文档，更新README以包含新功能链接；\n在路径和搜索索引中添加GitHub与Git功能相关信息，增强文档的可用性和完整性；\n增加自动化脚本。",
+                "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                 "github_username": "LoosePrince",
                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
             },
@@ -17,10 +17,10 @@
                 {
                     "name": "树梢",
                     "email": "pfingan@foxmail.com",
-                    "commits": 2,
+                    "commits": 3,
                     "github_username": "LoosePrince",
                     "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                    "last_commit_timestamp": 1745990253
+                    "last_commit_timestamp": 1747222507
                 }
             ]
         }
@@ -36,10 +36,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1746252008,
+                            "timestamp": 1747222507,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新支持时间戳格式化，添加相对时间显示功能；",
+                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -47,10 +47,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 3,
+                                "commits": 4,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746252008
+                                "last_commit_timestamp": 1747222507
                             }
                         ]
                     }
@@ -61,10 +61,10 @@
                 "path": "快速入门/README.md",
                 "git": {
                     "last_modified": {
-                        "timestamp": 1746176320,
+                        "timestamp": 1747222507,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
-                        "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
+                        "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                         "github_username": "LoosePrince",
                         "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                     },
@@ -72,10 +72,10 @@
                         {
                             "name": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "commits": 4,
+                            "commits": 5,
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                            "last_commit_timestamp": 1746176320
+                            "last_commit_timestamp": 1747222507
                         }
                     ]
                 }
@@ -91,35 +91,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1746176320,
+                            "timestamp": 1747222507,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
-                            "github_username": "LoosePrince",
-                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
-                        },
-                        "contributors": [
-                            {
-                                "name": "树梢",
-                                "email": "pfingan@foxmail.com",
-                                "commits": 3,
-                                "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746176320
-                            }
-                        ]
-                    }
-                },
-                {
-                    "title": "文档内链接",
-                    "path": "使用指南/文档内链接.md",
-                    "children": [],
-                    "git": {
-                        "last_modified": {
-                            "timestamp": 1746188027,
-                            "author": "树梢",
-                            "email": "pfingan@foxmail.com",
-                            "message": "新增目录编辑器页面测试工具，支持上传和编辑JSON格式的目录结构。",
+                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -130,7 +105,32 @@
                                 "commits": 4,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746188027
+                                "last_commit_timestamp": 1747222507
+                            }
+                        ]
+                    }
+                },
+                {
+                    "title": "文档内链接",
+                    "path": "使用指南/文档内链接.md",
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "timestamp": 1747222507,
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 5,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1747222507
                             }
                         ]
                     }
@@ -141,10 +141,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1745929687,
+                            "timestamp": 1747222507,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "v1.0.0",
+                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -152,10 +152,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 1,
+                                "commits": 2,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1745929687
+                                "last_commit_timestamp": 1747222507
                             }
                         ]
                     }
@@ -166,10 +166,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1746260964,
+                            "timestamp": 1747222507,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新搜索功能：\n实现实时搜索并支持多匹配项跳转；\n添加匹配项之间的最小字符距离配置；\n优化搜索结果展示样式。",
+                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -177,10 +177,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 3,
+                                "commits": 4,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746260964
+                                "last_commit_timestamp": 1747222507
                             }
                         ]
                     }
@@ -216,10 +216,10 @@
                 "path": "使用指南/README.md",
                 "git": {
                     "last_modified": {
-                        "timestamp": 1745929687,
+                        "timestamp": 1747222507,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
-                        "message": "v1.0.0",
+                        "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                         "github_username": "LoosePrince",
                         "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                     },
@@ -227,10 +227,10 @@
                         {
                             "name": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "commits": 1,
+                            "commits": 2,
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                            "last_commit_timestamp": 1745929687
+                            "last_commit_timestamp": 1747222507
                         }
                     ]
                 }
@@ -246,10 +246,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1746176320,
+                            "timestamp": 1747222507,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
+                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -257,10 +257,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 1,
+                                "commits": 2,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746176320
+                                "last_commit_timestamp": 1747222507
                             }
                         ]
                     }
@@ -296,10 +296,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1747218037,
+                            "timestamp": 1747222507,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新文档：添加文件夹展开模式配置，优化导航体验；新增打包功能说明，支持自定义文件夹展开策略",
+                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -307,10 +307,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 4,
+                                "commits": 5,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1747218037
+                                "last_commit_timestamp": 1747222507
                             }
                         ]
                     }
@@ -321,10 +321,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1746260964,
+                            "timestamp": 1747222507,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新搜索功能：\n实现实时搜索并支持多匹配项跳转；\n添加匹配项之间的最小字符距离配置；\n优化搜索结果展示样式。",
+                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -332,10 +332,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 2,
+                                "commits": 3,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746260964
+                                "last_commit_timestamp": 1747222507
                             }
                         ]
                     }
@@ -346,10 +346,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1746797343,
+                            "timestamp": 1747222507,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新目录动态展开功能的说明",
+                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -357,10 +357,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 2,
+                                "commits": 3,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746797343
+                                "last_commit_timestamp": 1747222507
                             }
                         ]
                     }
@@ -371,35 +371,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1745990253,
+                            "timestamp": 1747222507,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "添加GitHub与Git功能配置文档，更新README以包含新功能链接；\n在路径和搜索索引中添加GitHub与Git功能相关信息，增强文档的可用性和完整性；\n增加自动化脚本。",
-                            "github_username": "LoosePrince",
-                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
-                        },
-                        "contributors": [
-                            {
-                                "name": "树梢",
-                                "email": "pfingan@foxmail.com",
-                                "commits": 1,
-                                "github_username": "LoosePrince",
-                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1745990253
-                            }
-                        ]
-                    }
-                },
-                {
-                    "title": "path.json 结构与手动编写",
-                    "path": "配置详解/path-json结构.md",
-                    "children": [],
-                    "git": {
-                        "last_modified": {
-                            "timestamp": 1745935751,
-                            "author": "树梢",
-                            "email": "pfingan@foxmail.com",
-                            "message": "移除无效说明",
+                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -410,7 +385,32 @@
                                 "commits": 2,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1745935751
+                                "last_commit_timestamp": 1747222507
+                            }
+                        ]
+                    }
+                },
+                {
+                    "title": "path.json 结构与手动编写",
+                    "path": "配置详解/path-json结构.md",
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "timestamp": 1747222507,
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 3,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1747222507
                             }
                         ]
                     }
@@ -421,10 +421,10 @@
                 "path": "配置详解/README.md",
                 "git": {
                     "last_modified": {
-                        "timestamp": 1747218037,
+                        "timestamp": 1747222507,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
-                        "message": "更新文档：添加文件夹展开模式配置，优化导航体验；新增打包功能说明，支持自定义文件夹展开策略",
+                        "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                         "github_username": "LoosePrince",
                         "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                     },
@@ -432,10 +432,10 @@
                         {
                             "name": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "commits": 9,
+                            "commits": 10,
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                            "last_commit_timestamp": 1747218037
+                            "last_commit_timestamp": 1747222507
                         }
                     ]
                 }
@@ -476,10 +476,10 @@
                 "path": "示例与模板/README.md",
                 "git": {
                     "last_modified": {
-                        "timestamp": 1745929687,
+                        "timestamp": 1747222507,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
-                        "message": "v1.0.0",
+                        "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
                         "github_username": "LoosePrince",
                         "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                     },
@@ -487,10 +487,10 @@
                         {
                             "name": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "commits": 1,
+                            "commits": 2,
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                            "last_commit_timestamp": 1745929687
+                            "last_commit_timestamp": 1747222507
                         }
                     ]
                 }
