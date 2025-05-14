@@ -1,6 +1,6 @@
 {
     "name": "EasyDocument",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "author": "LoosePrince",
     "description": "一个轻量级、免编译的纯静态前端文档系统",
     "homepage": "https://github.com/LoosePrince/EasyDocument",
@@ -18,5 +18,5 @@
         "tailwindcss"
     ],
     "updateDate": "2025-05-14",
-    "releaseNotes": "正式版本发布"
+    "releaseNotes": "- 更新导航功能\n- 添加根目录标题和文件夹展开模式配置\n- 优化侧边栏交互体验"
 }
