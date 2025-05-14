@@ -611,18 +611,29 @@ def main():
     parser.add_argument('-y', '--yes', action='store_true', help='自动确认所有提示，不询问')
     parser.add_argument('--package', action='store_true', help='创建更新包，打包指定文件为zip格式')
     parser.add_argument('--package-output', default='EasyDocument-update.zip', help='更新包输出路径')
+    parser.add_argument('--initial-package', action='store_true', help='创建初始包，包含完整的项目文件')
+    parser.add_argument('--initial-package-output', default='EasyDocument-initial.zip', help='初始包输出路径')
+    parser.add_argument('--package-all', action='store_true', help='同时创建更新包和初始包')
     args = parser.parse_args()
     
     # 检查打包参数是否与其他操作参数共存
-    if args.package:
-        package_args_count = 1  # --package本身算一个
-        if args.package_output != 'EasyDocument-update.zip':
-            package_args_count += 1  # 如果指定了--package-output，再算一个
+    if args.package or args.initial_package or args.package_all:
+        package_args_count = 0
+        if args.package:
+            package_args_count += 1
+        if args.initial_package:
+            package_args_count += 1
+        if args.package_all:
+            package_args_count += 1
+        
+        if package_args_count > 1:
+            print("错误: --package, --initial-package 和 --package-all 参数不能同时使用")
+            sys.exit(1)
             
-        # 检查是否使用了其他参数（除了--yes，它可以与所有命令共存）
+        # 检查是否使用了其他参数（除了包名称和--yes，它们可以与打包命令共存）
         other_args_used = False
         for arg_name, arg_value in vars(args).items():
-            if arg_name not in ['package', 'package_output', 'yes'] and arg_value:
+            if arg_name not in ['package', 'package_output', 'initial_package', 'initial_package_output', 'package_all', 'yes'] and arg_value:
                 if isinstance(arg_value, bool) and arg_value == True:
                     other_args_used = True
                     break
@@ -631,12 +642,20 @@ def main():
                     break
         
         if other_args_used:
-            print("错误: --package 参数不能与其他操作参数共存")
+            print("错误: 打包参数不能与其他操作参数共存")
             sys.exit(1)
             
         # 执行打包操作
-        create_update_package(args.package_output)
-        return
+        if args.package:
+            create_update_package(args.package_output)
+            return
+        elif args.initial_package:
+            create_initial_package(args.initial_package_output)
+            return
+        elif args.package_all:
+            create_update_package(args.package_output)
+            create_initial_package(args.initial_package_output)
+            return
     
     # 检查是否有已存在的path.json文件且是否在没有使用任何参数的情况下运行
     if os.path.exists(args.output) and len(sys.argv) == 1:
@@ -843,7 +862,7 @@ def main():
     total_dirs = count_dirs(structure)
     
     # 更新HTML元数据
-    html_files_to_update = ['index.html', 'main.html']
+    html_files_to_update = glob.glob('*.html')
     update_html_metadata(html_files_to_update, config)
     
     print(f"文档扫描完成: 共 {total_files} 个文件, {total_dirs} 个目录")
@@ -961,14 +980,18 @@ def create_update_package(output_file='EasyDocument-update.zip'):
         else:
             print(f"警告: {config_path} 文件不存在，将被跳过")
         
-        # 复制所有HTML文件
-        for html_file in glob.glob('*.html'):
-            html_temp_path = os.path.join(temp_dir, html_file)
-            shutil.copy2(html_file, html_temp_path)
-            print(f"已复制: {html_file}")
+        # 复制指定的HTML文件
+        html_files = ['index.html', 'main.html']
+        for html_file in html_files:
+            if os.path.exists(html_file):
+                html_temp_path = os.path.join(temp_dir, html_file)
+                shutil.copy2(html_file, html_temp_path)
+                print(f"已复制: {html_file}")
+            else:
+                print(f"警告: {html_file} 文件不存在，将被跳过")
         
         # 复制其他文件
-        other_files = ['LICENSE', 'meta.json', 'README.md', 'requirements.txt']
+        other_files = ['meta.json', 'requirements.txt']
         for file in other_files:
             if os.path.exists(file):
                 file_temp_path = os.path.join(temp_dir, file)
@@ -991,6 +1014,85 @@ def create_update_package(output_file='EasyDocument-update.zip'):
         # 显示ZIP文件大小
         zip_size = os.path.getsize(output_file)
         print(f"更新包大小: {zip_size / 1024:.2f} KB")
+
+def create_initial_package(output_file='EasyDocument-initial.zip'):
+    """
+    创建初始包，包含完整的项目文件
+    
+    打包内容包括：
+    - assets文件夹
+    - data/README.md空文件
+    - config.js (不改名)
+    - 全部html文件
+    - LICENSE
+    - README.md
+    """
+    print(f"开始创建初始包: {output_file}")
+    
+    # 创建临时目录存放待打包文件
+    with tempfile.TemporaryDirectory() as temp_dir:
+        print(f"创建临时目录: {temp_dir}")
+        
+        # 复制assets文件夹
+        assets_path = 'assets'
+        if os.path.exists(assets_path) and os.path.isdir(assets_path):
+            assets_temp_path = os.path.join(temp_dir, 'assets')
+            shutil.copytree(assets_path, assets_temp_path)
+            print(f"已复制: {assets_path}")
+        else:
+            print(f"警告: {assets_path} 目录不存在，将被跳过")
+        
+        # 创建data目录和README.md空文件
+        data_dir = os.path.join(temp_dir, 'data')
+        os.makedirs(data_dir, exist_ok=True)
+        data_readme = os.path.join(data_dir, 'README.md')
+        with open(data_readme, 'w', encoding='utf-8') as f:
+            f.write('# EasyDocument\n\n这是您的文档目录，请在此处添加Markdown或HTML文档。')
+        print(f"已创建: data/README.md")
+        
+        # 复制config.js (不改名)
+        config_path = 'config.js'
+        if os.path.exists(config_path):
+            config_temp_path = os.path.join(temp_dir, 'config.js')
+            shutil.copy2(config_path, config_temp_path)
+            print(f"已复制: {config_path}")
+        else:
+            print(f"警告: {config_path} 文件不存在，将被跳过")
+        
+        # 复制指定的HTML文件
+        html_files = glob.glob('*.html')
+        for html_file in html_files:
+            if os.path.exists(html_file):
+                html_temp_path = os.path.join(temp_dir, html_file)
+                shutil.copy2(html_file, html_temp_path)
+                print(f"已复制: {html_file}")
+            else:
+                print(f"警告: {html_file} 文件不存在，将被跳过")
+        
+        # 复制其他文件
+        other_files = ['LICENSE', 'README.md']
+        for file in other_files:
+            if os.path.exists(file):
+                file_temp_path = os.path.join(temp_dir, file)
+                shutil.copy2(file, file_temp_path)
+                print(f"已复制: {file}")
+            else:
+                print(f"警告: {file} 文件不存在，将被跳过")
+        
+        # 创建ZIP文件
+        with zipfile.ZipFile(output_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # 遍历临时目录中的所有文件和子目录
+            for root, dirs, files in os.walk(temp_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    # 计算相对于临时目录的路径，作为zip内的路径
+                    arc_path = os.path.relpath(file_path, temp_dir)
+                    zipf.write(file_path, arc_path)
+        
+        print(f"初始包创建完成: {output_file}")
+        # 显示ZIP文件大小
+        zip_size = os.path.getsize(output_file)
+        print(f"初始包大小: {zip_size / 1024:.2f} KB")
 
 if __name__ == "__main__":
     main() 
