@@ -51,8 +51,8 @@ jobs:
           UPDATE_DATE=$(python -c "import json; print(json.load(open('meta.json')).get('updateDate', ''))")
           echo "UPDATE_DATE=$UPDATE_DATE" >> $GITHUB_ENV
       
-      - name: 创建更新包
-        run: python build.py --package --yes
+      - name: 创建打包文件
+        run: python build.py --package-all --yes
       
       - name: 读取发布说明
         id: release_notes
@@ -74,11 +74,16 @@ jobs:
             
             更新日期: ${{ env.UPDATE_DATE }}
             
-            ### 更新包
+            ### 更新包（EasyDocument-update.zip）
             - 包含了此版本的所有静态文件和资源
             - 解压后可直接覆盖原有文件进行更新
+            
+            ### 初始包（EasyDocument-initial.zip）
+            - 包含了完整的初始项目文件
+            - 适合首次部署或全新安装
           files: |
             EasyDocument-update.zip
+            EasyDocument-initial.zip
           draft: false
           prerelease: false
         env:
