@@ -248,6 +248,66 @@ li:has(> input[type="checkbox"]) {
     background-color: rgba(107, 114, 128, 0.7);
 }
 
+/* 外部链接样式 */
+a.external-link {
+    position: relative;
+    padding-right: 1.2em;
+}
+
+a.external-link .external-link-icon {
+    display: inline-block;
+    vertical-align: middle;
+    margin-top: -0.15em;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+a.external-link:hover .external-link-icon {
+    opacity: 1;
+}
+
+/* 提示卡片样式 */
+.admonition {
+    position: relative;
+    margin: 1.5625em 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s ease;
+}
+
+.admonition:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.admonition-title {
+    font-weight: 600;
+}
+
+.dark .admonition-content {
+    color: #e5e7eb;
+}
+
+/* 提示卡片类型的特定颜色 */
+.dark .admonition-note {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+.dark .admonition-tip {
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+.dark .admonition-important {
+    background-color: rgba(139, 92, 246, 0.1);
+}
+
+.dark .admonition-warning, 
+.dark .admonition-caution {
+    background-color: rgba(249, 115, 22, 0.1);
+}
+
+.dark .admonition-danger {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
 /* 表格 */
 .markdown-body table {
     display: block;

@@ -460,7 +460,7 @@ function generateSidebar(node) {
         if (rootNode) {
             // 添加当前根目录标题到导航顶部
             const rootHeader = document.createElement('div');
-            rootHeader.className = 'py-2 px-3 mb-4 bg-gray-100 dark:bg-gray-800 rounded-md font-medium text-gray-800 dark:text-gray-200 flex items-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700';
+            rootHeader.className = 'py-2 px-3 mb-4 bg-gray-100 dark:bg-gray-700 rounded-md font-medium text-gray-800 dark:text-gray-200 flex items-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600';
             
             // 创建根目录标题内容
             rootHeader.innerHTML = `
@@ -516,7 +516,7 @@ function generateSidebar(node) {
     
     // 添加根目录标题到导航顶部
     const rootHeader = document.createElement('div');
-    rootHeader.className = 'py-2 px-3 mb-4 bg-gray-100 dark:bg-gray-800 rounded-md font-medium text-gray-800 dark:text-gray-200 flex items-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700';
+    rootHeader.className = 'py-2 px-3 mb-4 bg-gray-100 dark:bg-gray-700 rounded-md font-medium text-gray-800 dark:text-gray-200 flex items-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600';
     
     // 创建根目录标题内容
     rootHeader.innerHTML = `
@@ -1730,6 +1730,9 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
             }
         });
         
+        // 处理GitHub风格的提示卡片
+        processAdmonitions(markdownBody);
+        
         // 手动处理块级数学公式 (必须在代码块处理后执行)
         if (config.extensions.math && !isHtmlFile) { // 只对Markdown文件处理公式
             processBlockMath(markdownBody);
@@ -2920,18 +2923,77 @@ function fixInternalLinks(container) {
     const links = container.querySelectorAll('a');
     links.forEach(link => {
         const href = link.getAttribute('href');
-        if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#')) {
-            // 内部链接，检查是否是相对路径
-            if (!href.startsWith('?')) {
-                // 获取完整路径并编码
-                let newHref = `?path=${encodeURIComponent(href)}`;
-                if (currentRoot) {
-                    newHref += `&root=${encodeURIComponent(currentRoot)}`;
+        if (!href) return;
+        
+        // 如果已经是完整URL或锚点链接，不处理
+        if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('#')) {
+            // 标记为外部链接
+            if (href.startsWith('http')) {
+                if (!link.classList.contains('external-link') && !link.querySelector('.external-link-icon')) {
+                    link.classList.add('external-link');
+                    
+                    // 添加外部链接图标
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-external-link-alt ml-1 text-xs external-link-icon';
+                    icon.style.fontSize = '0.75em';
+                    icon.setAttribute('aria-hidden', 'true');
+                    link.appendChild(icon);
+                    
+                    // 如果没有设置target，设置为_blank
+                    if (!link.getAttribute('target')) {
+                        link.setAttribute('target', '_blank');
+                        link.setAttribute('rel', 'noopener noreferrer');
+                    }
                 }
-                link.setAttribute('href', newHref);
-            } else if (href.includes('path=') && currentRoot && !href.includes('root=')) {
-                // 已有path参数但没有root参数
-                link.setAttribute('href', `${href}&root=${encodeURIComponent(currentRoot)}`);
+            }
+            return;
+        }
+        
+        // 处理相对路径链接 - 支持常规Markdown格式的链接
+        if (!href.startsWith('?')) {
+            // 尝试从href中提取相对路径
+            let path = href;
+            
+            // 如果链接有扩展名，保留；否则尝试推断为目录
+            const hasExtension = /\.(md|html)$/i.test(path);
+            if (!hasExtension) {
+                // 可能是目录链接，尝试将其视为目录
+                if (!path.endsWith('/')) {
+                    // 尝试添加默认索引文件
+                    for (const indexName of config.document.index_pages) {
+                        // 先检查是否以/结尾，如果不是，添加/
+                        const dirPath = path.endsWith('/') ? path : `${path}/`;
+                        const possiblePath = `${dirPath}${indexName}`;
+                        path = possiblePath;  // 使用第一个可能的索引页
+                        break;
+                    }
+                }
+            }
+            
+            // 获取完整路径并编码
+            let newHref = `?path=${encodeURIComponent(path)}`;
+            if (currentRoot) {
+                newHref += `&root=${encodeURIComponent(currentRoot)}`;
+            }
+            link.setAttribute('href', newHref);
+            
+            // 标记为内部链接
+            if (!link.classList.contains('internal-link') && !link.querySelector('.internal-link-icon')) {
+                link.classList.add('internal-link');
+            }
+            
+        } else if (href.includes('path=') && currentRoot && !href.includes('root=')) {
+            // 已有path参数但没有root参数
+            link.setAttribute('href', `${href}&root=${encodeURIComponent(currentRoot)}`);
+            
+            // 标记为内部链接
+            if (!link.classList.contains('internal-link')) {
+                link.classList.add('internal-link');
+            }
+        } else {
+            // 其他?开头的链接也标记为内部链接
+            if (!link.classList.contains('internal-link')) {
+                link.classList.add('internal-link');
             }
         }
     });
@@ -3993,4 +4055,95 @@ function setupTocResizer() {
         // 直接恢复为配置的默认宽度
         document.documentElement.style.setProperty('--toc-width', config.layout.toc_width);
     });
+}
+
+// 处理类似GitHub的提示卡片，如 > [TIP]
+function processAdmonitions(container) {
+    // 查找所有引用块
+    const blockquotes = container.querySelectorAll('blockquote');
+    
+    blockquotes.forEach(blockquote => {
+        // 检查第一个子元素是否是段落
+        const firstChild = blockquote.firstElementChild;
+        if (!firstChild || firstChild.tagName.toLowerCase() !== 'p') return;
+        
+        // 检查段落的文本内容
+        const text = firstChild.textContent.trim();
+        
+        // 检查是否匹配 [TYPE] 模式
+        const match = text.match(/^\[([A-Z]+)\]\s*(.*)/);
+        if (!match) return;
+        
+        const type = match[1].toLowerCase();
+        const title = match[2] || '';
+        
+        // 支持的提示类型及其图标和颜色
+        const admonitionTypes = {
+            'note': { icon: 'fas fa-info-circle', color: 'blue', title: title || '注意' },
+            'tip': { icon: 'fas fa-lightbulb', color: 'green', title: title || '提示' },
+            'important': { icon: 'fas fa-exclamation-circle', color: 'purple', title: title || '重要' },
+            'warning': { icon: 'fas fa-exclamation-triangle', color: 'orange', title: title || '警告' },
+            'caution': { icon: 'fas fa-fire', color: 'orange', title: title || '小心' },
+            'danger': { icon: 'fas fa-bolt', color: 'red', title: title || '危险' }
+        };
+        
+        // 如果是支持的类型，转换为特色卡片
+        if (admonitionTypes[type]) {
+            const admonition = admonitionTypes[type];
+            
+            // 创建卡片容器
+            const card = document.createElement('div');
+            card.className = `admonition admonition-${type} border-l-4 pl-4 py-2 my-4 bg-gray-50 rounded-r-md`;
+            card.style.borderLeftColor = `var(--color-${admonition.color}, ${getDefaultColor(admonition.color)})`;
+            
+            // 创建标题
+            const cardTitle = document.createElement('div');
+            cardTitle.className = 'admonition-title font-medium flex items-center mb-2';
+            cardTitle.style.color = `var(--color-${admonition.color}, ${getDefaultColor(admonition.color)})`;
+            
+            // 添加图标
+            const icon = document.createElement('i');
+            icon.className = `${admonition.icon} mr-2`;
+            cardTitle.appendChild(icon);
+            
+            // 添加标题文本
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = admonition.title;
+            cardTitle.appendChild(titleSpan);
+            
+            // 添加标题到卡片
+            card.appendChild(cardTitle);
+            
+            // 创建内容容器
+            const content = document.createElement('div');
+            content.className = 'admonition-content text-gray-700 dark:text-gray-300';
+            
+            // 移除第一个段落（包含类型标记）
+            firstChild.remove();
+            
+            // 将剩余内容移动到新容器中
+            while (blockquote.firstChild) {
+                content.appendChild(blockquote.firstChild);
+            }
+            
+            // 添加内容到卡片
+            card.appendChild(content);
+            
+            // 替换原始引用块
+            blockquote.parentNode.replaceChild(card, blockquote);
+        }
+    });
+}
+
+// 获取颜色的默认值（如果CSS变量不可用）
+function getDefaultColor(color) {
+    const colorMap = {
+        'blue': '#3b82f6',
+        'green': '#10b981',
+        'purple': '#8b5cf6',
+        'orange': '#f97316',
+        'red': '#ef4444',
+        'gray': '#6b7280'
+    };
+    return colorMap[color] || '#3b82f6';
 }
