@@ -55,6 +55,7 @@ const config = {
     auto_collapse: true, // 自动折叠非当前文档的目录
     back_to_top: true, // 显示返回顶部按钮
     prev_next_buttons: true, // 显示上一篇/下一篇导航
+    folder_expand_mode: 5, // 文件夹默认展开方式：1-展开全部第一级文件夹，2-展开全部文件夹，3-展开第一个文件夹的第一级，4-展开第一个文件夹的全部文件夹，5-不默认展开任何文件夹
     nav_links: [ // 导航栏链接
       {
         text: "首页",
