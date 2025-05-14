@@ -500,9 +500,6 @@ function generateSidebar(node) {
                 
                 // 重置文件夹展开状态
                 collapseAllFolders();
-                
-                // 跳转到完整目录页面
-                window.location.href = 'main.html';
             });
             
             backDiv.appendChild(backLink);
