@@ -991,7 +991,7 @@ def create_update_package(output_file='EasyDocument-update.zip'):
                 print(f"警告: {html_file} 文件不存在，将被跳过")
         
         # 复制其他文件
-        other_files = ['meta.json', 'requirements.txt']
+        other_files = ['meta.json', 'requirements.txt','build.py']
         for file in other_files:
             if os.path.exists(file):
                 file_temp_path = os.path.join(temp_dir, file)
