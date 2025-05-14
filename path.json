@@ -191,10 +191,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1746176320,
+                            "timestamp": 1747218037,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新文档；\n更新构建工具实现自动更新网站元信息",
+                            "message": "更新文档：添加文件夹展开模式配置，优化导航体验；新增打包功能说明，支持自定义文件夹展开策略",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -202,10 +202,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 2,
+                                "commits": 3,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746176320
+                                "last_commit_timestamp": 1747218037
                             }
                         ]
                     }
@@ -296,10 +296,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1746856355,
+                            "timestamp": 1747218037,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "添加toc_width配置的补充说明",
+                            "message": "更新文档：添加文件夹展开模式配置，优化导航体验；新增打包功能说明，支持自定义文件夹展开策略",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -307,10 +307,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 3,
+                                "commits": 4,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1746856355
+                                "last_commit_timestamp": 1747218037
                             }
                         ]
                     }
@@ -421,10 +421,10 @@
                 "path": "配置详解/README.md",
                 "git": {
                     "last_modified": {
-                        "timestamp": 1746797343,
+                        "timestamp": 1747218037,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
-                        "message": "更新目录动态展开功能的说明",
+                        "message": "更新文档：添加文件夹展开模式配置，优化导航体验；新增打包功能说明，支持自定义文件夹展开策略",
                         "github_username": "LoosePrince",
                         "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                     },
@@ -432,10 +432,10 @@
                         {
                             "name": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "commits": 8,
+                            "commits": 9,
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                            "last_commit_timestamp": 1746797343
+                            "last_commit_timestamp": 1747218037
                         }
                     ]
                 }
