@@ -1070,7 +1070,7 @@ def create_initial_package(output_file='EasyDocument-initial.zip'):
                 print(f"警告: {html_file} 文件不存在，将被跳过")
         
         # 复制其他文件
-        other_files = ['LICENSE', 'README.md']
+        other_files = ['LICENSE', 'README.md', 'build.py']
         for file in other_files:
             if os.path.exists(file):
                 file_temp_path = os.path.join(temp_dir, file)
