@@ -981,7 +981,7 @@ def create_update_package(output_file='EasyDocument-update.zip'):
             print(f"警告: {config_path} 文件不存在，将被跳过")
         
         # 复制指定的HTML文件
-        html_files = ['index.html', 'main.html']
+        html_files = ['main.html']
         for html_file in html_files:
             if os.path.exists(html_file):
                 html_temp_path = os.path.join(temp_dir, html_file)
