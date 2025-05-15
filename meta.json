@@ -1,6 +1,6 @@
 {
     "name": "EasyDocument",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "author": "LoosePrince",
     "description": "一个轻量级、免编译的纯静态前端文档系统",
     "homepage": "https://github.com/LoosePrince/EasyDocument",
@@ -18,5 +18,5 @@
         "tailwindcss"
     ],
     "updateDate": "2025-05-14",
-    "releaseNotes": "优化链接处理逻辑，支持锚点部分的提取与附加，同时更新样式以统一提示卡片的背景颜色。"
+    "releaseNotes": "修复文档加载逻辑 d1f020c03cadcf0f511536cd887bb94ebe30e6e5 04d94e2ec6c02a59989fb56b3bdca9b1f71839ec cd5360473afb2511f5b8d97ba904c5e6016b80e8"
 }
