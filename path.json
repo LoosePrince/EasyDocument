@@ -495,6 +495,35 @@
                     ]
                 }
             }
+        },
+        {
+            "title": "测试",
+            "path": "测试",
+            "children": [],
+            "index": {
+                "title": "测试",
+                "path": "测试/README.md",
+                "git": {
+                    "last_modified": {
+                        "timestamp": 1747273528,
+                        "author": "树梢",
+                        "email": "pfingan@foxmail.com",
+                        "message": "增强文档加载功能，添加重试逻辑以应对Cloudflare环境，改进路径比较为不区分大小写，优化索引文件路径处理，防止缓存问题并详细记录错误信息。同时新增README.md文件以提供测试内容。",
+                        "github_username": "LoosePrince",
+                        "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                    },
+                    "contributors": [
+                        {
+                            "name": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "commits": 1,
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                            "last_commit_timestamp": 1747273528
+                        }
+                    ]
+                }
+            }
         }
     ]
 }
