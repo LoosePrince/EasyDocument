@@ -60,10 +60,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 如果链接是导航路径查询参数
             if (url.pathname === window.location.pathname) {
                 e.preventDefault();
-                const path = url.searchParams.get('path') || '';
+                
+                // 检查是否已经加载过相同的内容
+                const currentUrl = new URL(window.location.href);
+                const currentPath = currentUrl.searchParams.get('path') || '';
+                const newPath = url.searchParams.get('path') || '';
+                
+                // 如果路径相同，则无需重新加载
+                if (currentPath === newPath) {
+                    console.log('已经在当前文档，无需重新加载');
+                    return;
+                }
                 
                 // 使用pushState更新URL，而不是直接改变location
-                window.history.pushState({path}, '', link.href);
+                window.history.pushState({path: newPath}, '', link.href);
                 
                 // 手动触发内容加载
                 loadContentFromUrl();
@@ -811,8 +821,19 @@ function createNavLink(item, level, isIndex = false) {
         newUrl.hash = '';
         window.history.pushState({path: item.path}, '', newUrl.toString());
         
+        // 获取规范化路径，确保使用正确的协议
+        let documentPath = item.path;
+        
+        // 确保目录路径能正确处理，特别是当路径末尾包含'/'时
+        if (documentPath && !documentPath.includes('.')) {
+            // 可能是目录，检查是否以/结尾，添加README.md
+            const dirPath = documentPath.endsWith('/') ? documentPath : documentPath + '/';
+            documentPath = dirPath + 'README.md';
+            console.log(`转换目录路径为索引文件: ${documentPath}`);
+        }
+        
         // 加载文档
-        loadDocument(item.path);
+        loadDocument(documentPath);
         
         // 滚动到顶部
         window.scrollTo({
@@ -888,8 +909,19 @@ function navigateToFolderIndex(item) {
     url.hash = '';
     window.history.pushState({path: item.index.path}, '', url.toString());
     
+    // 获取规范化路径，确保使用正确的协议
+    let documentPath = item.index.path;
+    
+    // 检查是否需要处理目录路径
+    if (!documentPath.includes('.')) {
+        // 可能是目录，添加README.md
+        const dirPath = documentPath.endsWith('/') ? documentPath : documentPath + '/';
+        documentPath = dirPath + 'README.md';
+        console.log(`转换目录索引路径为文件: ${documentPath}`);
+    }
+    
     // 加载文档
-    loadDocument(item.index.path);
+    loadDocument(documentPath);
     
     // 滚动到顶部
     window.scrollTo({
@@ -3060,10 +3092,21 @@ function fixInternalLinks(container) {
         const href = link.getAttribute('href');
         if (!href) return;
         
-        // 如果已经是完整URL或仅锚点链接，不处理
+        // 如果已经是完整URL或仅锚点链接，检查是否需要处理
         if (href.startsWith('http://') || href.startsWith('https://') || href === '#' || (href.startsWith('#') && !href.includes('?'))) {
+            // 检查是否需要强制HTTPS
+            if (href.startsWith('http://') && window.location.protocol === 'https:') {
+                // 同域名链接，但协议不同，需要修正
+                if (href.includes(window.location.hostname)) {
+                    const secureUrl = href.replace('http://', 'https://');
+                    link.setAttribute('href', secureUrl);
+                    console.log(`已将链接从HTTP转换为HTTPS: ${secureUrl}`);
+                }
+            }
+            
             // 标记为外部链接
-            if (href.startsWith('http')) {
+            if ((href.startsWith('http://') || href.startsWith('https://')) && 
+                !href.includes(window.location.hostname)) {
                 if (!link.classList.contains('external-link') && !link.querySelector('.external-link-icon')) {
                     link.classList.add('external-link');
                     
@@ -3081,7 +3124,16 @@ function fixInternalLinks(container) {
                     }
                 }
             }
-            return;
+            
+            // 非站内链接，不需要进一步处理
+            if (!href.includes(window.location.hostname) && (href.startsWith('http://') || href.startsWith('https://'))) {
+                return;
+            }
+            
+            // 锚点链接，不需要进一步处理
+            if (href === '#' || (href.startsWith('#') && !href.includes('?'))) {
+                return;
+            }
         }
         
         // 处理相对路径链接 - 支持常规Markdown格式的链接
