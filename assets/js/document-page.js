@@ -570,17 +570,44 @@ function handleFolderExpandMode(isSubRoot) {
     // 获取所有顶级文件夹
     const folderDivs = document.querySelectorAll('#sidebar-nav > ul.level-0 > li > div.folder-title');
     
-    switch(expandMode) {
-        case 1: // 展开全部第一级文件夹
+    // 对于模式1和2（展开全部），始终无条件应用，忽略auto_collapse设置
+    if (expandMode === 1 || expandMode === 2) {
+        if (expandMode === 1) {
+            // 展开全部第一级文件夹
             folderDivs.forEach(folderDiv => {
                 toggleFolder(folderDiv, true);
             });
-            break;
-            
-        case 2: // 展开全部文件夹（所有层级）
+        } else {
+            // 展开全部文件夹（所有层级）
             expandAllFolders();
-            break;
-            
+        }
+        return; // 处理完模式1和2后直接返回
+    }
+    
+    // 对于模式3和4，判断当前位置来决定是否应用
+    let shouldApplyExpandMode = true;
+    
+    // 检查是否启用了自动折叠功能且当前不是首次加载（有当前文档）
+    if (config.navigation.auto_collapse && !isSubRoot) {
+        // 获取当前URL的path参数
+        const url = new URL(window.location.href);
+        const currentPath = url.searchParams.get('path');
+        
+        // 如果存在当前路径，且不是根目录文档，则不应用默认展开模式
+        if (currentPath) {
+            // 如果路径不为空且不是首页文档，则认为不需要应用默认展开模式
+            const isHomePage = isIndexFile(currentPath) && !currentPath.includes('/');
+            shouldApplyExpandMode = isHomePage;
+        }
+    }
+    
+    // 如果不应用展开模式，直接退出
+    if (!shouldApplyExpandMode) {
+        return;
+    }
+    
+    // 处理模式3和4的逻辑
+    switch(expandMode) {
         case 3: // 展开第一个文件夹的第一级（在root_dir或根目录时）
             if (folderDivs.length > 0) {
                 toggleFolder(folderDivs[0], true);
@@ -948,6 +975,15 @@ function toggleFolder(div, forceExpand = false) {
 
 // 设置当前激活的链接或文件夹
 function setActiveLink(activeElement, isFolder = false) {
+    // 判断是否需要先折叠其他文件夹 - 仅当folder_expand_mode不是1或2时
+    const expandMode = config.navigation.folder_expand_mode || 5;
+    const shouldAutoCollapse = config.navigation.auto_collapse && expandMode > 2;
+    
+    // 如果启用了自动折叠功能且不是全局展开模式，先折叠所有文件夹
+    if (shouldAutoCollapse) {
+        collapseAllFolders();
+    }
+    
     // 清除所有链接的激活状态
     document.querySelectorAll('#sidebar-nav a').forEach(a => a.classList.remove('active'));
     document.querySelectorAll('#sidebar-nav div.folder-title').forEach(div => div.classList.remove('active-folder'));
@@ -1131,7 +1167,7 @@ async function loadContentFromUrl() {
             updateProgressBar(50);
         }, 200);
         
-        // 高亮侧边栏
+        // 高亮侧边栏并处理文件夹展开
         const isReadmeFile = decodedPath.toLowerCase().endsWith('readme.md');
         if (isReadmeFile && decodedPath.includes('/')) {
             const folderPath = decodedPath.substring(0, decodedPath.lastIndexOf('/'));
@@ -1266,18 +1302,66 @@ window.loadContentFromUrl = loadContentFromUrl;
 
 // 折叠所有文件夹
 function collapseAllFolders() {
+    // 如果folder_expand_mode是1或2，不执行折叠操作
+    const expandMode = config.navigation.folder_expand_mode || 5;
+    if (expandMode === 1 || expandMode === 2) {
+        return;
+    }
+    
+    // 获取当前URL的path参数以识别当前文档
+    const url = new URL(window.location.href);
+    const currentPath = url.searchParams.get('path');
+    
+    // 如果没有当前文档路径，则折叠所有文件夹
+    if (!currentPath) {
+        const allFolderDivs = document.querySelectorAll('#sidebar-nav div.folder-title');
+        
+        allFolderDivs.forEach(folderDiv => {
+            const icon = folderDiv.querySelector('i');
+            const subUl = folderDiv.nextElementSibling;
+            
+            if (subUl && subUl.tagName === 'UL' && subUl.style.display !== 'none') {
+                // 折叠文件夹
+                subUl.style.display = 'none';
+                // 更新图标
+                if (icon) {
+                    icon.classList.remove('rotate-90');
+                }
+            }
+        });
+        return;
+    }
+    
+    // 如果有当前文档路径，先找出需要保持展开状态的文件夹（当前文档的父级文件夹）
+    const pathParts = currentPath.split('/');
+    const foldersToKeepOpen = new Set();
+    
+    // 构建需要保持打开的文件夹路径集合
+    let parentPath = '';
+    for (let i = 0; i < pathParts.length - 1; i++) {
+        parentPath += (i > 0 ? '/' : '') + pathParts[i];
+        foldersToKeepOpen.add(parentPath);
+    }
+    
+    // 折叠所有非当前文档父级文件夹
     const allFolderDivs = document.querySelectorAll('#sidebar-nav div.folder-title');
     
     allFolderDivs.forEach(folderDiv => {
+        const folderPath = folderDiv.dataset.folderPath || '';
         const icon = folderDiv.querySelector('i');
         const subUl = folderDiv.nextElementSibling;
         
         if (subUl && subUl.tagName === 'UL' && subUl.style.display !== 'none') {
-            // 折叠文件夹
-            subUl.style.display = 'none';
-            // 更新图标
-            if (icon) {
-                icon.classList.remove('rotate-90');
+            // 检查是否是当前文档的父级文件夹
+            const shouldKeepOpen = foldersToKeepOpen.has(folderPath);
+            
+            if (!shouldKeepOpen) {
+                // 折叠非父级文件夹
+                subUl.style.display = 'none';
+                // 更新图标
+                if (icon) {
+                    icon.classList.remove('rotate-90');
+                }
             }
         }
     });
