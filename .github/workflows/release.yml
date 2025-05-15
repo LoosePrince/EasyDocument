@@ -62,6 +62,25 @@ jobs:
           NOTES="${NOTES//$'\n'/'%0A'}"
           NOTES="${NOTES//$'\r'/'%0D'}"
           echo "notes=$NOTES" >> $GITHUB_OUTPUT
+          
+      - name: 获取提交记录
+        id: get_commits
+        run: |
+          # 获取最新的tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$LATEST_TAG" ]; then
+            # 如果没有之前的tag，获取所有提交
+            COMMITS=$(git log --pretty=format:"- 提交 %h: %s" | head -n 10)
+          else
+            # 获取从上个版本到现在的提交
+            COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"- 提交 %h: %s")
+          fi
+          
+          COMMITS="${COMMITS//'%'/'%25'}"
+          COMMITS="${COMMITS//$'\n'/'%0A'}"
+          COMMITS="${COMMITS//$'\r'/'%0D'}"
+          echo "commits=$COMMITS" >> $GITHUB_OUTPUT
       
       - name: 创建Release
         id: create_release
@@ -70,7 +89,8 @@ jobs:
           tag_name: v${{ steps.get_version.outputs.version }}
           name: EasyDocument v${{ steps.get_version.outputs.version }}
           body: |
-            ${{ steps.release_notes.outputs.notes }}
+            说明：${{ steps.release_notes.outputs.notes }}
+            ${{ steps.get_commits.outputs.commits }}
             
             更新日期: ${{ env.UPDATE_DATE }}
             
