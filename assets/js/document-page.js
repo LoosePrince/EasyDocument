@@ -1115,8 +1115,45 @@ async function loadContentFromUrl() {
             updateProgressBar(70);
         }, 400);
         
-        // 加载文档
-        await loadDocument(decodedPath);
+        // 加载文档 - 添加重试逻辑，特别是针对Cloudflare环境
+        let loadSuccess = false;
+        let loadAttempt = 0;
+        const maxAttempts = 2; // 最大重试次数
+        
+        while (!loadSuccess && loadAttempt < maxAttempts) {
+            try {
+                loadAttempt++;
+                // 如果这是重试，添加一个小延迟
+                if (loadAttempt > 1) {
+                    console.log(`重试加载文档 (尝试 ${loadAttempt}/${maxAttempts}): ${decodedPath}`);
+                    await new Promise(resolve => setTimeout(resolve, 500)); // 延迟500ms
+                }
+                
+                await loadDocument(decodedPath);
+                loadSuccess = true;
+            } catch (err) {
+                console.error(`文档加载失败 (尝试 ${loadAttempt}/${maxAttempts}):`, err);
+                
+                // 如果是最后一次尝试，则重新抛出错误
+                if (loadAttempt >= maxAttempts) {
+                    // 如果是目录路径，尝试使用规范化的README.md路径
+                    if (decodedPath.toLowerCase().endsWith('readme.md') && decodedPath.includes('/')) {
+                        try {
+                            // 尝试直接构造README.md路径
+                            const folderPath = decodedPath.substring(0, decodedPath.lastIndexOf('/'));
+                            const readmePath = `${folderPath}/README.md`;
+                            console.log(`尝试使用规范化的README路径: ${readmePath}`);
+                            await loadDocument(readmePath);
+                            loadSuccess = true;
+                        } catch (finalErr) {
+                            throw err; // 使用原始错误
+                        }
+                    } else {
+                        throw err;
+                    }
+                }
+            }
+        }
         
         // 处理搜索高亮和跳转
         if (searchQuery) {
@@ -1202,8 +1239,12 @@ function findDirectoryIndexPath(dirPath) {
     
     // 检查pathData中是否存在对应的目录节点
     function findNode(node, currentPath) {
+        // 路径比较应该不区分大小写
+        const normalizedDirPath = dirPath.toLowerCase();
+        const normalizedNodePath = (node.path || '').toLowerCase();
+        
         // 如果有索引文件，直接返回
-        if (node.path === dirPath && node.index) {
+        if (normalizedNodePath === normalizedDirPath && node.index) {
             return node.index.path;
         }
         
@@ -1223,11 +1264,16 @@ function findDirectoryIndexPath(dirPath) {
     if (indexPath) return indexPath;
     
     // 如果在路径数据中没找到，尝试一些常见的索引文件名
+    // 创建可能的索引文件路径数组
+    const possiblePaths = [];
     for (const indexName of config.document.index_pages) {
-        const possiblePath = `${dirPath}/${indexName}`;
-        // 这里我们只返回可能的路径，不检查文件是否实际存在
-        // 文件存在性检查会在loadDocument中进行
-        return possiblePath; // 返回第一个可能的索引页
+        possiblePaths.push(`${dirPath}/${indexName}`);
+    }
+    
+    // 返回第一个可能的路径，后续在loadDocument中会检查文件是否存在
+    // 如果需要更精确，可以在此处使用fetch检查文件是否存在，但会增加额外网络请求
+    if (possiblePaths.length > 0) {
+        return possiblePaths[0];
     }
     
     return null;
@@ -1270,17 +1316,33 @@ async function loadDocument(relativePath) {
         // 不在缓存中，从网络获取
         try {
             updateProgressBar(60);
-            const response = await fetch(fetchPath);
+            // 添加防止缓存的随机参数，解决Cloudflare环境下的缓存问题
+            const fetchUrl = `${fetchPath}?_t=${Date.now()}`;
+            const response = await fetch(fetchUrl, {
+                method: 'GET',
+                cache: 'no-store', // 显式禁用缓存
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
+            });
             
             updateProgressBar(70);
             if (!response.ok) {
-                // ... 省略 404 和其他错误处理 (与之前类似) ...
-                // 重要的: 在错误处理中也要设置 successfullyLoaded = false 或抛出错误
-                throw new Error(`无法加载文档: ${response.statusText} (路径: ${fetchPath})`);
+                // 详细记录错误信息
+                console.error(`文档加载失败: 状态码=${response.status}, 状态文本=${response.statusText}, URL=${fetchUrl}, 相对路径=${relativePath}`);
+                throw new Error(`无法加载文档: ${response.statusText} (路径: ${relativePath})`);
             }
             
             updateProgressBar(80);
             const content = await response.text();
+            
+            // 检查内容是否为空或太短（可能是CDN返回了错误页面但状态码是200）
+            if (!content || content.trim().length < 10) {
+                console.error(`文档内容为空或太短: URL=${fetchUrl}, 相对路径=${relativePath}, 内容长度=${content.length}`);
+                throw new Error(`文档内容无效 (路径: ${relativePath})`);
+            }
+            
             documentCache.set(relativePath, content); // 添加到持久缓存
             
             updateProgressBar(90);
