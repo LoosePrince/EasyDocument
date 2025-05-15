@@ -39,8 +39,10 @@ jobs:
           
           # 检查该版本是否已存在Release
           if gh release view v$VERSION &>/dev/null; then
-            echo "ERROR: Release 版本 v$VERSION 已存在，请更新版本号" 
-            exit 1
+            echo "发现Release版本v$VERSION已存在，将更新此版本"
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
           fi
         env:
           GH_TOKEN: ${{ github.token }}
@@ -58,11 +60,10 @@ jobs:
         id: release_notes
         run: |
           NOTES=$(python -c "import json; print(json.load(open('meta.json'))['releaseNotes'])")
-          NOTES="${NOTES//'%'/'%25'}"
-          NOTES="${NOTES//$'\n'/'%0A'}"
-          NOTES="${NOTES//$'\r'/'%0D'}"
-          echo "notes=$NOTES" >> $GITHUB_OUTPUT
-          
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+            
       - name: 获取提交记录
         id: get_commits
         run: |
@@ -77,10 +78,23 @@ jobs:
             COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"- 提交 %h: %s")
           fi
           
-          COMMITS="${COMMITS//'%'/'%25'}"
-          COMMITS="${COMMITS//$'\n'/'%0A'}"
-          COMMITS="${COMMITS//$'\r'/'%0D'}"
-          echo "commits=$COMMITS" >> $GITHUB_OUTPUT
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: 删除现有Release（如果存在）
+        if: steps.get_version.outputs.tag_exists == 'true'
+        run: |
+          gh release delete v${{ steps.get_version.outputs.version }} --yes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          
+      - name: 删除现有Tag（如果存在）
+        if: steps.get_version.outputs.tag_exists == 'true'
+        run: |
+          git push --delete origin v${{ steps.get_version.outputs.version }} || true
+        env:
+          GH_TOKEN: ${{ github.token }}
       
       - name: 创建Release
         id: create_release
@@ -90,6 +104,7 @@ jobs:
           name: EasyDocument v${{ steps.get_version.outputs.version }}
           body: |
             说明：${{ steps.release_notes.outputs.notes }}
+            
             ${{ steps.get_commits.outputs.commits }}
             
             更新日期: ${{ env.UPDATE_DATE }}
