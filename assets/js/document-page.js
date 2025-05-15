@@ -1134,22 +1134,71 @@ async function loadContentFromUrl() {
             } catch (err) {
                 console.error(`文档加载失败 (尝试 ${loadAttempt}/${maxAttempts}):`, err);
                 
-                // 如果是最后一次尝试，则重新抛出错误
+                // 如果是最后一次尝试，尝试其他可能的方案
                 if (loadAttempt >= maxAttempts) {
-                    // 如果是目录路径，尝试使用规范化的README.md路径
+                    // 情况1: 如果是README.md文件，尝试访问其所在目录
                     if (decodedPath.toLowerCase().endsWith('readme.md') && decodedPath.includes('/')) {
                         try {
-                            // 尝试直接构造README.md路径
+                            // 尝试使用大写的README.md
                             const folderPath = decodedPath.substring(0, decodedPath.lastIndexOf('/'));
                             const readmePath = `${folderPath}/README.md`;
-                            console.log(`尝试使用规范化的README路径: ${readmePath}`);
-                            await loadDocument(readmePath);
-                            loadSuccess = true;
+                            if (readmePath !== decodedPath) { // 避免重复尝试相同路径
+                                console.log(`尝试使用大写的README.md路径: ${readmePath}`);
+                                await loadDocument(readmePath);
+                                loadSuccess = true;
+                            } else {
+                                // 如果已经是大写，尝试使用其他索引文件名
+                                for (const indexName of config.document.index_pages) {
+                                    if (indexName.toLowerCase() !== 'readme.md') {
+                                        const altPath = `${folderPath}/${indexName}`;
+                                        console.log(`尝试使用备选索引文件: ${altPath}`);
+                                        try {
+                                            await loadDocument(altPath);
+                                            loadSuccess = true;
+                                            break;
+                                        } catch (altErr) {
+                                            console.warn(`备选索引文件加载失败: ${altPath}`);
+                                        }
+                                    }
+                                }
+                            }
                         } catch (finalErr) {
-                            throw err; // 使用原始错误
+                            // 继续向上抛出错误前，尝试加载目录本身
+                            try {
+                                const folderPath = decodedPath.substring(0, decodedPath.lastIndexOf('/'));
+                                if (folderPath) {
+                                    console.log(`尝试加载目录: ${folderPath}`);
+                                    await loadDocument(folderPath);
+                                    loadSuccess = true;
+                                }
+                            } catch (dirErr) {
+                                throw err; // 使用原始错误
+                            }
+                        }
+                    } 
+                    // 情况2: 如果是目录路径（无扩展名），尝试添加README.md或查找索引页
+                    else if (!decodedPath.includes('.')) {
+                        let tried = false;
+                        
+                        // 尝试各种索引文件名
+                        for (const indexName of config.document.index_pages) {
+                            try {
+                                tried = true;
+                                const indexPath = `${decodedPath}/${indexName}`;
+                                console.log(`尝试目录索引文件: ${indexPath}`);
+                                await loadDocument(indexPath);
+                                loadSuccess = true;
+                                break;
+                            } catch (indexErr) {
+                                console.warn(`索引文件加载失败: ${decodedPath}/${indexName}`);
+                            }
+                        }
+                        
+                        if (!tried || !loadSuccess) {
+                            throw err; // 所有尝试都失败，使用原始错误
                         }
                     } else {
-                        throw err;
+                        throw err; // 其他情况，直接抛出错误
                     }
                 }
             }
@@ -1291,8 +1340,19 @@ async function loadDocument(relativePath) {
     loadingIndicator.innerHTML = '<p class="text-gray-600 dark:text-gray-300 flex items-center"><i class="fas fa-spinner fa-spin mr-2"></i>正在加载文档...</p>';
     document.body.appendChild(loadingIndicator);
     
-    // 确保路径是相对于根目录的，而不是 data/ 目录
-    const fetchPath = `${config.document.root_dir}/${relativePath}`;
+    // 构建完整的获取路径，正确处理相对路径和绝对路径
+    let fetchPath;
+    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+        // 如果已经是完整URL，直接使用
+        fetchPath = relativePath;
+    } else {
+        // 如果是相对路径，拼接上根目录
+        // 确保路径中不会有双斜杠
+        const rootDir = config.document.root_dir.replace(/\/$/, '');
+        const cleanPath = relativePath.replace(/^\//, '');
+        fetchPath = `${rootDir}/${cleanPath}`;
+    }
+    
     let successfullyLoaded = false; // 标记是否成功加载了内容
     
     // 保存当前URL中的hash
@@ -1317,7 +1377,15 @@ async function loadDocument(relativePath) {
         try {
             updateProgressBar(60);
             // 添加防止缓存的随机参数，解决Cloudflare环境下的缓存问题
-            const fetchUrl = `${fetchPath}?_t=${Date.now()}`;
+            // 确保URL使用与当前页面相同的协议（http/https）
+            let fetchUrl = `${fetchPath}?_t=${Date.now()}`;
+            
+            // 检查是否是绝对URL，如果是则确保协议与当前页面一致
+            if (fetchUrl.startsWith('http://') && window.location.protocol === 'https:') {
+                fetchUrl = fetchUrl.replace('http://', 'https://');
+                console.log(`已将请求URL从HTTP转换为HTTPS: ${fetchUrl}`);
+            }
+            
             const response = await fetch(fetchUrl, {
                 method: 'GET',
                 cache: 'no-store', // 显式禁用缓存
@@ -1337,10 +1405,15 @@ async function loadDocument(relativePath) {
             updateProgressBar(80);
             const content = await response.text();
             
-            // 检查内容是否为空或太短（可能是CDN返回了错误页面但状态码是200）
-            if (!content || content.trim().length < 10) {
-                console.error(`文档内容为空或太短: URL=${fetchUrl}, 相对路径=${relativePath}, 内容长度=${content.length}`);
-                throw new Error(`文档内容无效 (路径: ${relativePath})`);
+            // 检查内容是否为空（可能是CDN返回了错误页面但状态码是200）
+            if (!content) {
+                console.error(`文档内容为空: URL=${fetchUrl}, 相对路径=${relativePath}`);
+                throw new Error(`文档内容为空 (路径: ${relativePath})`);
+            }
+            
+            // 内容非常短时只记录警告，但不阻止渲染
+            if (content.trim().length < 10) {
+                console.warn(`文档内容很短: URL=${fetchUrl}, 相对路径=${relativePath}, 内容长度=${content.length}`);
             }
             
             documentCache.set(relativePath, content); // 添加到持久缓存
