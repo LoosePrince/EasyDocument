@@ -4749,34 +4749,51 @@ function enhanceHeadings(container) {
             
             // 复制到剪贴板
             navigator.clipboard.writeText(fullUrl).then(() => {
-                // 显示复制成功提示
-                const toast = document.createElement('div');
-                toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md z-50 animate-fade-in';
-                toast.textContent = '链接已复制到剪贴板';
-                document.body.appendChild(toast);
-                
-                // 2秒后移除提示
-                setTimeout(() => {
-                    toast.classList.add('animate-fade-out');
+                // 使用统一的showToast方法
+                if (window.contextMenuManager && window.contextMenuManager.showToast) {
+                    window.contextMenuManager.showToast('链接已复制到剪贴板');
+                } else {
+                    // 兜底方案，直接创建toast但使用统一样式
+                    const toast = document.createElement('div');
+                    toast.className = 'toast toast-success';
+                    toast.textContent = '链接已复制到剪贴板';
+                    document.body.appendChild(toast);
+                    
+                    // 显示动画
                     setTimeout(() => {
-                        toast.remove();
-                    }, 300);
-                }, 2000);
+                        toast.classList.add('show');
+                    }, 10);
+                    
+                    // 自动隐藏
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                        setTimeout(() => {
+                            if (toast.parentNode) {
+                                toast.parentNode.removeChild(toast);
+                            }
+                        }, 300);
+                    }, 2000);
+                }
             }).catch(err => {
                 console.error('复制失败:', err);
+                if (window.contextMenuManager && window.contextMenuManager.showToast) {
+                    window.contextMenuManager.showToast('复制链接失败', 'error');
+                }
             });
         });
         
-        // 使标题本身也可点击，点击时复制链接
-        heading.style.cursor = 'pointer';
+        // 移除标题本身的点击复制功能，只保留链接图标的点击功能
+        // 使标题可以正常选择文本，不会意外触发复制
         heading.classList.add('group'); // 添加group类以支持悬停显示链接图标
         
-        heading.addEventListener('click', (e) => {
-            // 只在没有选中文本的情况下触发
-            if (window.getSelection().toString() === '') {
-                copyButton.click();
-            }
-        });
+        // 注释掉原来的标题点击事件
+        // heading.style.cursor = 'pointer';
+        // heading.addEventListener('click', (e) => {
+        //     // 只在没有选中文本的情况下触发
+        //     if (window.getSelection().toString() === '') {
+        //         copyButton.click();
+        //     }
+        // });
         
         // 将按钮添加到标题
         heading.appendChild(copyButton);
