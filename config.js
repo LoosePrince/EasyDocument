@@ -30,7 +30,7 @@ const config = {
     use_custom_footer: true, // 是否使用自定义的footer.html文件
     footer_file: "footer.html", // 自定义底栏文件路径
     sidebar_width: "250px", // 侧边栏宽度
-    toc_width: "220px", // 目录宽度
+    toc_width: "280px", // 目录宽度
     mobile_breakpoint: "1024px" // 移动设备断点
   },
 
