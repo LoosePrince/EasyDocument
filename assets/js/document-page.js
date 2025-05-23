@@ -11,6 +11,104 @@ let currentRoot = null; // 当前根目录
 let isLoadingDocument = false; // 是否正在加载文档
 let progressBar = null; // 进度条元素
 
+/**
+ * 解析URL路径，支持新的URL格式
+ * 新格式: main.html#root/path/to/file.md#anchor
+ * 兼容格式: main.html#/path/to/file.md#anchor (无root)
+ * 旧格式兼容: main.html?path=xxx&root=xxx#anchor
+ */
+function parseUrlPath() {
+    const url = new URL(window.location.href);
+    const hash = decodeURIComponent(url.hash.substring(1)); // 去掉#并解码
+    
+    let path = '';
+    let root = null;
+    let anchor = '';
+    
+    if (hash) {
+        // 处理新格式: #root/path/to/file.md#anchor 或 #/path/to/file.md#anchor
+        if (hash.startsWith('/')) {
+            // 无root的情况: #/path/to/file.md#anchor
+            const anchorIndex = hash.indexOf('#', 1);
+            if (anchorIndex !== -1) {
+                path = hash.substring(1, anchorIndex); // 去掉开头的/
+                anchor = hash.substring(anchorIndex + 1);
+            } else {
+                path = hash.substring(1); // 去掉开头的/
+            }
+        } else {
+            // 有root的情况: #root/path/to/file.md#anchor
+            const anchorIndex = hash.indexOf('#');
+            let pathPart = anchorIndex !== -1 ? hash.substring(0, anchorIndex) : hash;
+            
+            if (anchorIndex !== -1) {
+                anchor = hash.substring(anchorIndex + 1);
+            }
+            
+            // 解析root和path
+            const slashIndex = pathPart.indexOf('/');
+            if (slashIndex !== -1) {
+                root = pathPart.substring(0, slashIndex);
+                path = pathPart.substring(slashIndex + 1);
+            } else {
+                // 只有root，没有具体文档
+                root = pathPart;
+                path = '';
+            }
+        }
+    } else {
+        // 旧格式兼容: ?path=xxx&root=xxx
+        path = url.searchParams.get('path') || '';
+        root = url.searchParams.get('root') || null;
+    }
+    
+    return { path, root, anchor };
+}
+
+/**
+ * 生成新格式URL
+ * @param {string} path 文档路径
+ * @param {string} root 根目录（可选）
+ * @param {string} anchor 锚点（可选）
+ * @returns {string} 新格式URL
+ */
+function generateNewUrl(path, root = null, anchor = '') {
+    const baseUrl = 'main.html';
+    
+    // 构建新的hash格式
+    let hash = '';
+    
+    if (root) {
+        // 当有root时，需要检查path是否已经包含了root前缀
+        let relativePath = path;
+        if (path && path.startsWith(root + '/')) {
+            // 如果path已经包含root前缀，则移除它
+            relativePath = path.substring(root.length + 1);
+        }
+        
+        // 有root的情况: #root/path#anchor
+        hash = root;
+        if (relativePath) {
+            hash += '/' + relativePath;
+        }
+        if (anchor) {
+            hash += '#' + anchor; // 移除encodeURIComponent
+        }
+    } else {
+        // 无root的情况: #/path#anchor (兼容原格式)
+        if (path) {
+            hash = '/' + path;
+            if (anchor) {
+                hash += '#' + anchor; // 移除encodeURIComponent
+            }
+        } else if (anchor) {
+            hash = '#' + anchor; // 移除encodeURIComponent
+        }
+    }
+    
+    return hash ? `${baseUrl}#${hash}` : baseUrl;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     // 初始化Mermaid
     initializeMermaid();
@@ -55,25 +153,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // 如果是站内链接（相同域名）
         if (link && link.href && link.href.startsWith(window.location.origin)) {
-            const url = new URL(link.href);
+            const linkUrl = new URL(link.href);
             
-            // 如果链接是导航路径查询参数
-            if (url.pathname === window.location.pathname) {
+            // 如果链接是同一页面的导航
+            if (linkUrl.pathname === window.location.pathname) {
                 e.preventDefault();
                 
-                // 检查是否已经加载过相同的内容
-                const currentUrl = new URL(window.location.href);
-                const currentPath = currentUrl.searchParams.get('path') || '';
-                const newPath = url.searchParams.get('path') || '';
+                // 使用新的URL解析函数比较路径
+                const currentParsed = parseUrlPath();
                 
-                // 如果路径相同，则无需重新加载
-                if (currentPath === newPath) {
+                // 临时修改location来解析目标URL
+                const originalHref = window.location.href;
+                window.history.replaceState(null, '', link.href);
+                const targetParsed = parseUrlPath();
+                window.history.replaceState(null, '', originalHref);
+                
+                // 比较路径和根目录是否相同
+                const isSamePath = currentParsed.path === targetParsed.path && 
+                                 currentParsed.root === targetParsed.root;
+                
+                // 如果路径相同，且没有锚点，则无需重新加载
+                if (isSamePath && !targetParsed.anchor) {
                     console.log('已经在当前文档，无需重新加载');
                     return;
                 }
                 
-                // 使用pushState更新URL，而不是直接改变location
-                window.history.pushState({path: newPath}, '', link.href);
+                // 使用pushState更新URL
+                window.history.pushState({path: targetParsed.path}, '', link.href);
                 
                 // 手动触发内容加载
                 loadContentFromUrl();
@@ -153,7 +259,7 @@ function updateReadingProgress() {
 
     // 获取文档内容区域的位置和尺寸
     const contentRect = contentDiv.getBoundingClientRect();
-    const contentTop = contentRect.top + window.pageYOffset;
+    const contentTop = contentRect.top + window.scrollY;
     const contentHeight = contentDiv.offsetHeight;
     
     // 如果内容高度太小，不显示进度条
@@ -167,7 +273,7 @@ function updateReadingProgress() {
     }
     
     // 获取当前滚动位置
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
     
     // 计算阅读进度
     // 考虑到窗口高度，我们应该在用户接近底部时显示为100%
@@ -502,20 +608,32 @@ function generateSidebar(node) {
             backDiv.className = 'py-2 px-3 mb-4 border-t border-gray-200 dark:border-gray-700 mt-4';
             
             const backLink = document.createElement('a');
-            backLink.href = 'main.html'; // 直接跳转到main.html，不带任何参数
+            // 生成去掉root参数但保留当前文档完整路径的URL
+            const currentParsed = parseUrlPath();
+            
+            // 构造完整路径：如果当前在root模式下，需要加上root前缀
+            let fullPath = currentParsed.path;
+            if (currentParsed.root && currentParsed.path && !currentParsed.path.startsWith(currentParsed.root + '/')) {
+                fullPath = currentParsed.root + '/' + currentParsed.path;
+            }
+            
+            const backUrl = generateNewUrl(fullPath, null, currentParsed.anchor);
+            backLink.href = backUrl;
             backLink.className = 'flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-primary';
             backLink.innerHTML = '<i class="fas fa-arrow-left mr-2"></i> 返回完整目录';
             
-            // 添加点击事件处理，重置侧边栏状态
+            // 添加点击事件处理，切换到完整目录视图
             backLink.addEventListener('click', function(e) {
                 e.preventDefault();
                 
-                // 移除所有激活状态
-                document.querySelectorAll('#sidebar-nav a').forEach(a => a.classList.remove('active'));
-                document.querySelectorAll('#sidebar-nav div.folder-title').forEach(div => div.classList.remove('active-folder'));
+                // 更新URL去掉root参数，但保持完整路径
+                window.history.pushState({path: fullPath}, '', backUrl);
                 
-                // 重置文件夹展开状态
-                collapseAllFolders();
+                // 重新生成侧边栏（不带root参数）
+                generateSidebar(pathData);
+                
+                // 重新加载内容以更新面包屑等信息
+                loadContentFromUrl();
             });
             
             backDiv.appendChild(backLink);
@@ -803,13 +921,8 @@ function createNavList(items, level) {
 function createNavLink(item, level, isIndex = false) {
     const a = document.createElement('a');
     
-    // 构建URL，保留root参数，不进行编码
-    let url = `?path=${item.path}`;
-    if (currentRoot) {
-        url += `&root=${currentRoot}`;
-    }
-    
-    a.href = url;
+    // 使用新的URL格式
+    a.href = generateNewUrl(item.path, currentRoot);
     a.textContent = item.title;
     a.classList.add('block', 'text-gray-700', 'dark:text-gray-300', 'hover:text-primary', 'dark:hover:text-primary');
     a.classList.add(`file-level-${level}`); // 添加层级类名，用于CSS控制缩进
@@ -844,17 +957,9 @@ function createNavLink(item, level, isIndex = false) {
         // 展开所有父级文件夹
         expandParentFolders(a);
         
-        // 更新URL，保留root参数，不进行编码
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.set('path', item.path);
-        if (currentRoot) {
-            newUrl.searchParams.set('root', currentRoot);
-        }
-        // 清除URL中的hash部分，确保不会保留之前的#heading-xx
-        newUrl.hash = '';
-        // 使用原始URL字符串而不是toString()，避免自动编码
-        const urlString = `${newUrl.pathname}?path=${item.path}${currentRoot ? `&root=${currentRoot}` : ''}`;
-        window.history.pushState({path: item.path}, '', urlString);
+        // 使用新的URL格式更新浏览器地址栏
+        const newUrl = generateNewUrl(item.path, currentRoot);
+        window.history.pushState({path: item.path}, '', newUrl);
         
         // 获取规范化路径，确保使用正确的协议
         let documentPath = item.path;
@@ -935,14 +1040,8 @@ function navigateToFolderIndex(item) {
     }
     
     // 更新URL，添加path参数并保留root参数
-    const url = new URL(window.location.href);
-    url.searchParams.set('path', item.index.path);
-    if (currentRoot) {
-        url.searchParams.set('root', currentRoot);
-    }
-    // 清除URL中的hash部分，确保不会保留之前的#heading-xx
-    url.hash = '';
-    window.history.pushState({path: item.index.path}, '', url.toString());
+    const newUrl = generateNewUrl(item.index.path, currentRoot);
+    window.history.pushState({path: item.index.path}, '', newUrl);
     
     // 获取规范化路径，确保使用正确的协议
     let documentPath = item.index.path;
@@ -1075,17 +1174,20 @@ async function loadContentFromUrl() {
         return;
     }
     
-    // 获取URL中的path参数
-    const url = new URL(window.location.href);
-    let path = url.searchParams.get('path') || ''; // 使用let，因为可能需要修改
-    const root = url.searchParams.get('root') || null;
+    // 使用新的URL解析函数
+    const { path: initialPath, root, anchor } = parseUrlPath();
+    let path = initialPath; // 使用let，因为可能需要修改
     
-    // 获取搜索参数
+    // 如果有root参数且path不为空，需要检查是否需要转换为完整路径
+    if (root && path && !path.startsWith(root + '/')) {
+        // 将相对路径转换为完整路径
+        path = root + '/' + path;
+    }
+    
+    // 获取搜索参数（从旧的查询参数中获取，保持兼容性）
+    const url = new URL(window.location.href);
     const searchQuery = url.searchParams.get('search');
     const searchOccurrence = url.searchParams.get('occurrence');
-    
-    // 保存URL中的hash部分以便稍后处理
-    const urlHash = window.location.hash;
     
     // 如果root参数更改或从无到有，需要重新生成侧边栏
     if (root !== currentRoot) {
@@ -1117,12 +1219,9 @@ async function loadContentFromUrl() {
         }
         
         // 更新URL以反映实际加载的路径 (如果path被修改了)
-        if (path && !url.searchParams.has('path')) {
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.set('path', path);
-            // 清除URL中的hash部分，确保不会保留之前的#heading-xx
-            newUrl.hash = '';
-            window.history.replaceState({ path: path }, '', newUrl.toString());
+        if (path && initialPath !== path) {
+            const newUrl = generateNewUrl(path, currentRoot);
+            window.history.replaceState({ path: path }, '', newUrl);
         }
         
     } else {
@@ -1136,11 +1235,8 @@ async function loadContentFromUrl() {
                 path = indexPath;
                 
                 // 更新URL，但不触发新的导航
-                const newUrl = new URL(window.location.href);
-                newUrl.searchParams.set('path', path);
-                // 清除URL中的hash部分，确保不会保留之前的#heading-xx
-                newUrl.hash = '';
-                window.history.replaceState({path: path}, '', newUrl.toString());
+                const newUrl = generateNewUrl(path, currentRoot);
+                window.history.replaceState({path: path}, '', newUrl);
             }
         }
     }
@@ -1287,12 +1383,7 @@ async function loadContentFromUrl() {
             }, 500); // 等待文档渲染完成
         }
         
-        // 处理URL中的锚点，应用自定义滚动偏移
-        if (urlHash && urlHash.length > 1) {
-            setTimeout(() => {
-                handleUrlHash(urlHash);
-            }, 300); // 等待内容渲染完成再滚动
-        }
+        // 锚点滚动已经在loadDocument中处理，此处无需重复处理
         
         // 完成加载，隐藏进度条
         hideProgressBar();
@@ -1479,8 +1570,9 @@ async function loadDocument(relativePath) {
     
     let successfullyLoaded = false; // 标记是否成功加载了内容
     
-    // 保存当前URL中的hash
-    const currentHash = window.location.hash;
+    // 从新格式URL中正确获取锚点
+    const { anchor } = parseUrlPath();
+    const currentHash = anchor ? `#${decodeURIComponent(anchor)}` : '';
     
     // 首先检查缓存中是否有该文档
     const cachedContent = documentCache.get(relativePath);
@@ -1584,7 +1676,7 @@ async function loadDocument(relativePath) {
     if (currentHash && currentHash.length > 1) {
         setTimeout(() => {
             handleUrlHash(currentHash);
-        }, 300); // 给内容渲染一点时间
+        }, 800); // 增加延迟时间，确保文档完全渲染完成
     } else {
         // 没有hash时滚动到页面顶部
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2301,10 +2393,7 @@ function generateBreadcrumb(path) {
     const breadcrumbParts = [];
     
     // 添加首页
-    let homeUrl = '?';
-    if (currentRoot) {
-        homeUrl += `root=${currentRoot}`;
-    }
+    let homeUrl = generateNewUrl('', currentRoot);
     
     breadcrumbParts.push({
         text: config.navigation.home_text || '首页',
@@ -2318,12 +2407,12 @@ function generateBreadcrumb(path) {
     if (currentRoot) {
         const rootNode = findNodeByPath(pathData, currentRoot);
         if (rootNode) {
-            // 构建根目录URL
-            let rootUrl = '?';
+            // 使用新的URL格式构建根目录URL
+            let rootUrl = '';
             if (rootNode.index) {
-                rootUrl = `?path=${rootNode.index.path}`;
+                rootUrl = generateNewUrl(rootNode.index.path, currentRoot);
             } else {
-                rootUrl = `?root=${currentRoot}`;
+                rootUrl = generateNewUrl('', currentRoot);
             }
             
             breadcrumbParts.push({
@@ -2607,7 +2696,12 @@ function generateToc(contentElement) {
         const li = document.createElement('li');
         li.classList.add('toc-item', `toc-level-${level}`);
         const a = document.createElement('a');
-        a.href = `#${id}`; // 直接跳转到ID
+        
+        // 生成新格式的链接：保留当前文档路径，添加锚点
+        const currentParsed = parseUrlPath();
+        const tocUrl = generateNewUrl(currentParsed.path, currentParsed.root, id);
+        a.href = tocUrl;
+        
         a.innerHTML = prefix + heading.textContent;  // 使用innerHTML以支持编号+标题文本
         a.classList.add('block', 'text-sm', 'py-1', 'hover:text-primary', 'dark:hover:text-primary');
         a.style.marginLeft = `${(level - 1) * 0.75}rem`; // 缩进
@@ -2636,16 +2730,17 @@ function generateToc(contentElement) {
             e.stopPropagation(); // 阻止冒泡，防止触发document的全局点击事件处理
             const targetHeading = document.getElementById(id);
             if (targetHeading) {
-                // 计算目标位置，使标题显示在屏幕上方25%的位置
-                const targetPosition = targetHeading.getBoundingClientRect().top + window.pageYOffset;
-                const offset = window.innerHeight * 0.25; // 屏幕高度的25%
+                // 计算目标位置，使标题显示在屏幕上方30%的位置
+                const targetPosition = targetHeading.getBoundingClientRect().top + window.scrollY;
+                const offset = window.innerHeight * 0.30; // 屏幕高度的30%
                 window.scrollTo({
                     top: targetPosition - offset,
                     behavior: 'smooth'
                 });
                 
-                // 更新URL hash但不触发页面跳转
-                history.pushState(null, null, `#${id}`);
+                // 更新URL为新格式，包含锚点
+                const newUrl = generateNewUrl(currentParsed.path, currentParsed.root, id);
+                history.pushState(null, null, newUrl);
                 
                 // 高亮当前目录项
                 document.querySelectorAll('#toc-nav a').forEach(link => link.classList.remove('active'));
@@ -3054,11 +3149,7 @@ function isDarkMode() {
 
 // 将文件路径转换为URL基础路径
 function filePathToUrl(path) {
-    let url = `?path=${path}`;
-    if (currentRoot) {
-        url += `&root=${currentRoot}`;
-    }
-    return url;
+    return generateNewUrl(path, currentRoot);
 }
 
 // 修复外部链接，在外部链接上添加target="_blank"
@@ -3141,11 +3232,8 @@ function generatePrevNextNavigation(currentPath) {
         const prevDiv = document.createElement('div');
         prevDiv.className = 'text-left';
         
-        // 构建URL，保留root参数
-        let prevUrl = `?path=${prevLink.path}`;
-        if (currentRoot) {
-            prevUrl += `&root=${currentRoot}`;
-        }
+        // 使用新的URL格式
+        const prevUrl = generateNewUrl(prevLink.path, currentRoot);
         
         prevDiv.innerHTML = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">上一篇</p>
@@ -3167,11 +3255,8 @@ function generatePrevNextNavigation(currentPath) {
         const nextDiv = document.createElement('div');
         nextDiv.className = 'text-right';
         
-        // 构建URL，保留root参数
-        let nextUrl = `?path=${nextLink.path}`;
-        if (currentRoot) {
-            nextUrl += `&root=${currentRoot}`;
-        }
+        // 使用新的URL格式
+        const nextUrl = generateNewUrl(nextLink.path, currentRoot);
         
         nextDiv.innerHTML = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">下一篇</p>
@@ -3245,19 +3330,14 @@ function fixInternalLinks(container) {
         const href = link.getAttribute('href');
         if (!href) return;
         
-        // 如果已经是完整URL或仅锚点链接，检查是否需要处理
-        if (href.startsWith('http://') || href.startsWith('https://') || href === '#' || (href.startsWith('#') && !href.includes('?'))) {
-            // 检查是否需要强制HTTPS
-            if (href.startsWith('http://') && window.location.protocol === 'https:') {
-                // 同域名链接，但协议不同，需要修正
-                if (href.includes(window.location.hostname)) {
-                    const secureUrl = href.replace('http://', 'https://');
-                    link.setAttribute('href', secureUrl);
-                    console.log(`已将链接从HTTP转换为HTTPS: ${secureUrl}`);
-                }
-            }
-            
-            // 标记为外部链接
+        // 跳过已经处理过的链接（以main.html开头的）
+        if (href.startsWith('main.html#')) {
+            return;
+        }
+        
+        // 跳过外部链接
+        if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
+            // 标记外部链接
             if ((href.startsWith('http://') || href.startsWith('https://')) && 
                 !href.includes(window.location.hostname)) {
                 if (!link.classList.contains('external-link') && !link.querySelector('.external-link-icon')) {
@@ -3270,102 +3350,116 @@ function fixInternalLinks(container) {
                     icon.setAttribute('aria-hidden', 'true');
                     link.appendChild(icon);
                     
-                    // 如果没有设置target，设置为_blank
+                    // 设置为在新标签页打开
                     if (!link.getAttribute('target')) {
                         link.setAttribute('target', '_blank');
                         link.setAttribute('rel', 'noopener noreferrer');
                     }
                 }
             }
-            
-            // 非站内链接，不需要进一步处理
-            if (!href.includes(window.location.hostname) && (href.startsWith('http://') || href.startsWith('https://'))) {
-                return;
-            }
-            
-            // 锚点链接，不需要进一步处理
-            if (href === '#' || (href.startsWith('#') && !href.includes('?'))) {
-                return;
-            }
+            return;
         }
         
-        // 处理相对路径链接 - 支持常规Markdown格式的链接
-        if (!href.startsWith('?')) {
-            // 提取链接中的锚点部分(如果有)
-            let path = href;
-            let hashPart = '';
+        // 跳过纯锚点链接（页面内跳转）
+        if (href === '#' || (href.startsWith('#') && !href.includes('.md') && !href.includes('.html'))) {
+            return;
+        }
+        
+        // 处理相对路径的.md和.html文件链接
+        if (href.includes('.md') || href.includes('.html')) {
+            // 提取路径和锚点，并解码
+            let path = decodeURIComponent(href);
+            let anchor = '';
             
-            if (href.includes('#')) {
-                const parts = href.split('#');
+            if (path.includes('#')) {
+                const parts = path.split('#');
                 path = parts[0];
-                hashPart = parts.length > 1 ? `#${parts[1]}` : '';
+                anchor = parts.slice(1).join('#'); // 处理可能的多个#
             }
             
-            // 如果链接有扩展名，保留；否则尝试推断为目录
-            const hasExtension = /\.(md|html)$/i.test(path);
-            if (!hasExtension) {
-                // 可能是目录链接，尝试将其视为目录
-                if (!path.endsWith('/')) {
-                    // 尝试添加默认索引文件
-                    for (const indexName of config.document.index_pages) {
-                        // 先检查是否以/结尾，如果不是，添加/
-                        const dirPath = path.endsWith('/') ? path : `${path}/`;
-                        const possiblePath = `${dirPath}${indexName}`;
-                        path = possiblePath;  // 使用第一个可能的索引页
-                        break;
-                    }
-                }
-            }
-            
-            // 获取完整路径并编码
-            let newHref = `?path=${encodeURIComponent(path)}`;
+            // 构建新的URL，不使用generateNewUrl以避免编码
+            let newHref;
             if (currentRoot) {
-                newHref += `&root=${encodeURIComponent(currentRoot)}`;
-            }
-            
-            // 附加锚点部分到URL
-            if (hashPart) {
-                newHref += hashPart;
+                // 有root的情况，检查是否需要移除root前缀
+                let relativePath = path;
+                if (path && path.startsWith(currentRoot + '/')) {
+                    relativePath = path.substring(currentRoot.length + 1);
+                }
+                
+                newHref = `main.html#${currentRoot}`;
+                if (relativePath) {
+                    newHref += `/${relativePath}`;
+                }
+                if (anchor) {
+                    newHref += `#${anchor}`;
+                }
+            } else {
+                // 无root的情况
+                newHref = `main.html#/${path}`;
+                if (anchor) {
+                    newHref += `#${anchor}`;
+                }
             }
             
             link.setAttribute('href', newHref);
-            
-            // 标记为内部链接
-            if (!link.classList.contains('internal-link') && !link.querySelector('.internal-link-icon')) {
-                link.classList.add('internal-link');
-            }
-            
-        } else if (href.includes('path=')) {
-            // 处理已有path参数的链接
-            let newHref = href;
-            
-            // 如果链接已经被编码，先解码
-            if (href.includes('%')) {
-                try {
-                    const url = new URL(href, window.location.origin);
-                    const path = decodeURIComponent(url.searchParams.get('path'));
-                    newHref = `?path=${path}`;
-                    if (currentRoot) {
-                        newHref += `&root=${currentRoot}`;
-                    }
-                } catch (e) {
-                    console.error('解码链接失败:', e);
-                }
-            }
-            
-            // 添加root参数(如果尚未添加)
-            if (currentRoot && !newHref.includes('root=')) {
-                newHref = `${newHref}&root=${currentRoot}`;
-            }
             
             // 标记为内部链接
             if (!link.classList.contains('internal-link')) {
                 link.classList.add('internal-link');
             }
+        }
+        // 处理旧格式的链接（包含path参数）
+        else if (href.includes('path=')) {
+            try {
+                const url = new URL(href, window.location.origin);
+                const path = decodeURIComponent(url.searchParams.get('path') || '');
+                const anchor = url.hash ? url.hash.substring(1) : '';
+                
+                // 转换为新格式
+                const newHref = generateNewUrl(path, currentRoot, anchor);
+                link.setAttribute('href', newHref);
+                
+                // 标记为内部链接
+                if (!link.classList.contains('internal-link')) {
+                    link.classList.add('internal-link');
+                }
+            } catch (e) {
+                console.error('转换链接格式失败:', e);
+            }
+        }
+        // 处理目录链接（没有扩展名的相对路径）
+        else if (!href.startsWith('#') && !href.startsWith('?') && !href.includes('.')) {
+            // 解码路径
+            let path = decodeURIComponent(href);
+            
+            // 尝试添加默认索引文件
+            for (const indexName of config.document.index_pages) {
+                const dirPath = path.endsWith('/') ? path : `${path}/`;
+                path = `${dirPath}${indexName}`;
+                break; // 使用第一个可能的索引页
+            }
+            
+            // 构建新的URL，不编码
+            let newHref;
+            if (currentRoot) {
+                // 有root的情况，检查是否需要移除root前缀
+                let relativePath = path;
+                if (path && path.startsWith(currentRoot + '/')) {
+                    relativePath = path.substring(currentRoot.length + 1);
+                }
+                
+                newHref = `main.html#${currentRoot}`;
+                if (relativePath) {
+                    newHref += `/${relativePath}`;
+                }
+            } else {
+                // 无root的情况
+                newHref = `main.html#/${path}`;
+            }
             
             link.setAttribute('href', newHref);
-        } else {
-            // 其他?开头的链接也标记为内部链接
+            
+            // 标记为内部链接
             if (!link.classList.contains('internal-link')) {
                 link.classList.add('internal-link');
             }
@@ -3734,6 +3828,49 @@ function generateTocFromIframe(iframeDoc, tocNav) {
     // 查找iframe中符合深度要求的标题元素
     const headings = iframeDoc.querySelectorAll(headingSelector);
     
+    // 首先为iframe中的所有标题生成统一的ID（与普通文章相同的方式）
+    const usedIds = new Set(); // 用于跟踪已使用的ID
+    
+    // 为所有标题生成统一的ID
+    headings.forEach((heading, index) => {
+        // 如果标题已经有ID，跳过
+        if (heading.id) {
+            usedIds.add(heading.id);
+            return;
+        }
+        
+        // 获取标题文本，并清理
+        const headingText = heading.textContent.trim();
+        // 移除可能存在的链接图标文本
+        const cleanText = headingText.replace(/复制链接$/, '').trim();
+        
+        // 生成符合URL要求的ID：只保留字母、数字、中文字符和连字符
+        let headingId = cleanText
+            .replace(/[^\p{L}\p{N}\p{Script=Han}-]/gu, '-') // 替换非字母、数字、中文和连字符为连字符
+            .replace(/-+/g, '-')       // 合并多个连续连字符
+            .replace(/^-|-$/g, '')     // 移除首尾连字符
+            .toLowerCase();
+        
+        // 如果转换后为空，使用备用ID
+        if (!headingId) {
+            headingId = `heading-${index}`;
+        }
+        
+        // 确保ID唯一
+        let uniqueId = headingId;
+        let counter = 1;
+        while (usedIds.has(uniqueId)) {
+            uniqueId = `${headingId}-${counter}`;
+            counter++;
+        }
+        
+        // 保存使用过的ID
+        usedIds.add(uniqueId);
+        
+        // 设置新ID
+        heading.id = uniqueId;
+    });
+    
     // 是否显示标题编号
     const showNumbering = config.document.toc_numbering || false;
     // 是否忽略h1标题计数
@@ -3752,12 +3889,7 @@ function generateTocFromIframe(iframeDoc, tocNav) {
     
     headingsArray.forEach((heading, index) => {
         const level = parseInt(heading.tagName.substring(1));
-
-        // 如果标题没有ID，添加一个
-        if (!heading.id) {
-            heading.id = `iframe-heading-${index}`;
-        }
-        const id = heading.id;
+        const id = heading.id; // 使用已经生成的ID
         
         // 处理标题编号
         let prefix = '';
@@ -3812,7 +3944,12 @@ function generateTocFromIframe(iframeDoc, tocNav) {
 
         const li = document.createElement('li');
         const a = document.createElement('a');
-        a.href = `javascript:void(0);`; // 改为使用JavaScript事件而不是锚链接
+        
+        // 生成新格式的链接：保留当前文档路径，添加锚点
+        const currentParsed = parseUrlPath();
+        const iframeTocUrl = generateNewUrl(currentParsed.path, currentParsed.root, id);
+        a.href = iframeTocUrl;
+        
         a.innerHTML = prefix + heading.textContent; 
         a.classList.add('block', 'text-sm', 'py-1', 'hover:text-primary', 'dark:hover:text-primary');
         a.style.marginLeft = `${(level - 1) * 0.75}rem`; // 缩进
@@ -3859,8 +3996,9 @@ function generateTocFromIframe(iframeDoc, tocNav) {
                                 behavior: 'smooth'
                             });
                             
-                            // 更新URL hash但不触发页面跳转
-                            history.pushState(null, null, `#${id}`);
+                            // 更新URL为新格式，包含锚点
+                            const newUrl = generateNewUrl(currentParsed.path, currentParsed.root, id);
+                            history.pushState(null, null, newUrl);
                             
                             // 高亮当前目录项
                             document.querySelectorAll('#toc-nav a').forEach(link => link.classList.remove('active'));
@@ -4344,11 +4482,14 @@ function handleUrlHash(hash) {
     
     // 移除开头的#号
     const targetId = hash.substring(1);
+    
+    // 首先尝试在主文档中查找元素（普通Markdown文章）
     const targetElement = document.getElementById(targetId);
     
     if (targetElement) {
+        // 在主文档中找到元素，按原有逻辑处理
         // 计算目标位置，使标题显示在屏幕上方30%的位置
-        const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset;
+        const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY;
         const offset = window.innerHeight * 0.3; // 屏幕高度的30%
         
         // 平滑滚动到目标位置
@@ -4372,6 +4513,61 @@ function handleUrlHash(hash) {
                 // 展开子目录
                 expandChildHeadings(targetId, level);
             }
+        }
+    } else {
+        // 在主文档中未找到，尝试在iframe中查找（HTML文档）
+        const iframe = document.querySelector('.iframe-container iframe');
+        if (iframe) {
+            // 创建重试函数，等待iframe加载完成
+            const tryScrollToIframeElement = (retryCount = 0) => {
+                const maxRetries = 5;
+                
+                if (iframe.contentWindow && iframe.contentWindow.document) {
+                    try {
+                        const iframeTargetElement = iframe.contentWindow.document.getElementById(targetId);
+                        if (iframeTargetElement) {
+                            // 在iframe中找到目标元素
+                            // 获取iframe在页面中的位置
+                            const iframeRect = iframe.getBoundingClientRect();
+                            // 获取标题在iframe中的位置
+                            const headingRect = iframeTargetElement.getBoundingClientRect();
+                            
+                            // 计算标题在页面中的绝对位置 = iframe在页面中的位置 + 标题在iframe中的位置
+                            const absoluteHeadingTop = window.scrollY + iframeRect.top + headingRect.top;
+                            const offset = window.innerHeight * 0.3; // 屏幕高度的30%
+                            
+                            // 滚动主页面到标题位置
+                            window.scrollTo({
+                                top: absoluteHeadingTop - offset,
+                                behavior: 'smooth'
+                            });
+                            
+                            // 高亮对应的目录项
+                            const tocItem = document.querySelector(`#toc-nav a[data-heading-id="${targetId}"]`);
+                            if (tocItem) {
+                                document.querySelectorAll('#toc-nav a').forEach(link => link.classList.remove('active'));
+                                tocItem.classList.add('active');
+                                scrollTocToActiveItem(tocItem);
+                            }
+                            return; // 成功找到并滚动，退出
+                        }
+                    } catch (error) {
+                        console.warn('访问iframe内容失败:', error);
+                    }
+                }
+                
+                // 如果还没有找到元素且未达到最大重试次数，继续重试
+                if (retryCount < maxRetries) {
+                    setTimeout(() => tryScrollToIframeElement(retryCount + 1), 200);
+                } else {
+                    console.warn(`未找到锚点元素: ${targetId}`);
+                }
+            };
+            
+            // 开始尝试滚动
+            tryScrollToIframeElement();
+        } else {
+            console.warn(`未找到锚点元素: ${targetId}`);
         }
     }
 }
@@ -4547,22 +4743,9 @@ function enhanceHeadings(container) {
             e.preventDefault();
             e.stopPropagation();
             
-            // 构建不带编码的链接
-            const url = new URL(window.location.href);
-            const baseUrl = url.href.split('#')[0].split('?')[0]; // 获取基础URL，移除查询参数和锚点
-            const params = new URLSearchParams(window.location.search);
-            
-            // 构建包含path和root参数的URL，不进行编码
-            let fullUrl = baseUrl + '?';
-            if (params.has('path')) {
-                fullUrl += `path=${params.get('path')}`;
-            }
-            if (params.has('root')) {
-                fullUrl += `${params.has('path') ? '&' : ''}root=${params.get('root')}`;
-            }
-            
-            // 添加锚点，确保不被编码
-            fullUrl += `#${heading.id}`;
+            // 使用新的URL格式生成链接
+            const { path, root } = parseUrlPath();
+            const fullUrl = generateNewUrl(path, root, heading.id);
             
             // 复制到剪贴板
             navigator.clipboard.writeText(fullUrl).then(() => {
@@ -4670,7 +4853,7 @@ function setupLegacyHeadingLinks() {
                         const targetHeading = document.getElementById(actualId);
                         if (targetHeading) {
                             // 计算目标位置，使标题显示在屏幕上方30%的位置
-                            const targetPosition = targetHeading.getBoundingClientRect().top + window.pageYOffset;
+                            const targetPosition = targetHeading.getBoundingClientRect().top + window.scrollY;
                             const offset = window.innerHeight * 0.3; // 屏幕高度的30%
                             
                             window.scrollTo({
@@ -4718,7 +4901,7 @@ function setupLegacyHeadingLinks() {
                             const targetHeading = document.getElementById(actualId);
                             if (targetHeading) {
                                 // 计算目标位置，使标题显示在屏幕上方30%的位置
-                                const targetPosition = targetHeading.getBoundingClientRect().top + window.pageYOffset;
+                                const targetPosition = targetHeading.getBoundingClientRect().top + window.scrollY;
                                 const offset = window.innerHeight * 0.3; // 屏幕高度的30%
                                 
                                 window.scrollTo({
@@ -4733,3 +4916,6 @@ function setupLegacyHeadingLinks() {
         }
     });
 }
+
+// 导出函数供其他模块使用
+window.loadContentFromUrl = loadContentFromUrl;
