@@ -34,6 +34,23 @@ const config = {
     mobile_breakpoint: "1024px" // 移动设备断点
   },
 
+  // 动画设置
+  animation: {
+    sidebar: {
+      enable: true, // 是否启用左侧导航动画
+      duration: 200, // 动画基准时长(毫秒) - CSS动画持续时间
+      stagger_delay: 50 // 交错动画间隔时间(毫秒) - 每个项目之间的延迟
+    },
+    toc: {
+      enable: true, // 是否启用右侧目录动画
+      duration: 200, // 动画基准时长(毫秒) - CSS动画持续时间
+      stagger_delay: 50 // 交错动画间隔时间(毫秒) - 每个项目之间的延迟
+    },
+    loading: {
+      min_duration: 300 // 加载动画最小显示时长(毫秒) - 确保用户能看到加载过程
+    }
+  },
+
   // 导航设置
   navigation: {
     home_text: "首页", // 首页链接文本
