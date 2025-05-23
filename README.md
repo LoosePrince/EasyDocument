@@ -4,6 +4,10 @@
 
 EasyDocument 是一个轻量级、免编译的纯静态前端文档系统。它允许用户通过简单地添加 Markdown 或 HTML 文件到 `/data` 目录，即可自动生成美观、结构化的文档网站。无需后端支持，纯前端实现，简单易用。
 
+**v1.2.5+ 新特性**:
+- 🖱️ 右键菜单功能：复制链接、生成MD格式链接、快速预览
+- 🔗 新版链接格式：更简洁的 `main.html#path/file.md` 格式
+
 ## 设计风格
 
 ![image](https://github.com/user-attachments/assets/f9a14da2-d50a-421d-8805-de2eda484da8)
@@ -18,12 +22,13 @@ EasyDocument 是一个轻量级、免编译的纯静态前端文档系统。它�
 - **Mermaid**: 流程图和序列图
 - **KaTeX**: 数学公式渲染
 - **Canvg**: 矢量图渲染
+- **原生JavaScript**: 右键菜单、链接处理、主题切换等核心功能
 
 ## 项目结构
 
 ```
 EasyDocument/
-├── index.html          # 网站首页（项目首页，如项目介绍、“开始”进入文档页）
+├── index.html          # 网站首页（项目首页，如项目介绍、"开始"进入文档页）
 ├── header.html         # 全局顶栏（可选）
 ├── footer.html         # 全局底栏（可选）
 ├── main.html           # 文档页面模板（文档首页，文档渲染，基于get属性）
@@ -33,7 +38,20 @@ EasyDocument/
 ├── build.py            # 一键创建文档路径
 ├── assets/             # 静态资源
 │   ├── css/            # CSS文件
+│   │   ├── style.css           # 主样式文件
+│   │   ├── md.css              # Markdown渲染样式
+│   │   └── context-menu.css    # 右键菜单样式
 │   ├── js/             # JavaScript文件
+│   │   ├── main.js             # 主要功能逻辑
+│   │   ├── document-page.js    # 文档页面处理
+│   │   ├── context-menu.js     # 右键菜单功能
+│   │   ├── cache-manager.js    # 缓存管理
+│   │   ├── document-cache.js   # 文档缓存
+│   │   ├── navigation.js       # 导航功能
+│   │   ├── theme.js            # 主题切换
+│   │   ├── katex-handler.js    # 数学公式处理
+│   │   ├── mermaid-handler.js  # 图表处理
+│   │   └── tailwindcss.js      # TailwindCSS框架
 │   └── img/            # 图片资源
 └── data/               # 文档存储目录
     ├── README.md       # 根目录文档
@@ -70,6 +88,34 @@ EasyDocument/
 - 文档内锚点跳转
 - 移动设备适配的响应式设计
 
+### 4. 右键菜单功能 (v1.2.5+)
+
+- **<i class="fas fa-copy"></i> 复制链接**: 快速复制文档或文件夹的完整链接地址
+- **<i class="fas fa-file-alt"></i> 复制MD格式链接**: 自动生成 `[标题](链接)` 格式的Markdown链接
+- **<i class="fas fa-eye"></i> 预览文档**: 在弹窗中快速预览文档内容，支持主题切换
+
+支持的元素：
+- 左侧导航栏的文档链接和文件夹
+- 右侧目录中的标题链接
+- 文档内容中的内部链接
+- 面包屑导航和顶部导航链接
+
+### 5. 新版链接格式 (v1.2.5+)
+
+EasyDocument 引入了更简洁的链接格式：
+
+**新格式**: `main.html#root/path/to/file.md#anchor`
+- 更简洁、直观的路径表示
+- SEO友好，更适合分享
+- 类似文件系统的路径结构
+
+**兼容性**: 继续支持旧的查询参数格式 `main.html?path=xxx&root=xxx#anchor`
+
+**推荐用法**:
+- 文档内链接优先使用 Markdown 相对路径: `[文档](../path/file.md)`
+- 特殊需求使用新哈希格式: `[文档](main.html#path/file.md)`
+- 右键菜单自动生成最适合的链接格式
+
 ## 配置系统
 
 项目使用 `config.js` 文件进行全局配置，可自定义以下内容：
@@ -104,6 +150,12 @@ EasyDocument/
 3. 根据需要修改 `config.js` 文件自定义网站
 4. 运行 `build.py` 脚本生成文档路径（可选，用于生成文档路径，你可以自己手写）
 5. 直接通过浏览器访问 `index.html`
+
+### 右键菜单使用
+
+- 在任何文档链接或文件夹上右键点击即可使用菜单功能
+- 支持复制链接、生成Markdown格式链接、快速预览
+- 使用 `ESC` 键可以关闭预览窗口和右键菜单
 
 ### 自定义外观
 
