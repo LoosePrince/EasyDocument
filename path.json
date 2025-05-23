@@ -116,10 +116,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1747222507,
+                            "timestamp": 1747961928,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
+                            "message": "增强文档页面功能，添加标题链接样式和旧式链接支持，优化URL构建逻辑，改进缓存状态指示，更新文档说明，支持新格式的标题ID生成。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -127,10 +127,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 5,
+                                "commits": 6,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1747222507
+                                "last_commit_timestamp": 1747961928
                             }
                         ]
                     }
@@ -166,10 +166,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1747222507,
+                            "timestamp": 1747962009,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
+                            "message": "优化缓存管理功能，添加缓存控制开关，支持禁用文档缓存和预加载，改进缓存状态指示器，更新文档说明，增强用户体验。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -177,10 +177,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 4,
+                                "commits": 5,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1747222507
+                                "last_commit_timestamp": 1747962009
                             }
                         ]
                     }
