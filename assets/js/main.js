@@ -587,17 +587,29 @@ function displaySearchResults(results, query, searchResultsContainer) {
                     occurrenceTarget = matchElement.getAttribute('data-occurrence');
                 }
                 
-                // 构建URL，添加搜索参数
+                // 构建URL，使用新的格式 #/path 或 #root/path
                 let url = new URL(window.location.href);
-                url.searchParams.set('path', path);
-                url.searchParams.set('search', query);
+                
+                // 清除所有查询参数
+                url.search = '';
+                
+                // 从当前URL中获取root参数(如果有)
+                const currentUrl = new URL(window.location.href);
+                const root = currentUrl.searchParams.get('root') || null;
+                
+                // 生成新的path格式
+                let hashPath = root ? `#${root}/${path}` : `#/${path}`;
+                
+                // 添加搜索参数到hash
+                hashPath += `?search=${encodeURIComponent(query)}`;
                 
                 // 如果点击了特定匹配项，添加occurrence参数
                 if (occurrenceTarget) {
-                    url.searchParams.set('occurrence', occurrenceTarget);
-                } else {
-                    url.searchParams.delete('occurrence');
+                    hashPath += `&occurrence=${occurrenceTarget}`;
                 }
+                
+                // 设置新的hash路径
+                url.hash = hashPath;
                 
                 // 关闭搜索模态窗口
                 closeSearchModal();
@@ -610,12 +622,18 @@ function displaySearchResults(results, query, searchResultsContainer) {
                 if (typeof window.loadContentFromUrl === 'function') {
                     window.loadContentFromUrl();
                     
-                    // 15秒后移除URL中的search和occurrence参数
+                    // 15秒后移除hash中的search和occurrence参数，保留基本路径
                     setTimeout(() => {
                         const cleanUrl = new URL(window.location.href);
-                        cleanUrl.searchParams.delete('search');
-                        cleanUrl.searchParams.delete('occurrence');
-                        window.history.replaceState({path}, '', cleanUrl.toString());
+                        let hashPath = cleanUrl.hash;
+                        
+                        // 处理新格式URL的hash清理
+                        if (hashPath && hashPath.includes('?')) {
+                            // 只保留基本路径部分，去掉查询参数
+                            hashPath = hashPath.split('?')[0];
+                            cleanUrl.hash = hashPath;
+                            window.history.replaceState(null, '', cleanUrl.toString());
+                        }
                     }, 15000);
                 } else {
                     // 如果函数不可用，退回到传统跳转方式

@@ -96,6 +96,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 设置目录宽度调整功能
     setupTocResizer();
+    
+    // 添加标题链接样式
+    addHeadingStyles();
+    
+    // 设置对旧式heading-x链接的支持
+    setupLegacyHeadingLinks();
 });
 
 // 创建顶部进度条
@@ -797,10 +803,10 @@ function createNavList(items, level) {
 function createNavLink(item, level, isIndex = false) {
     const a = document.createElement('a');
     
-    // 构建URL，保留root参数
-    let url = `?path=${encodeURIComponent(item.path)}`;
+    // 构建URL，保留root参数，不进行编码
+    let url = `?path=${item.path}`;
     if (currentRoot) {
-        url += `&root=${encodeURIComponent(currentRoot)}`;
+        url += `&root=${currentRoot}`;
     }
     
     a.href = url;
@@ -838,7 +844,7 @@ function createNavLink(item, level, isIndex = false) {
         // 展开所有父级文件夹
         expandParentFolders(a);
         
-        // 更新URL，保留root参数
+        // 更新URL，保留root参数，不进行编码
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.set('path', item.path);
         if (currentRoot) {
@@ -846,7 +852,9 @@ function createNavLink(item, level, isIndex = false) {
         }
         // 清除URL中的hash部分，确保不会保留之前的#heading-xx
         newUrl.hash = '';
-        window.history.pushState({path: item.path}, '', newUrl.toString());
+        // 使用原始URL字符串而不是toString()，避免自动编码
+        const urlString = `${newUrl.pathname}?path=${item.path}${currentRoot ? `&root=${currentRoot}` : ''}`;
+        window.history.pushState({path: item.path}, '', urlString);
         
         // 获取规范化路径，确保使用正确的协议
         let documentPath = item.path;
@@ -1165,7 +1173,7 @@ async function loadContentFromUrl() {
         // 更新进度到50%
         setTimeout(() => {
             updateProgressBar(50);
-        }, 200);
+        }, 2000);
         
         // 高亮侧边栏并处理文件夹展开
         const isReadmeFile = decodedPath.toLowerCase().endsWith('readme.md');
@@ -1181,7 +1189,7 @@ async function loadContentFromUrl() {
         // 更新进度到70%
         setTimeout(() => {
             updateProgressBar(70);
-        }, 400);
+        }, 4000);
         
         // 加载文档 - 添加重试逻辑，特别是针对Cloudflare环境
         let loadSuccess = false;
@@ -1483,10 +1491,18 @@ async function loadDocument(relativePath) {
         await renderDocument(relativePath, cachedContent, contentDiv, tocNav);
         successfullyLoaded = true;
 
-        const isPreloaded = documentCache.isPreloaded(relativePath);
-        const isCached = documentCache.isCached(relativePath);
-        if (isPreloaded) addCacheStatusIndicator(contentDiv, 'preloaded');
-        else if (isCached) addCacheStatusIndicator(contentDiv, 'cached');
+        // 根据缓存开关状态和实际缓存情况显示状态
+        if (documentCache.disableCache && documentCache.disablePreload) {
+            addCacheStatusIndicator(contentDiv, 'not-enabled');
+        } else {
+            const isPreloaded = documentCache.isPreloaded(relativePath);
+            const isCached = documentCache.isCached(relativePath);
+            if (isPreloaded && !documentCache.disablePreload) {
+                addCacheStatusIndicator(contentDiv, 'preloaded');
+            } else if (isCached && !documentCache.disableCache) {
+                addCacheStatusIndicator(contentDiv, 'cached');
+            }
+        }
         
     } else {
         // 不在缓存中，从网络获取
@@ -1538,7 +1554,13 @@ async function loadDocument(relativePath) {
             contentDiv.innerHTML = ''; // 清空旧内容
             await renderDocument(relativePath, content, contentDiv, tocNav);
             successfullyLoaded = true;
-            addCacheStatusIndicator(contentDiv, 'cached');
+            
+            // 根据缓存开关状态显示状态
+            if (documentCache.disableCache && documentCache.disablePreload) {
+                addCacheStatusIndicator(contentDiv, 'not-enabled');
+            } else if (!documentCache.disableCache) {
+                addCacheStatusIndicator(contentDiv, 'cached');
+            }
 
         } catch (error) {
             console.error("加载文档失败:", error);
@@ -1595,6 +1617,12 @@ function addCacheStatusIndicator(contentDiv, cacheType) {
             icon = 'fas fa-database';
             text = '已缓存';
             color = 'blue';
+            break;
+        case 'not-enabled':
+            className = 'cache-status-not-enabled';
+            icon = 'fas fa-ban';
+            text = '未启用';
+            color = 'gray';
             break;
         default:
             return; // 未知类型不显示指示器
@@ -2004,8 +2032,11 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
         // 处理外部链接
         fixExternalLinks(markdownBody);
         
-        // 生成目录
+        // 先生成目录，此步骤会统一生成所有标题的ID
         generateToc(markdownBody);
+        
+        // 增强标题，添加点击复制链接功能
+        enhanceHeadings(markdownBody);
         
         // 设置标题观察器(使用交叉观察API提高准确性)
         setupHeadingIntersectionObserver(contentDiv);
@@ -2272,7 +2303,7 @@ function generateBreadcrumb(path) {
     // 添加首页
     let homeUrl = '?';
     if (currentRoot) {
-        homeUrl += `root=${encodeURIComponent(currentRoot)}`;
+        homeUrl += `root=${currentRoot}`;
     }
     
     breadcrumbParts.push({
@@ -2290,9 +2321,9 @@ function generateBreadcrumb(path) {
             // 构建根目录URL
             let rootUrl = '?';
             if (rootNode.index) {
-                rootUrl = `?path=${encodeURIComponent(rootNode.index.path)}`;
+                rootUrl = `?path=${rootNode.index.path}`;
             } else {
-                rootUrl = `?root=${encodeURIComponent(currentRoot)}`;
+                rootUrl = `?root=${currentRoot}`;
             }
             
             breadcrumbParts.push({
@@ -2449,9 +2480,47 @@ function generateToc(contentElement) {
     const tocNav = document.getElementById('toc-nav');
     tocNav.innerHTML = '';
     
-    // **修改**: 直接在 contentElement 中查找标题
+    // 首先确保所有标题都有统一的ID，使用更简洁的格式
+    const usedIds = new Set(); // 用于跟踪已使用的ID
+    
+    // 获取所有标题
     const headings = contentElement.querySelectorAll(`h1, h2, h3, h4, h5, h6`);
     
+    // 为所有标题生成统一的ID
+    headings.forEach((heading, index) => {
+        // 获取标题文本，并清理
+        const headingText = heading.textContent.trim();
+        // 移除可能存在的链接图标文本
+        const cleanText = headingText.replace(/复制链接$/, '').trim();
+        
+        // 生成符合URL要求的ID：只保留字母、数字、中文字符和连字符
+        let headingId = cleanText
+            .replace(/[^\p{L}\p{N}\p{Script=Han}-]/gu, '-') // 替换非字母、数字、中文和连字符为连字符
+            .replace(/-+/g, '-')       // 合并多个连续连字符
+            .replace(/^-|-$/g, '')     // 移除首尾连字符
+            .toLowerCase();
+        
+        // 如果转换后为空，使用备用ID
+        if (!headingId) {
+            headingId = `heading-${index}`;
+        }
+        
+        // 确保ID唯一
+        let uniqueId = headingId;
+        let counter = 1;
+        while (usedIds.has(uniqueId)) {
+            uniqueId = `${headingId}-${counter}`;
+            counter++;
+        }
+        
+        // 保存使用过的ID
+        usedIds.add(uniqueId);
+        
+        // 设置新ID
+        heading.id = uniqueId;
+    });
+    
+    // 生成目录
     const tocDepth = config.document.toc_depth || 3;
     // 是否显示标题编号
     const showNumbering = config.document.toc_numbering || false;
@@ -2985,9 +3054,9 @@ function isDarkMode() {
 
 // 将文件路径转换为URL基础路径
 function filePathToUrl(path) {
-    let url = `?path=${encodeURIComponent(path)}`;
+    let url = `?path=${path}`;
     if (currentRoot) {
-        url += `&root=${encodeURIComponent(currentRoot)}`;
+        url += `&root=${currentRoot}`;
     }
     return url;
 }
@@ -3070,12 +3139,12 @@ function generatePrevNextNavigation(currentPath) {
     if (currentIndex > 0) {
         const prevLink = allLinks[currentIndex - 1];
         const prevDiv = document.createElement('div');
-        prevDiv.className = 'mb-4 md:mb-0';
+        prevDiv.className = 'text-left';
         
         // 构建URL，保留root参数
-        let prevUrl = `?path=${encodeURIComponent(prevLink.path)}`;
+        let prevUrl = `?path=${prevLink.path}`;
         if (currentRoot) {
-            prevUrl += `&root=${encodeURIComponent(currentRoot)}`;
+            prevUrl += `&root=${currentRoot}`;
         }
         
         prevDiv.innerHTML = `
@@ -3099,9 +3168,9 @@ function generatePrevNextNavigation(currentPath) {
         nextDiv.className = 'text-right';
         
         // 构建URL，保留root参数
-        let nextUrl = `?path=${encodeURIComponent(nextLink.path)}`;
+        let nextUrl = `?path=${nextLink.path}`;
         if (currentRoot) {
-            nextUrl += `&root=${encodeURIComponent(currentRoot)}`;
+            nextUrl += `&root=${currentRoot}`;
         }
         
         nextDiv.innerHTML = `
@@ -3270,9 +3339,23 @@ function fixInternalLinks(container) {
             // 处理已有path参数的链接
             let newHref = href;
             
+            // 如果链接已经被编码，先解码
+            if (href.includes('%')) {
+                try {
+                    const url = new URL(href, window.location.origin);
+                    const path = decodeURIComponent(url.searchParams.get('path'));
+                    newHref = `?path=${path}`;
+                    if (currentRoot) {
+                        newHref += `&root=${currentRoot}`;
+                    }
+                } catch (e) {
+                    console.error('解码链接失败:', e);
+                }
+            }
+            
             // 添加root参数(如果尚未添加)
-            if (currentRoot && !href.includes('root=')) {
-                newHref = `${href}&root=${encodeURIComponent(currentRoot)}`;
+            if (currentRoot && !newHref.includes('root=')) {
+                newHref = `${newHref}&root=${currentRoot}`;
             }
             
             // 标记为内部链接
@@ -4437,4 +4520,216 @@ function getDefaultColor(color) {
         'gray': '#6b7280'
     };
     return colorMap[color] || '#3b82f6';
+}
+
+// 处理标题，添加点击复制链接功能 (ID已在generateToc中处理)
+function enhanceHeadings(container) {
+    const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    
+    headings.forEach((heading, index) => {
+        // ID已在generateToc中设置，这里只添加复制链接功能
+        
+        // 移除之前可能添加的复制链接按钮
+        const existingButton = heading.querySelector('.heading-link');
+        if (existingButton) {
+            existingButton.remove();
+        }
+        
+        // 创建复制链接按钮
+        const copyButton = document.createElement('span');
+        copyButton.className = 'heading-link ml-2 text-gray-400 hover:text-primary cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity';
+        copyButton.innerHTML = '<i class="fas fa-link text-sm"></i>';
+        copyButton.title = '复制链接';
+        copyButton.style.display = 'inline-block';
+        
+        // 点击事件：复制标题链接到剪贴板
+        copyButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // 构建不带编码的链接
+            const url = new URL(window.location.href);
+            const baseUrl = url.href.split('#')[0].split('?')[0]; // 获取基础URL，移除查询参数和锚点
+            const params = new URLSearchParams(window.location.search);
+            
+            // 构建包含path和root参数的URL，不进行编码
+            let fullUrl = baseUrl + '?';
+            if (params.has('path')) {
+                fullUrl += `path=${params.get('path')}`;
+            }
+            if (params.has('root')) {
+                fullUrl += `${params.has('path') ? '&' : ''}root=${params.get('root')}`;
+            }
+            
+            // 添加锚点，确保不被编码
+            fullUrl += `#${heading.id}`;
+            
+            // 复制到剪贴板
+            navigator.clipboard.writeText(fullUrl).then(() => {
+                // 显示复制成功提示
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md z-50 animate-fade-in';
+                toast.textContent = '链接已复制到剪贴板';
+                document.body.appendChild(toast);
+                
+                // 2秒后移除提示
+                setTimeout(() => {
+                    toast.classList.add('animate-fade-out');
+                    setTimeout(() => {
+                        toast.remove();
+                    }, 300);
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+            });
+        });
+        
+        // 使标题本身也可点击，点击时复制链接
+        heading.style.cursor = 'pointer';
+        heading.classList.add('group'); // 添加group类以支持悬停显示链接图标
+        
+        heading.addEventListener('click', (e) => {
+            // 只在没有选中文本的情况下触发
+            if (window.getSelection().toString() === '') {
+                copyButton.click();
+            }
+        });
+        
+        // 将按钮添加到标题
+        heading.appendChild(copyButton);
+    });
+}
+
+
+
+// 添加CSS样式
+function addHeadingStyles() {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+        /* 标题链接样式 */
+        .heading-link {
+            font-size: 0.8em;
+            vertical-align: middle;
+        }
+        
+        /* 淡入淡出动画 */
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .animate-fade-out {
+            animation: fadeOut 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    `;
+    document.head.appendChild(styleElement);
+}
+
+// 添加对旧式"#heading-x"链接的支持
+function setupLegacyHeadingLinks() {
+    // 在加载完页面后，创建旧式heading-x的锚点映射
+    window.addEventListener('load', () => {
+        const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        
+        // 创建旧式ID映射（heading-0, heading-1, heading-2...）到新ID
+        const headingMap = new Map();
+        headings.forEach((heading, index) => {
+            const legacyId = `heading-${index}`;
+            const actualId = heading.id;
+            
+            // 如果ID不同，记录映射
+            if (legacyId !== actualId) {
+                headingMap.set(legacyId, actualId);
+            }
+        });
+        
+        // 如果有映射存在，处理锚点变更
+        if (headingMap.size > 0) {
+            // 检查当前URL中是否有旧式锚点
+            const hash = window.location.hash;
+            if (hash && hash.match(/^#heading-\d+$/)) {
+                const legacyId = hash.substring(1); // 移除#符号
+                const actualId = headingMap.get(legacyId);
+                
+                if (actualId) {
+                    // 替换URL中的锚点，但不触发滚动（防止页面跳动）
+                    const newUrl = window.location.href.replace(hash, `#${actualId}`);
+                    window.history.replaceState(null, '', newUrl);
+                    
+                    // 延迟滚动到正确位置
+                    setTimeout(() => {
+                        const targetHeading = document.getElementById(actualId);
+                        if (targetHeading) {
+                            // 计算目标位置，使标题显示在屏幕上方30%的位置
+                            const targetPosition = targetHeading.getBoundingClientRect().top + window.pageYOffset;
+                            const offset = window.innerHeight * 0.3; // 屏幕高度的30%
+                            
+                            window.scrollTo({
+                                top: targetPosition - offset,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }, 100);
+                }
+            }
+            
+            // 添加全局click事件监听器，拦截旧式锚点链接点击
+            document.addEventListener('click', (e) => {
+                // 查找被点击的a标签
+                const link = e.target.closest('a');
+                if (!link) return;
+                
+                const href = link.getAttribute('href');
+                if (!href) return;
+                
+                // 检查是否是旧式锚点链接（内部或外部）
+                if (href.match(/^#heading-\d+$/) || href.match(/\?.*#heading-\d+$/)) {
+                    e.preventDefault(); // 阻止默认导航
+                    
+                    // 提取旧式锚点ID
+                    const hashMatch = href.match(/#(heading-\d+)$/);
+                    if (hashMatch && hashMatch[1]) {
+                        const legacyId = hashMatch[1];
+                        const actualId = headingMap.get(legacyId);
+                        
+                        if (actualId) {
+                            // 构建新的链接URL
+                            let newHref = '';
+                            if (href.startsWith('#')) {
+                                // 内部锚点链接
+                                newHref = `#${actualId}`;
+                            } else {
+                                // 带查询参数的链接
+                                newHref = href.replace(/#heading-\d+$/, `#${actualId}`);
+                            }
+                            
+                            // 更新URL并滚动到目标位置
+                            window.history.pushState(null, '', newHref);
+                            
+                            const targetHeading = document.getElementById(actualId);
+                            if (targetHeading) {
+                                // 计算目标位置，使标题显示在屏幕上方30%的位置
+                                const targetPosition = targetHeading.getBoundingClientRect().top + window.pageYOffset;
+                                const offset = window.innerHeight * 0.3; // 屏幕高度的30%
+                                
+                                window.scrollTo({
+                                    top: targetPosition - offset,
+                                    behavior: 'smooth'
+                                });
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
 }
