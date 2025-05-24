@@ -2,7 +2,7 @@
  * 主应用入口文件
  * 负责初始化应用和加载配置
  */
-import config from '../../config.js';
+import config from '/config.js';
 import { initDarkMode, initThemeEvents } from './theme.js';
 import { generateNavLinks, generateMobileNavLinks, updateFooterElements } from './navigation.js';
 import documentCache from './document-cache.js';
@@ -840,7 +840,7 @@ function formatSiteName(siteName) {
  * 生成新格式的文档URL
  */
 function generateNewDocumentUrl(path, root = null, anchor = '') {
-    const baseUrl = 'main.html';
+    const baseUrl = '/main/';
     
     // 构建新的hash格式
     let hash = '';
