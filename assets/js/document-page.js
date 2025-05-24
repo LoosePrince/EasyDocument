@@ -970,14 +970,19 @@ function createNavList(items, level) {
         const li = document.createElement('li');
         li.classList.add('nav-item', 'my-1');
         
-        if (item.children && item.children.length > 0) {
+        // 检查是否为文件夹：有子文件或有索引文件的节点都视为文件夹
+        if ((item.children && item.children.length > 0) || item.index) {
             // 目录
             const div = document.createElement('div');
             div.classList.add('flex', 'items-center', 'cursor-pointer', 'hover:text-primary', 'dark:hover:text-primary', 'folder-title');
             div.classList.add(`folder-level-${level}`); // 添加层级类名，用于CSS控制缩进
             
             const icon = document.createElement('i');
-            icon.classList.add('fas', 'fa-chevron-right', 'text-xs', 'mr-2', 'transition-transform');
+            // 如果文件夹只有索引文件而没有子文件，显示文件夹图标而不是展开图标
+            const hasChildren = item.children && item.children.length > 0;
+            if (hasChildren) {
+                icon.classList.add('fas', 'fa-chevron-right', 'text-xs', 'mr-2', 'transition-transform');
+            }
             div.appendChild(icon);
             
             // 创建span元素
@@ -1025,9 +1030,11 @@ function createNavList(items, level) {
             li.appendChild(div);
             
             // 创建子列表（不包含索引页在顶层）
+            // 如果没有children数组，则初始化为空数组
+            const children = item.children || [];
             const filteredChildren = item.index ? 
-                item.children.filter(child => child.path !== item.index.path) : 
-                item.children;
+                children.filter(child => child.path !== item.index.path) : 
+                children;
                 
             const subUl = createNavList(filteredChildren, level + 1);
             li.appendChild(subUl);
