@@ -1530,6 +1530,11 @@ async function loadContentFromUrl() {
         
         // 锚点滚动已经在loadDocument中处理，此处无需重复处理
         
+        // 更新左侧目录的选中状态
+        setTimeout(() => {
+            highlightCurrentDocument();
+        }, 100); // 等待DOM更新完成
+        
         // 完成加载，隐藏进度条
         hideProgressBar();
     } catch (error) {
@@ -1545,6 +1550,10 @@ async function loadContentFromUrl() {
 function highlightCurrentDocument() {
     const { path: currentPath, root } = parseUrlPath();
     if (!currentPath) return;
+    
+    // 清除所有现有的高亮状态
+    document.querySelectorAll('#sidebar-nav a').forEach(link => link.classList.remove('active'));
+    document.querySelectorAll('#sidebar-nav div.folder-title').forEach(div => div.classList.remove('active-folder'));
     
     let decodedPath = decodeURIComponent(currentPath);
     
