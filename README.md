@@ -4,9 +4,9 @@
 
 EasyDocument 是一个轻量级、免编译的纯静态前端文档系统。它允许用户通过简单地添加 Markdown 或 HTML 文件到 `/data` 目录，即可自动生成美观、结构化的文档网站。无需后端支持，纯前端实现，简单易用。
 
-**v1.2.5+ 新特性**:
-- 🖱️ 右键菜单功能：复制链接、生成MD格式链接、快速预览
-- 🔗 新版链接格式：更简洁的 `main.html#path/file.md` 格式
+**新特性**:
+- 🖱️ 右键菜单功能：复制链接、生成MD格式链接、快速预览（v1.2.5+）
+- 🔗 新版链接格式：更简洁的 `main/#path/file` 格式（v1.2.7+）
 
 ## 设计风格
 
@@ -31,11 +31,13 @@ EasyDocument/
 ├── index.html          # 网站首页（项目首页，如项目介绍、"开始"进入文档页）
 ├── header.html         # 全局顶栏（可选）
 ├── footer.html         # 全局底栏（可选）
-├── main.html           # 文档页面模板（文档首页，文档渲染，基于get属性）
+├── main.html           # 重定向
 ├── config.js           # 网站配置文件
 ├── path.json           # 文档路径文件（data文件夹中的文档结构）
 ├── search.json         # 搜索索引文件
 ├── build.py            # 一键创建文档路径
+├── main/
+│   └── index.html      # 文档页面模板（文档首页，文档渲染，基于get属性）
 ├── assets/             # 静态资源
 │   ├── css/            # CSS文件
 │   │   ├── style.css           # 主样式文件
@@ -100,11 +102,11 @@ EasyDocument/
 - 文档内容中的内部链接
 - 面包屑导航和顶部导航链接
 
-### 5. 新版链接格式 (v1.2.5+)
+### 5. 新版链接格式 (v1.2.7+)
 
 EasyDocument 引入了更简洁的链接格式：
 
-**新格式**: `main.html#root/path/to/file.md#anchor`
+**新格式**: `main/#root/path/to/file#anchor`
 - 更简洁、直观的路径表示
 - SEO友好，更适合分享
 - 类似文件系统的路径结构
@@ -112,8 +114,8 @@ EasyDocument 引入了更简洁的链接格式：
 **兼容性**: 继续支持旧的查询参数格式 `main.html?path=xxx&root=xxx#anchor`
 
 **推荐用法**:
-- 文档内链接优先使用 Markdown 相对路径: `[文档](../path/file.md)`
-- 特殊需求使用新哈希格式: `[文档](main.html#path/file.md)`
+- 文档内链接优先使用 Markdown 相对路径: `[文档](./path/file)`
+- 特殊需求使用新哈希格式: `[文档](main/#path/file)`
 - 右键菜单自动生成最适合的链接格式
 
 ## 配置系统
