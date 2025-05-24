@@ -219,7 +219,7 @@ function initSearch() {
 // 加载搜索数据
 async function loadSearchData() {
     try {
-        const response = await fetch('search.json');
+        const response = await fetch('/search.json');
         if (response.ok) {
             searchData = await response.json();
             console.log('搜索数据加载成功，共 ' + searchData.length + ' 条记录');
