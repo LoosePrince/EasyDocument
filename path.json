@@ -421,10 +421,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1748000829,
+                            "timestamp": 1748258640,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "v1.2.6：添加动画配置功能，支持左侧导航、右侧目录和加载动画的自定义设置，增强用户体验。更新文档，详细说明动画参数及其使用示例。",
+                            "message": "优化动画配置，新增文章加载和渲染动画功能；更新文档以反映新的配置结构和选项；调整样式以支持骨架屏和淡入效果。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -432,10 +432,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 1,
+                                "commits": 2,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1748000829
+                                "last_commit_timestamp": 1748258640
                             }
                         ]
                     }
@@ -446,10 +446,10 @@
                 "path": "配置详解/README.md",
                 "git": {
                     "last_modified": {
-                        "timestamp": 1748000829,
+                        "timestamp": 1748258640,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
-                        "message": "v1.2.6：添加动画配置功能，支持左侧导航、右侧目录和加载动画的自定义设置，增强用户体验。更新文档，详细说明动画参数及其使用示例。",
+                        "message": "优化动画配置，新增文章加载和渲染动画功能；更新文档以反映新的配置结构和选项；调整样式以支持骨架屏和淡入效果。",
                         "github_username": "LoosePrince",
                         "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                     },
@@ -457,10 +457,10 @@
                         {
                             "name": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "commits": 11,
+                            "commits": 12,
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                            "last_commit_timestamp": 1748000829
+                            "last_commit_timestamp": 1748258640
                         }
                     ]
                 }
