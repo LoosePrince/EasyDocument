@@ -6,10 +6,10 @@
         "path": "README.md",
         "git": {
             "last_modified": {
-                "timestamp": 1747222507,
+                "timestamp": 1748248764,
                 "author": "树梢",
                 "email": "pfingan@foxmail.com",
-                "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
+                "message": "重构代码并拆分模块以提升可维护性；新增图片模态框功能，支持缩放、拖拽等操作；优化侧边栏和进度条功能，增强用户体验。",
                 "github_username": "LoosePrince",
                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
             },
@@ -17,10 +17,10 @@
                 {
                     "name": "树梢",
                     "email": "pfingan@foxmail.com",
-                    "commits": 3,
+                    "commits": 4,
                     "github_username": "LoosePrince",
                     "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                    "last_commit_timestamp": 1747222507
+                    "last_commit_timestamp": 1748248764
                 }
             ]
         }
@@ -36,10 +36,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1748071190,
+                            "timestamp": 1748248764,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "v1.2.7：\n统一资源路径为绝对路径；\n优化文档链接格式，支持无扩展名URL；\n优化左右侧目录加载动画；\n更新文档说明，详细描述新格式的使用方法和特性。",
+                            "message": "重构代码并拆分模块以提升可维护性；新增图片模态框功能，支持缩放、拖拽等操作；优化侧边栏和进度条功能，增强用户体验。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -47,10 +47,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 5,
+                                "commits": 6,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1748071190
+                                "last_commit_timestamp": 1748248764
                             }
                         ]
                     }
