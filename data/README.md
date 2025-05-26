@@ -42,7 +42,7 @@ console.log(sayHello('World')); // 输出: Hello, World!
 
 ### 数学公式
 
-当 `a \ne 0` 时，方程 $ax^2 + bx + c = 0$ 有两个解，它们是:
+当 $a \ne 0$ 时，方程 $ax^2 + bx + c = 0$ 有两个解，它们是:
 
 $$x = {-b \pm \sqrt{b^2-4ac} \over 2a}$$
 

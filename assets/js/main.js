@@ -6,6 +6,12 @@ import config from '/config.js';
 import { initDarkMode, initThemeEvents } from './theme.js';
 import { generateNavLinks, generateMobileNavLinks, updateFooterElements } from './navigation.js';
 import documentCache from './document-cache.js';
+import {
+    debounce,
+    isDarkMode,
+    parseUrlPath,
+    generateNewUrl
+} from './utils.js';
 
 // 搜索数据
 let searchData = null;
@@ -290,19 +296,6 @@ function bindSearchEvents() {
             }
         });
     }
-}
-
-// 防抖函数，用于限制高频率事件的触发
-function debounce(func, wait) {
-    let timeout;
-    return function() {
-        const context = this;
-        const args = arguments;
-        clearTimeout(timeout);
-        timeout = setTimeout(function() {
-            func.apply(context, args);
-        }, wait);
-    };
 }
 
 // 打开搜索模态窗口
