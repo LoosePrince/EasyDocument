@@ -8,6 +8,8 @@ on:
       - 'config.js'    # 配置文件
       - '**.html'      # HTML文件
       - '.github/workflows/static.yml'  # 工作流本身的更改
+    paths-ignore:
+      - 'data/**'      # 排除data目录的变化，避免与build-document.yml冲突
     branches:
       - main  # 仅在main分支上触发
   workflow_dispatch:  # 支持手动触发
