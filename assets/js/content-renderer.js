@@ -65,9 +65,133 @@ export function initContentRenderer(data, root, mainFunctions) {
     showEnhancedImageModal = mainFunctions.showEnhancedImageModal;
 }
 
-// ===== 在这里插入移动的函数 =====
+// ===== 文章加载和渲染动画函数 =====
 
-// 这些函数需要从主文件移动过来：
+/**
+ * 创建文章加载动画骨架屏
+ */
+function createArticleLoader() {
+    const loader = document.createElement('div');
+    loader.className = 'article-loader p-8';
+    loader.innerHTML = `
+        <div class="space-y-6">
+            <!-- 标题骨架 -->
+            <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded-lg max-w-md animate-pulse"></div>
+            
+            <!-- 面包屑骨架 -->
+            <div class="flex items-center space-x-2">
+                <div class="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div class="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div class="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div class="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            
+            <!-- 内容段落骨架 -->
+            <div class="space-y-6">
+                <div class="space-y-3">
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full animate-pulse"></div>
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6 animate-pulse"></div>
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/5 animate-pulse"></div>
+                </div>
+                
+                <div class="space-y-3">
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full animate-pulse"></div>
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
+                </div>
+                
+                <!-- 小标题骨架 -->
+                <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mt-8 animate-pulse"></div>
+                
+                <div class="space-y-3">
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full animate-pulse"></div>
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/5 animate-pulse"></div>
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6 animate-pulse"></div>
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
+                </div>
+                
+                <!-- 代码块骨架 -->
+                <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mt-6">
+                    <div class="space-y-3">
+                        <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 animate-pulse"></div>
+                        <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/2 animate-pulse"></div>
+                        <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-5/6 animate-pulse"></div>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full animate-pulse"></div>
+                    <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 animate-pulse"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    return loader;
+}
+
+/**
+ * 替换加载动画为实际内容的平滑过渡
+ */
+async function replaceLoaderWithContent(contentDiv, renderFunction) {
+    const loader = contentDiv.querySelector('.article-loader');
+    const loadingText = contentDiv.querySelector('.text-center.py-8');
+    
+    // 先淡出加载动画或加载文本
+    if (loader || loadingText) {
+        const elementToFade = loader || loadingText;
+        elementToFade.style.transition = 'opacity 0.3s ease-out';
+        elementToFade.style.opacity = '0';
+        
+        // 等待淡出完成
+        await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    
+    // 清空内容并渲染新内容
+    contentDiv.innerHTML = '';
+    await renderFunction();
+    
+    // 添加淡入效果
+    contentDiv.style.opacity = '0';
+    contentDiv.style.transition = 'opacity 0.4s ease-in';
+    
+    // 触发淡入动画
+    requestAnimationFrame(() => {
+        contentDiv.style.opacity = '1';
+    });
+    
+    // 清理过渡样式
+    setTimeout(() => {
+        contentDiv.style.transition = '';
+    }, 400);
+}
+
+/**
+ * 添加文章渲染动画
+ * 对整个markdown-body容器进行淡入动画
+ */
+function addArticleRenderAnimation(contentDiv) {
+    // 查找 markdown-body 容器
+    const markdownBody = contentDiv.querySelector('.markdown-body');
+    if (!markdownBody) return;
+    
+    // 获取动画持续时间
+    const renderDuration = config.animation?.article?.render_duration || 600;
+    
+    // 确保初始状态（用户已经设置了透明度为0）
+    // markdownBody.style.opacity = '0'; // 用户已设置，无需重复
+    
+    // 触发动画
+    setTimeout(() => {
+        // 设置CSS变量为动画持续时间
+        markdownBody.style.setProperty('--animation-duration', `${renderDuration}ms`);
+        
+        // 添加动画类
+        markdownBody.classList.add('article-fade-in');
+    }, 100); // 延迟100ms确保DOM完全渲染
+}
+
+
+
 // 1. addCacheStatusIndicator
 // 添加缓存状态指示器
 function addCacheStatusIndicator(contentDiv, cacheType) {
@@ -538,6 +662,13 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
         document.dispatchEvent(new CustomEvent('mdContentLoaded', {
             detail: { markdownBody, contentPath: relativePath }
         }));
+        
+        // 添加文章渲染动画（如果启用）
+        if (config.animation?.article?.enable_render !== false) {
+            setTimeout(() => {
+                addArticleRenderAnimation(contentDiv);
+            }, 100); // 稍微延迟确保DOM完全渲染
+        }
         
         // 添加图片点击放大功能
         const images = contentDiv.querySelectorAll('img:not(a > img)'); // 选择不在链接内的图片
@@ -1476,6 +1607,9 @@ function enhanceHeadings(container) {
 
 // ===== 导出函数列表 =====
 export {
+    createArticleLoader,
+    replaceLoaderWithContent,
+    addArticleRenderAnimation,
     addCacheStatusIndicator,
     renderDocument,
     preProcessMathContent,

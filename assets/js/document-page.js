@@ -32,6 +32,9 @@ import {
 } from './sundry.js';
 import {
     initContentRenderer,
+    createArticleLoader,
+    replaceLoaderWithContent,
+    addArticleRenderAnimation,
     addCacheStatusIndicator,
     renderDocument,
     preProcessMathContent,
@@ -729,6 +732,8 @@ async function loadContentFromUrl() {
     }
 }
 
+
+
 // 将loadContentFromUrl函数导出到window对象
 window.loadContentFromUrl = loadContentFromUrl;
 
@@ -746,9 +751,19 @@ async function loadDocument(relativePath) {
     const tocNav = document.getElementById('toc-nav');
     tocNav.innerHTML = '<p class="text-gray-400 text-sm">暂无目录</p>';
     
-    // 添加一个加载指示器，但不清空现有内容
+    // 创建文章加载动画（如果启用）
+    if (config.animation?.article?.enable_skeleton !== false) {
+        const articleLoader = createArticleLoader();
+        contentDiv.innerHTML = '';
+        contentDiv.appendChild(articleLoader);
+    } else {
+        // 如果未启用骨架屏，显示简单的加载文本
+        contentDiv.innerHTML = '<div class="text-center py-8 text-gray-500">正在加载文档...</div>';
+    }
+    
+    // 添加底部加载指示器
     const loadingIndicator = document.createElement('div');
-    loadingIndicator.className = 'fixed bottom-4 left-4 z-40 bg-white dark:bg-gray-800 shadow-md rounded-lg p-2 text-sm';
+    loadingIndicator.className = 'fixed bottom-4 left-4 z-40 bg-white dark:bg-gray-800 shadow-md rounded-lg p-2 text-sm transition-all duration-300';
     loadingIndicator.innerHTML = '<p class="text-gray-600 dark:text-gray-300 flex items-center"><i class="fas fa-spinner fa-spin mr-2"></i>正在加载文档...</p>';
     document.body.appendChild(loadingIndicator);
     
@@ -776,8 +791,8 @@ async function loadDocument(relativePath) {
     if (cachedContent) {
         // console.log(`从缓存加载文档: ${relativePath}`);
         updateProgressBar(90);
-        contentDiv.innerHTML = ''; // 清空旧内容
-        await renderDocument(relativePath, cachedContent, contentDiv, tocNav);
+        // 移除加载动画并渲染文档
+        await replaceLoaderWithContent(contentDiv, () => renderDocument(relativePath, cachedContent, contentDiv, tocNav));
         successfullyLoaded = true;
 
         // 根据缓存开关状态和实际缓存情况显示状态
@@ -840,8 +855,8 @@ async function loadDocument(relativePath) {
             documentCache.set(relativePath, content); // 添加到持久缓存
             
             updateProgressBar(90);
-            contentDiv.innerHTML = ''; // 清空旧内容
-            await renderDocument(relativePath, content, contentDiv, tocNav);
+            // 移除加载动画并渲染文档
+            await replaceLoaderWithContent(contentDiv, () => renderDocument(relativePath, content, contentDiv, tocNav));
             successfullyLoaded = true;
             
             // 根据缓存开关状态显示状态
@@ -853,13 +868,28 @@ async function loadDocument(relativePath) {
 
         } catch (error) {
             console.error("加载文档失败:", error);
-            contentDiv.innerHTML = `<p class="text-red-500">加载文档失败: ${error.message}</p>`;
+            // 移除加载动画并显示错误信息
+            const loader = contentDiv.querySelector('.article-loader');
+            if (loader) {
+                loader.style.transition = 'opacity 0.3s ease-out';
+                loader.style.opacity = '0';
+                setTimeout(() => {
+                    contentDiv.innerHTML = `<p class="text-red-500">加载文档失败: ${error.message}</p>`;
+                }, 300);
+            } else {
+                contentDiv.innerHTML = `<p class="text-red-500">加载文档失败: ${error.message}</p>`;
+            }
             successfullyLoaded = false;
         }
     }
 
-    // 移除加载指示器
-    loadingIndicator.remove();
+    // 移除加载指示器（添加淡出效果）
+    loadingIndicator.style.opacity = '0';
+    setTimeout(() => {
+        if (loadingIndicator.parentNode) {
+            loadingIndicator.remove();
+        }
+    }, 300);
     
     // 如果成功加载，触发自动预加载
     if (successfullyLoaded) {
