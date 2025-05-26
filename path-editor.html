@@ -39,7 +39,7 @@
                     <button @click="collapseAllFolders" class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                         全部收起
                     </button>
-                    <button @click="showEditModal = true; currentEditItem = { title: pathData.title, path: pathData.index.path, isRoot: true }" class="px-3 py-1 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm">
+                                                        <button @click="editRootDirectory()" class="px-3 py-1 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm">
                         编辑根目录
                     </button>
                     <button @click="savePathJson" class="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
@@ -80,6 +80,9 @@
                                                 <span class="font-semibold" x-text="child.title"></span>
                                                 <span class="ml-2 text-gray-500 dark:text-gray-400 text-sm" x-text="child.index ? child.index.path : child.path"></span>
                                                 <span x-show="child.index" class="ml-2 text-xs bg-gray-200 dark:bg-gray-700 rounded px-2 py-0.5">索引文件</span>
+                                                <span x-show="child.hidden" class="ml-2 text-xs bg-red-200 dark:bg-red-700 text-red-800 dark:text-red-200 rounded px-2 py-0.5">隐藏</span>
+                                                <span x-show="child.order" class="ml-2 text-xs bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded px-2 py-0.5" x-text="'排序: ' + child.order"></span>
+                                                <span x-show="child.external_url" class="ml-2 text-xs bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200 rounded px-2 py-0.5">外链</span>
                                             </div>
                                             <div class="flex space-x-2">
                                                 <button @click="moveItem('up', 'folder', index)" :disabled="index === 0" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': index === 0}">
@@ -92,14 +95,19 @@
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                                     </svg>
                                                 </button>
-                                                <button @click="showEditModal = true; currentEditItem = { ...child, index: index, isFolder: true, path: (child.index ? child.index.path : child.path) }" class="text-yellow-600 hover:text-yellow-800 focus:outline-none">
+                                                <button @click="editFolder(child, index)" class="text-yellow-600 hover:text-yellow-800 focus:outline-none">
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                                     </svg>
                                                 </button>
-                                                <button @click="addNewFile(index)" class="text-green-600 hover:text-green-800 focus:outline-none">
+                                                <button @click="addNewFile(index)" class="text-green-600 hover:text-green-800 focus:outline-none" title="添加新文件">
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                </button>
+                                                <button @click="addNewSubFolder(index)" class="text-purple-600 hover:text-purple-800 focus:outline-none" title="添加子文件夹">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-4.586a1 1 0 01-.707-.293l-1.414-1.414A1 1 0 009.586 3H5a2 2 0 00-2 2v2z" />
                                                     </svg>
                                                 </button>
                                                 <button @click="removeFolder(index)" class="text-red-600 hover:text-red-800 focus:outline-none">
@@ -120,34 +128,124 @@
                                             <template x-if="child.children && child.children.length > 0">
                                                 <div>
                                                     <template x-for="(subItem, subIndex) in child.children" :key="subIndex">
-                                                        <div class="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700 last:border-0"
+                                                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-3"
                                                              :class="{'edited': subItem.isEdited}">
+                                                            <!-- 子文件夹 -->
+                                                            <template x-if="subItem.children && Array.isArray(subItem.children)">
+                                                                <div>
+                                                                    <div class="flex items-center justify-between mb-2">
+                                                                        <div class="flex items-center">
+                                                                            <span class="font-medium" x-text="subItem.title"></span>
+                                                                            <span class="ml-2 text-gray-500 dark:text-gray-400 text-xs" x-text="subItem.index ? subItem.index.path : subItem.path"></span>
+                                                                            <span x-show="subItem.index" class="ml-2 text-xs bg-gray-200 dark:bg-gray-700 rounded px-2 py-0.5">索引文件</span>
+                                                                            <span x-show="subItem.hidden" class="ml-2 text-xs bg-red-200 dark:bg-red-700 text-red-800 dark:text-red-200 rounded px-1 py-0.5">隐藏</span>
+                                                                            <span x-show="subItem.order" class="ml-2 text-xs bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded px-1 py-0.5" x-text="'排序: ' + subItem.order"></span>
+                                                                            <span x-show="subItem.external_url" class="ml-2 text-xs bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200 rounded px-1 py-0.5">外链</span>
+                                                                        </div>
+                                                                        <div class="flex space-x-2">
+                                                                            <button @click="moveSubItem('up', subIndex, index)" :disabled="subIndex === 0" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': subIndex === 0}">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                                                                                </svg>
+                                                                            </button>
+                                                                            <button @click="moveSubItem('down', subIndex, index)" :disabled="subIndex === child.children.length - 1" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': subIndex === child.children.length - 1}">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                                                </svg>
+                                                                            </button>
+                                                                            <button @click="editSubFolder(subItem, index, subIndex)" class="text-yellow-600 hover:text-yellow-800 focus:outline-none" title="编辑子文件夹">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                                                </svg>
+                                                                            </button>
+                                                                            <button @click="addNewFileToSubFolder(index, subIndex)" class="text-green-600 hover:text-green-800 focus:outline-none" title="添加文件到子文件夹">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                                </svg>
+                                                                            </button>
+                                                                            <button @click="removeSubFolder(index, subIndex)" class="text-red-600 hover:text-red-800 focus:outline-none" title="删除子文件夹">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                </svg>
+                                                                            </button>
+                                                                            <button @click="toggleSubFolderItems(index, subIndex)" class="text-blue-600 dark:text-blue-400 focus:outline-none" title="展开/收起子文件夹">
+                                                                                <span x-show="!subItem.expanded">展开</span>
+                                                                                <span x-show="subItem.expanded">收起</span>
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    <!-- 子文件夹的内容 -->
+                                                                    <div x-show="subItem.expanded" class="ml-4 mt-2">
+                                                                        <template x-if="subItem.children && subItem.children.length > 0">
+                                                                            <div>
+                                                                                <template x-for="(subSubItem, subSubIndex) in subItem.children" :key="subSubIndex">
+                                                                                    <div class="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700 last:border-0"
+                                                                                         :class="{'edited': subSubItem.isEdited}">
+                                                                                        <div class="flex items-center">
+                                                                                            <span x-text="subSubItem.title"></span>
+                                                                                            <span class="ml-2 text-gray-500 dark:text-gray-400 text-xs" x-text="subSubItem.path"></span>
+                                                                                            <span x-show="subSubItem.hidden" class="ml-2 text-xs bg-red-200 dark:bg-red-700 text-red-800 dark:text-red-200 rounded px-1 py-0.5">隐藏</span>
+                                                                                            <span x-show="subSubItem.order" class="ml-2 text-xs bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded px-1 py-0.5" x-text="'排序: ' + subSubItem.order"></span>
+                                                                                            <span x-show="subSubItem.external_url" class="ml-2 text-xs bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200 rounded px-1 py-0.5">外链</span>
+                                                                                        </div>
+                                                                                        <div class="flex space-x-2">
+                                                                                            <button @click="editSubFolderFile(subSubItem, index, subIndex, subSubIndex)" class="text-yellow-600 hover:text-yellow-800 focus:outline-none" title="编辑文件">
+                                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                                                                </svg>
+                                                                                            </button>
+                                                                                            <button @click="removeSubFolderFile(index, subIndex, subSubIndex)" class="text-red-600 hover:text-red-800 focus:outline-none" title="删除文件">
+                                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                                </svg>
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </template>
+                                                                            </div>
+                                                                        </template>
+                                                                        <div x-show="!subItem.children || subItem.children.length === 0" class="text-gray-500 dark:text-gray-400 text-xs">
+                                                                            无文件
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </template>
+                                                            
+                                                            <!-- 普通文件 -->
+                                                            <template x-if="!subItem.children || !Array.isArray(subItem.children)">
+                                                                <div class="flex items-center justify-between">
                                                             <div class="flex items-center">
                                                                 <span x-text="subItem.title"></span>
                                                                 <span class="ml-2 text-gray-500 dark:text-gray-400 text-xs" x-text="subItem.path"></span>
+                                                                        <span x-show="subItem.hidden" class="ml-2 text-xs bg-red-200 dark:bg-red-700 text-red-800 dark:text-red-200 rounded px-1 py-0.5">隐藏</span>
+                                                                        <span x-show="subItem.order" class="ml-2 text-xs bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded px-1 py-0.5" x-text="'排序: ' + subItem.order"></span>
+                                                                        <span x-show="subItem.external_url" class="ml-2 text-xs bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200 rounded px-1 py-0.5">外链</span>
                                                             </div>
                                                             <div class="flex space-x-2">
-                                                                <button @click="moveItem('up', 'file', subIndex, index)" :disabled="subIndex === 0" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': subIndex === 0}">
+                                                                        <button @click="moveSubItem('up', subIndex, index)" :disabled="subIndex === 0" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': subIndex === 0}">
                                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
                                                                     </svg>
                                                                 </button>
-                                                                <button @click="moveItem('down', 'file', subIndex, index)" :disabled="subIndex === child.children.length - 1" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': subIndex === child.children.length - 1}">
+                                                                        <button @click="moveSubItem('down', subIndex, index)" :disabled="subIndex === child.children.length - 1" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': subIndex === child.children.length - 1}">
                                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                                                     </svg>
                                                                 </button>
-                                                                <button @click="showEditModal = true; currentEditItem = { ...subItem, parentIndex: index, index: subIndex, isFile: true }" class="text-yellow-600 hover:text-yellow-800 focus:outline-none">
+                                                                        <button @click="editFile(subItem, index, subIndex)" class="text-yellow-600 hover:text-yellow-800 focus:outline-none" title="编辑文件">
                                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                                                     </svg>
                                                                 </button>
-                                                                <button @click="removeFile(index, subIndex)" class="text-red-600 hover:text-red-800 focus:outline-none">
+                                                                        <button @click="removeFile(index, subIndex)" class="text-red-600 hover:text-red-800 focus:outline-none" title="删除文件">
                                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                                     </svg>
                                                                 </button>
                                                             </div>
+                                                                </div>
+                                                            </template>
                                                         </div>
                                                     </template>
                                                 </div>
@@ -167,18 +265,156 @@
         
         <!-- 编辑模态框 -->
         <div x-show="showEditModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md" @click.outside="showEditModal = false">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" @click.outside="showEditModal = false">
                 <h3 class="text-xl font-semibold mb-4" x-text="currentEditItem.isRoot ? '编辑根目录' : (currentEditItem.isFolder ? '编辑目录' : '编辑文件')"></h3>
                 
+                <div class="space-y-6">
+                    <!-- 基本信息 -->
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-medium mb-3 text-gray-800 dark:text-gray-200">
+                            <span x-show="currentEditItem.isRoot">根目录信息</span>
+                            <span x-show="currentEditItem.isFolder">目录信息</span>
+                            <span x-show="currentEditItem.isFile">文件信息</span>
+                        </h4>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    <span x-show="currentEditItem.isRoot">根目录标题</span>
+                                    <span x-show="currentEditItem.isFolder">目录标题</span>
+                                    <span x-show="currentEditItem.isFile">文件标题</span>
+                                </label>
+                                <input type="text" x-model="currentEditItem.title" 
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                       placeholder="输入标题">
+                            </div>
+                            
+                            <div x-show="currentEditItem.isRoot">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">根目录路径</label>
+                                <input type="text" x-model="currentEditItem.rootPath" 
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                       placeholder="通常为空或根路径">
+                            </div>
+                            
+                            <div x-show="currentEditItem.isFolder">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">目录路径</label>
+                                <input type="text" x-model="currentEditItem.folderPath" 
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                       placeholder="如：配置详解">
+                            </div>
+                            
+                            <div x-show="currentEditItem.isFile">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">文件路径</label>
+                                <input type="text" x-model="currentEditItem.path" 
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                       placeholder="如：配置详解/README.md">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 索引文件信息 (仅目录和根目录) -->
+                    <div x-show="!currentEditItem.isFile" class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-medium mb-3 text-gray-800 dark:text-gray-200">索引文件信息</h4>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">标题</label>
-                        <input type="text" x-model="currentEditItem.title" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">索引文件标题</label>
+                                <input type="text" x-model="currentEditItem.indexTitle" 
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                       placeholder="索引文件显示的标题">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">索引文件路径</label>
+                                <input type="text" x-model="currentEditItem.indexPath" 
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                       placeholder="如：README.md 或 配置详解/README.md">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 自定义属性 -->
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-medium mb-3 text-gray-800 dark:text-gray-200">自定义属性</h4>
+                        
+                        <!-- 显示排序 -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">显示排序</label>
+                            <input type="number" x-model="currentEditItem.order" 
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                   placeholder="数字越小越靠前，留空使用默认排序">
+                        </div>
+                        
+                        <!-- 描述信息 -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">描述信息</label>
+                            <textarea x-model="currentEditItem.description" rows="3"
+                                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                      placeholder="可选的描述信息"></textarea>
+                        </div>
+                        
+                        <!-- 自定义标签 -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">标签 (逗号分隔)</label>
+                            <input type="text" x-model="currentEditItem.tags" 
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                   placeholder="如：重要,配置,指南">
+                        </div>
+                        
+                        <!-- 是否隐藏 -->
+                        <div class="flex items-center">
+                            <input type="checkbox" x-model="currentEditItem.hidden" id="hiddenCheck"
+                                   class="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label for="hiddenCheck" class="text-sm text-gray-700 dark:text-gray-300">隐藏此项目 (不在导航中显示)</label>
+                        </div>
                     </div>
                     
+                    <!-- 高级选项 -->
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <details class="group">
+                            <summary class="cursor-pointer text-lg font-medium text-gray-800 dark:text-gray-200 mb-3 list-none">
+                                <span class="flex items-center">
+                                    高级选项
+                                    <svg class="ml-2 h-4 w-4 transform group-open:rotate-90 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </span>
+                            </summary>
+                            
+                            <div class="space-y-4 mt-3">
+                                <!-- 外部链接 -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">外部链接</label>
+                                    <input type="url" x-model="currentEditItem.external_url" 
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                           placeholder="如：https://example.com">
+                                </div>
+                                
+                                <!-- 图标 -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">图标 (FontAwesome类名)</label>
+                                    <input type="text" x-model="currentEditItem.icon" 
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                           placeholder="如：fas fa-book">
+                                </div>
+                                
+                                <!-- 自定义CSS类 -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">自定义CSS类</label>
+                                    <input type="text" x-model="currentEditItem.css_class" 
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                                           placeholder="如：highlight important">
+                                </div>
+                                
+                                <!-- 自定义元数据 JSON -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">路径</label>
-                        <input type="text" x-model="currentEditItem.path" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">自定义元数据 (JSON格式)</label>
+                                    <textarea x-model="currentEditItem.metadata" rows="3"
+                                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 font-mono text-sm"
+                                              placeholder='{"key": "value", "author": "张三"}'></textarea>
+                                    <p class="text-xs text-gray-500 mt-1">请输入有效的JSON格式，留空表示无自定义元数据</p>
+                                </div>
+                            </div>
+                        </details>
                     </div>
                 </div>
                 
@@ -223,10 +459,19 @@
                 if (!data.title) data.title = "根目录";
                 if (!data.index.path) data.index.path = "";
                 
-                // 添加扩展属性用于UI交互
+                // 递归添加扩展属性用于UI交互
+                function initializeExpandedState(item) {
+                    if (item.children && Array.isArray(item.children)) {
+                        item.expanded = false;
+                        item.children.forEach(child => {
+                            initializeExpandedState(child);
+                        });
+                    }
+                }
+                
                 if (data.children) {
                     data.children.forEach(child => {
-                        child.expanded = false;
+                        initializeExpandedState(child);
                     });
                 } else {
                     data.children = [];
@@ -240,17 +485,35 @@
             },
             
             expandAllFolders() {
+                function expandRecursively(item) {
+                    if (item.children && Array.isArray(item.children)) {
+                        item.expanded = true;
+                        item.children.forEach(child => {
+                            expandRecursively(child);
+                        });
+                    }
+                }
+                
                 if (this.pathData && this.pathData.children) {
                     this.pathData.children.forEach(child => {
-                        child.expanded = true;
+                        expandRecursively(child);
                     });
                 }
             },
             
             collapseAllFolders() {
+                function collapseRecursively(item) {
+                    if (item.children && Array.isArray(item.children)) {
+                        item.expanded = false;
+                        item.children.forEach(child => {
+                            collapseRecursively(child);
+                        });
+                    }
+                }
+                
                 if (this.pathData && this.pathData.children) {
                     this.pathData.children.forEach(child => {
-                        child.expanded = false;
+                        collapseRecursively(child);
                     });
                 }
             },
@@ -297,26 +560,200 @@
             },
             
             saveEdit() {
+                try {
                 if (this.currentEditItem.isRoot) {
+                        // 更新根目录
                     this.pathData.title = this.currentEditItem.title;
-                    this.pathData.path = this.currentEditItem.path;
+                        this.pathData.path = this.currentEditItem.rootPath || "";
+                        
+                        // 更新根目录索引文件
+                        if (!this.pathData.index) {
+                            this.pathData.index = {};
+                        }
+                        this.pathData.index.title = this.currentEditItem.indexTitle;
+                        this.pathData.index.path = this.currentEditItem.indexPath;
+                        
+                        // 添加自定义属性
+                        this.addCustomProperties(this.pathData);
+                        
                 } else if (this.currentEditItem.isFolder) {
+                        let folder;
+                        
+                        if (this.currentEditItem.isSubFolder) {
+                            // 子文件夹
+                            const parentIndex = this.currentEditItem.parentIndex;
+                            const index = this.currentEditItem.index;
+                            folder = this.pathData.children[parentIndex].children[index];
+                        } else {
+                            // 顶级文件夹
                     const index = this.currentEditItem.index;
-                    this.pathData.children[index].title = this.currentEditItem.title;
-                    if (!this.pathData.children[index].index) {
-                        this.pathData.children[index].index = {};
+                            folder = this.pathData.children[index];
+                        }
+                        
+                        // 更新文件夹信息
+                        folder.title = this.currentEditItem.title;
+                        folder.path = this.currentEditItem.folderPath;
+                        
+                        // 更新索引文件
+                        if (!folder.index) {
+                            folder.index = {};
                     }
-                    this.pathData.children[index].index.path = this.currentEditItem.path;
-                    this.pathData.children[index].isEdited = true;
+                        folder.index.title = this.currentEditItem.indexTitle;
+                        folder.index.path = this.currentEditItem.indexPath;
+                        
+                        // 添加自定义属性
+                        this.addCustomProperties(folder);
+                        folder.isEdited = true;
+                        
                 } else if (this.currentEditItem.isFile) {
+                        let file;
+                        
+                        if (this.currentEditItem.isSubFolderFile) {
+                            // 子文件夹中的文件
+                            const parentIndex = this.currentEditItem.parentIndex;
+                            const subFolderIndex = this.currentEditItem.subFolderIndex;
+                            const index = this.currentEditItem.index;
+                            file = this.pathData.children[parentIndex].children[subFolderIndex].children[index];
+                        } else {
+                            // 普通文件
                     const parentIndex = this.currentEditItem.parentIndex;
                     const index = this.currentEditItem.index;
-                    this.pathData.children[parentIndex].children[index].title = this.currentEditItem.title;
-                    this.pathData.children[parentIndex].children[index].path = this.currentEditItem.path;
-                    this.pathData.children[parentIndex].children[index].isEdited = true;
+                            file = this.pathData.children[parentIndex].children[index];
+                        }
+                        
+                        // 更新文件信息
+                        file.title = this.currentEditItem.title;
+                        file.path = this.currentEditItem.path;
+                        
+                        // 添加自定义属性
+                        this.addCustomProperties(file);
+                        file.isEdited = true;
+                    }
+                    
+                    this.showEditModal = false;
+                } catch (error) {
+                    alert('保存失败: ' + error.message);
+                }
+            },
+            
+            addCustomProperties(item) {
+                // 添加排序
+                if (this.currentEditItem.order && this.currentEditItem.order.toString().trim()) {
+                    item.order = parseInt(this.currentEditItem.order);
+                } else {
+                    delete item.order;
                 }
                 
-                this.showEditModal = false;
+                // 添加描述
+                if (this.currentEditItem.description && this.currentEditItem.description.trim()) {
+                    item.description = this.currentEditItem.description.trim();
+                } else {
+                    delete item.description;
+                }
+                
+                // 添加标签
+                if (this.currentEditItem.tags && this.currentEditItem.tags.trim()) {
+                    item.tags = this.currentEditItem.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                } else {
+                    delete item.tags;
+                }
+                
+                // 添加隐藏状态
+                if (this.currentEditItem.hidden) {
+                    item.hidden = true;
+                } else {
+                    delete item.hidden;
+                }
+                
+                // 添加外部链接
+                if (this.currentEditItem.external_url && this.currentEditItem.external_url.trim()) {
+                    item.external_url = this.currentEditItem.external_url.trim();
+                } else {
+                    delete item.external_url;
+                }
+                
+                // 添加图标
+                if (this.currentEditItem.icon && this.currentEditItem.icon.trim()) {
+                    item.icon = this.currentEditItem.icon.trim();
+                } else {
+                    delete item.icon;
+                }
+                
+                // 添加CSS类
+                if (this.currentEditItem.css_class && this.currentEditItem.css_class.trim()) {
+                    item.css_class = this.currentEditItem.css_class.trim();
+                } else {
+                    delete item.css_class;
+                }
+                
+                // 添加自定义元数据
+                if (this.currentEditItem.metadata && this.currentEditItem.metadata.trim()) {
+                    try {
+                        item.metadata = JSON.parse(this.currentEditItem.metadata.trim());
+                    } catch (e) {
+                        throw new Error('自定义元数据JSON格式不正确: ' + e.message);
+                    }
+                } else {
+                    delete item.metadata;
+                }
+            },
+            
+            editRootDirectory() {
+                this.currentEditItem = {
+                    isRoot: true,
+                    title: this.pathData.title,
+                    rootPath: this.pathData.path || "",
+                    indexTitle: this.pathData.index?.title || "",
+                    indexPath: this.pathData.index?.path || "",
+                    order: this.pathData.order || "",
+                    description: this.pathData.description || "",
+                    tags: this.pathData.tags ? this.pathData.tags.join(', ') : "",
+                    hidden: this.pathData.hidden || false,
+                    external_url: this.pathData.external_url || "",
+                    icon: this.pathData.icon || "",
+                    css_class: this.pathData.css_class || "",
+                    metadata: this.pathData.metadata ? JSON.stringify(this.pathData.metadata, null, 2) : ""
+                };
+                this.showEditModal = true;
+            },
+            
+            editFolder(folder, index) {
+                this.currentEditItem = {
+                    isFolder: true,
+                    index: index,
+                    title: folder.title,
+                    folderPath: folder.path,
+                    indexTitle: folder.index?.title || "",
+                    indexPath: folder.index?.path || "",
+                    order: folder.order || "",
+                    description: folder.description || "",
+                    tags: folder.tags ? folder.tags.join(', ') : "",
+                    hidden: folder.hidden || false,
+                    external_url: folder.external_url || "",
+                    icon: folder.icon || "",
+                    css_class: folder.css_class || "",
+                    metadata: folder.metadata ? JSON.stringify(folder.metadata, null, 2) : ""
+                };
+                this.showEditModal = true;
+            },
+            
+            editFile(file, parentIndex, fileIndex) {
+                this.currentEditItem = {
+                    isFile: true,
+                    parentIndex: parentIndex,
+                    index: fileIndex,
+                    title: file.title,
+                    path: file.path,
+                    order: file.order || "",
+                    description: file.description || "",
+                    tags: file.tags ? file.tags.join(', ') : "",
+                    hidden: file.hidden || false,
+                    external_url: file.external_url || "",
+                    icon: file.icon || "",
+                    css_class: file.css_class || "",
+                    metadata: file.metadata ? JSON.stringify(file.metadata, null, 2) : ""
+                };
+                this.showEditModal = true;
             },
             
             addNewFolder() {
@@ -343,13 +780,7 @@
                 this.pathData.children.push(newFolder);
                 
                 // 编辑新增的文件夹
-                this.showEditModal = true;
-                this.currentEditItem = { 
-                    ...newFolder, 
-                    index: this.pathData.children.length - 1, 
-                    isFolder: true,
-                    path: newFolder.index.path
-                };
+                this.editFolder(newFolder, this.pathData.children.length - 1);
             },
             
             addNewFile(parentIndex) {
@@ -370,13 +801,141 @@
                 this.pathData.children[parentIndex].expanded = true;
                 
                 // 编辑新增的文件
-                this.showEditModal = true;
-                this.currentEditItem = { 
-                    ...newFile, 
-                    parentIndex, 
-                    index: this.pathData.children[parentIndex].children.length - 1, 
-                    isFile: true 
+                this.editFile(newFile, parentIndex, this.pathData.children[parentIndex].children.length - 1);
+            },
+            
+            addNewSubFolder(parentIndex) {
+                if (!this.pathData || !this.pathData.children) return;
+                
+                const newSubFolder = {
+                    title: '新子目录',
+                    path: '新子目录',
+                    index: {
+                        title: '新子目录',
+                        path: '新子目录/README.md'
+                    },
+                    children: [],
+                    expanded: true,
+                    isEdited: true
                 };
+                
+                if (!this.pathData.children[parentIndex].children) {
+                    this.pathData.children[parentIndex].children = [];
+                }
+                
+                this.pathData.children[parentIndex].children.push(newSubFolder);
+                this.pathData.children[parentIndex].expanded = true;
+                
+                // 编辑新增的子文件夹
+                this.editSubFolder(newSubFolder, parentIndex, this.pathData.children[parentIndex].children.length - 1);
+            },
+            
+            editSubFolder(subFolder, parentIndex, subIndex) {
+                this.currentEditItem = {
+                    isFolder: true,
+                    parentIndex: parentIndex,
+                    index: subIndex,
+                    title: subFolder.title,
+                    folderPath: subFolder.path,
+                    indexTitle: subFolder.index?.title || "",
+                    indexPath: subFolder.index?.path || "",
+                    order: subFolder.order || "",
+                    description: subFolder.description || "",
+                    tags: subFolder.tags ? subFolder.tags.join(', ') : "",
+                    hidden: subFolder.hidden || false,
+                    external_url: subFolder.external_url || "",
+                    icon: subFolder.icon || "",
+                    css_class: subFolder.css_class || "",
+                    metadata: subFolder.metadata ? JSON.stringify(subFolder.metadata, null, 2) : "",
+                    isSubFolder: true
+                };
+                this.showEditModal = true;
+            },
+            
+            addNewFileToSubFolder(parentIndex, subFolderIndex) {
+                if (!this.pathData || !this.pathData.children) return;
+                
+                const newFile = {
+                    title: '新文件',
+                    path: '新文件.md',
+                    children: [],
+                    isEdited: true
+                };
+                
+                const subFolder = this.pathData.children[parentIndex].children[subFolderIndex];
+                if (!subFolder.children) {
+                    subFolder.children = [];
+                }
+                
+                subFolder.children.push(newFile);
+                subFolder.expanded = true;
+                
+                // 编辑新增的文件
+                this.editSubFolderFile(newFile, parentIndex, subFolderIndex, subFolder.children.length - 1);
+            },
+            
+            editSubFolderFile(file, parentIndex, subFolderIndex, fileIndex) {
+                this.currentEditItem = { 
+                    isFile: true,
+                    parentIndex: parentIndex,
+                    subFolderIndex: subFolderIndex,
+                    index: fileIndex,
+                    title: file.title,
+                    path: file.path,
+                    order: file.order || "",
+                    description: file.description || "",
+                    tags: file.tags ? file.tags.join(', ') : "",
+                    hidden: file.hidden || false,
+                    external_url: file.external_url || "",
+                    icon: file.icon || "",
+                    css_class: file.css_class || "",
+                    metadata: file.metadata ? JSON.stringify(file.metadata, null, 2) : "",
+                    isSubFolderFile: true
+                };
+                this.showEditModal = true;
+            },
+            
+            removeSubFolder(parentIndex, subIndex) {
+                if (!this.pathData || !this.pathData.children) return;
+                
+                const subFolder = this.pathData.children[parentIndex].children[subIndex];
+                if (confirm(`确定要删除子目录 "${subFolder.title}" 及其所有内容吗？`)) {
+                    this.pathData.children[parentIndex].children.splice(subIndex, 1);
+                }
+            },
+            
+            removeSubFolderFile(parentIndex, subFolderIndex, fileIndex) {
+                if (!this.pathData || !this.pathData.children) return;
+                
+                const file = this.pathData.children[parentIndex].children[subFolderIndex].children[fileIndex];
+                if (confirm(`确定要删除文件 "${file.title}" 吗？`)) {
+                    this.pathData.children[parentIndex].children[subFolderIndex].children.splice(fileIndex, 1);
+                }
+            },
+            
+            toggleSubFolderItems(parentIndex, subIndex) {
+                if (this.pathData && this.pathData.children && this.pathData.children[parentIndex] && this.pathData.children[parentIndex].children && this.pathData.children[parentIndex].children[subIndex]) {
+                    this.pathData.children[parentIndex].children[subIndex].expanded = !this.pathData.children[parentIndex].children[subIndex].expanded;
+                }
+            },
+            
+            moveSubItem(direction, subIndex, parentIndex) {
+                const parent = this.pathData.children[parentIndex];
+                if (!parent.children) return;
+                
+                if (direction === 'up' && subIndex > 0) {
+                    // 上移子项目
+                    const temp = parent.children[subIndex];
+                    parent.children[subIndex] = parent.children[subIndex - 1];
+                    parent.children[subIndex - 1] = temp;
+                    parent.children[subIndex - 1].isEdited = true;
+                } else if (direction === 'down' && subIndex < parent.children.length - 1) {
+                    // 下移子项目
+                    const temp = parent.children[subIndex];
+                    parent.children[subIndex] = parent.children[subIndex + 1];
+                    parent.children[subIndex + 1] = temp;
+                    parent.children[subIndex + 1].isEdited = true;
+                }
             },
             
             removeFolder(index) {
@@ -400,16 +959,23 @@
                 
                 // 移除UI特定属性
                 const cleanData = JSON.parse(JSON.stringify(this.pathData));
+                
+                // 递归清理UI属性但保留自定义属性
+                function cleanUIProperties(item) {
+                    delete item.expanded;
+                    delete item.isEdited;
+                    
+                    if (item.children && Array.isArray(item.children)) {
+                        item.children.forEach(child => {
+                            cleanUIProperties(child);
+                        });
+                    }
+                }
+                
+                cleanUIProperties(cleanData);
                 if (cleanData.children) {
                     cleanData.children.forEach(child => {
-                        delete child.expanded;
-                        delete child.isEdited;
-                        
-                        if (child.children) {
-                            child.children.forEach(subItem => {
-                                delete subItem.isEdited;
-                            });
-                        }
+                        cleanUIProperties(child);
                     });
                 }
                 
