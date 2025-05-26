@@ -862,7 +862,7 @@ button.active, .button.active {
     height: 16px;
     background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
     background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite;
+    animation: skeleton-loading var(--skeleton-duration, 1.5s) infinite;
     border-radius: 2px;
     margin-right: 0.5rem;
     flex-shrink: 0;
@@ -872,7 +872,7 @@ button.active, .button.active {
     height: 14px;
     background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
     background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite;
+    animation: skeleton-loading var(--skeleton-duration, 1.5s) infinite;
     border-radius: 2px;
     flex: 1;
 }
@@ -928,7 +928,7 @@ button.active, .button.active {
     height: 8px;
     background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
     background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite;
+    animation: skeleton-loading var(--skeleton-duration, 1.5s) infinite;
     border-radius: 50%;
     margin-right: 0.5rem;
     flex-shrink: 0;
@@ -938,7 +938,7 @@ button.active, .button.active {
     height: 12px;
     background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
     background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite;
+    animation: skeleton-loading var(--skeleton-duration, 1.5s) infinite;
     border-radius: 2px;
     flex: 1;
 }
@@ -992,5 +992,85 @@ button.active, .button.active {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* 文章加载动画样式 */
+.article-loader {
+    padding: 2rem;
+    animation: articleLoaderPulse 1.5s ease-in-out infinite;
+}
+
+.article-loader .space-y-6 > * + * {
+    margin-top: 1.5rem;
+}
+
+.article-loader .space-y-4 > * + * {
+    margin-top: 1rem;
+}
+
+.article-loader .space-y-2 > * + * {
+    margin-top: 0.5rem;
+}
+
+.article-loader .flex.space-x-2 > * + * {
+    margin-left: 0.5rem;
+}
+
+/* 骨架元素基础动画 */
+.article-loader [class*="bg-gray"] {
+    background: linear-gradient(90deg, 
+        #f3f4f6 25%, 
+        #e5e7eb 50%, 
+        #f3f4f6 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.dark .article-loader [class*="bg-gray"] {
+    background: linear-gradient(90deg, 
+        #374151 25%, 
+        #4b5563 50%, 
+        #374151 75%);
+    background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes articleLoaderPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* 文章渲染动画 - 简单淡入效果 */
+.article-fade-in {
+    animation: articleFadeIn var(--animation-duration, 0.6s) ease-out forwards;
+}
+
+@keyframes articleFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* 移动设备上的动画优化 */
+@media (max-width: 768px) {
+    .article-fade-in {
+        animation-duration: calc(var(--animation-duration, 0.6s) * 0.5);
+        animation-timing-function: ease-out;
     }
 } 

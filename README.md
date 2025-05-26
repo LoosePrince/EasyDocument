@@ -35,7 +35,10 @@ EasyDocument/
 ├── config.js           # 网站配置文件
 ├── path.json           # 文档路径文件（data文件夹中的文档结构）
 ├── search.json         # 搜索索引文件
-├── build.py            # 一键创建文档路径
+├── build.py            # 一键创建文档路径脚本
+├── path-editor.html    # 可视化路径编辑器
+├── requirements.txt    # Python依赖文件
+├── LICENSE             # 开源协议
 ├── main/
 │   └── index.html      # 文档页面模板（文档首页，文档渲染，基于get属性）
 ├── assets/             # 静态资源
@@ -46,15 +49,23 @@ EasyDocument/
 │   ├── js/             # JavaScript文件
 │   │   ├── main.js             # 主要功能逻辑
 │   │   ├── document-page.js    # 文档页面处理
+│   │   ├── content-renderer.js # 内容渲染模块
+│   │   ├── sidebar-navigation.js # 侧边栏导航模块
 │   │   ├── context-menu.js     # 右键菜单功能
 │   │   ├── cache-manager.js    # 缓存管理
 │   │   ├── document-cache.js   # 文档缓存
 │   │   ├── navigation.js       # 导航功能
+│   │   ├── progress-bar.js     # 进度条组件
 │   │   ├── theme.js            # 主题切换
+│   │   ├── image-modal.js      # 图片放大模态框
+│   │   ├── utils.js            # 通用工具函数
+│   │   ├── sundry.js           # 杂项功能
 │   │   ├── katex-handler.js    # 数学公式处理
 │   │   ├── mermaid-handler.js  # 图表处理
 │   │   └── tailwindcss.js      # TailwindCSS框架
 │   └── img/            # 图片资源
+│       ├── favicon.ico         # 网站图标
+│       └── logo.svg            # 网站Logo
 └── data/               # 文档存储目录
     ├── README.md       # 根目录文档
     ├── 分类1/

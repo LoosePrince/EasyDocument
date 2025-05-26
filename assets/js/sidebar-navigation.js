@@ -167,7 +167,7 @@ function generateSidebar(node) {
         setTimeout(() => {
             highlightCurrentDocument();
         }, 100); // 稍微延迟确保DOM完全渲染
-    }, config.animation?.loading?.min_duration || 300); // 根据配置设置加载动画显示时间
+    }, config.animation?.general?.min_duration || 300); // 根据配置设置加载动画显示时间
 }
 
 // 处理默认文件夹展开模式
@@ -1094,7 +1094,7 @@ function generateToc(contentElement) {
         
         // 移除这行，因为动画已经在 fadeOutLoadingAndShowContent 中处理了
         // addStaggerAnimation(tocNav, '.toc-item');
-    }, config.animation?.loading?.min_duration || 300); // 根据配置设置加载动画显示时间
+    }, config.animation?.general?.min_duration || 300); // 根据配置设置加载动画显示时间
 }
 
 // 展开指定标题的子标题
@@ -1488,25 +1488,64 @@ function scrollTocToActiveItem(activeItem) {
 // 加载动画辅助函数
 function showSidebarLoading() {
     const nav = document.getElementById('sidebar-nav');
-    nav.innerHTML = `
-        <div class="loading-container">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">正在加载目录...</div>
-        </div>
-        <div class="skeleton-loading px-3">
-            ${generateSkeletonItems(6)}
-        </div>
-    `;
+    
+    // 检查是否启用骨架屏动画
+    const enableSkeleton = config.animation?.sidebar?.enable_skeleton !== false;
+    
+    if (enableSkeleton) {
+        nav.innerHTML = `
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">正在加载目录...</div>
+            </div>
+            <div class="skeleton-loading px-3">
+                ${generateSkeletonItems(6)}
+            </div>
+        `;
+        
+        // 应用骨架屏动画持续时间
+        const skeletonDuration = config.animation?.sidebar?.skeleton_duration || 1500;
+        const skeletonContainer = nav.querySelector('.skeleton-loading');
+        if (skeletonContainer) {
+            skeletonContainer.style.setProperty('--skeleton-duration', `${skeletonDuration}ms`);
+        }
+    } else {
+        nav.innerHTML = `
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">正在加载目录...</div>
+            </div>
+        `;
+    }
 }
 
 function showTocLoading() {
     const tocNav = document.getElementById('toc-nav');
-    tocNav.innerHTML = `
-        <div class="toc-loading">
-            <div class="loading-text" style="margin-bottom: 1rem; font-size: 0.75rem;">正在生成目录...</div>
-            ${generateTocSkeletonItems(4)}
-        </div>
-    `;
+    
+    // 检查是否启用骨架屏动画
+    const enableSkeleton = config.animation?.toc?.enable_skeleton !== false;
+    
+    if (enableSkeleton) {
+        tocNav.innerHTML = `
+            <div class="toc-loading">
+                <div class="loading-text" style="margin-bottom: 1rem; font-size: 0.75rem;">正在生成目录...</div>
+                ${generateTocSkeletonItems(4)}
+            </div>
+        `;
+        
+        // 应用骨架屏动画持续时间
+        const skeletonDuration = config.animation?.toc?.skeleton_duration || 1500;
+        const skeletonContainer = tocNav.querySelector('.toc-loading');
+        if (skeletonContainer) {
+            skeletonContainer.style.setProperty('--skeleton-duration', `${skeletonDuration}ms`);
+        }
+    } else {
+        tocNav.innerHTML = `
+            <div class="toc-loading">
+                <div class="loading-text" style="margin-bottom: 1rem; font-size: 0.75rem;">正在生成目录...</div>
+            </div>
+        `;
+    }
 }
 
 // 平滑切换到实际内容
@@ -1524,7 +1563,17 @@ function fadeOutLoadingAndShowContent(container, contentGenerator, useStaggerAni
         const skeletonLoading = container.querySelector('.skeleton-loading, .toc-loading');
         
         if (loadingContainer) loadingContainer.classList.add('fade-out');
-        if (skeletonLoading) skeletonLoading.classList.add('fade-out');
+        
+        // 检查是否启用了骨架屏动画，如果启用了才添加淡出效果
+        if (skeletonLoading) {
+            const isSkeletonEnabled = (container.id === 'sidebar-nav' && config.animation?.sidebar?.enable_skeleton !== false) ||
+                                     (container.id === 'toc-nav' && config.animation?.toc?.enable_skeleton !== false) ||
+                                     (!container.id); // 其他容器默认启用
+            
+            if (isSkeletonEnabled) {
+                skeletonLoading.classList.add('fade-out');
+            }
+        }
         
         // 等待淡出动画完成
         setTimeout(() => {
