@@ -102,11 +102,11 @@ Markdown 支持两种类型的链接：
 插入图片的语法与链接类似，只是前面多了一个感叹号：
 
 ```markdown
-![图片替代文本](assets/img/logo.svg)
+![图片替代文本](/assets/img/logo.svg)
 ```
 
 效果如下：
-![图片替代文本](assets/img/logo.svg)
+![图片替代文本](/assets/img/logo.svg)
 
 ## 引用
 

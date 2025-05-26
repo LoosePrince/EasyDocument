@@ -466,7 +466,12 @@ class ContextMenuManager {
     }
 }
 
-// 当DOM加载完成后初始化右键菜单管理器
-document.addEventListener('DOMContentLoaded', () => {
+/**
+ * 初始化右键菜单模块
+ */
+export function initContextMenu() {
     window.contextMenuManager = new ContextMenuManager();
-}); 
+}
+
+// 导出类供外部使用
+export { ContextMenuManager }; 

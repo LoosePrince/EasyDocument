@@ -561,7 +561,7 @@ button.active, .button.active {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.9);
     z-index: 9999;
     display: flex;
     justify-content: center;
@@ -576,23 +576,94 @@ button.active, .button.active {
     pointer-events: auto;
 }
 
+.image-viewer-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
 .custom-image-modal img {
-    max-width: 90vw;
-    max-height: 90vh;
+    max-width: none;
+    max-height: none;
     object-fit: contain;
     transform: scale(0.9);
     transition: transform 0.3s ease;
-    cursor: zoom-out;
+    cursor: grab;
+    user-select: none;
+    pointer-events: auto;
+}
+
+.custom-image-modal img.dragging {
+    cursor: grabbing;
+    transition: none; /* 拖动时禁用动画，确保流畅的拖动体验 */
 }
 
 .custom-image-modal.active img {
     transform: scale(1);
 }
 
+/* 图片工具栏 */
+.image-toolbar {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px 15px;
+    border-radius: 25px;
+    backdrop-filter: blur(5px);
+    z-index: 10001;
+}
+
+.image-toolbar button {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 16px;
+}
+
+.image-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.image-toolbar button:active {
+    transform: scale(0.95);
+}
+
+/* 缩放信息显示 */
+.zoom-info {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 15px;
+    font-size: 14px;
+    backdrop-filter: blur(5px);
+    z-index: 10001;
+}
+
 .custom-image-modal .close-btn {
     position: absolute;
-    top: 15px;
-    right: 15px;
+    top: 20px;
+    right: 20px;
     color: white;
     font-size: 28px;
     cursor: pointer;
@@ -603,11 +674,39 @@ button.active, .button.active {
     align-items: center;
     background-color: rgba(0, 0, 0, 0.5);
     border-radius: 50%;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
+    z-index: 10001;
 }
 
 .custom-image-modal .close-btn:hover {
     background-color: rgba(255, 0, 0, 0.7);
+    transform: scale(1.1);
+}
+
+
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .image-toolbar {
+        bottom: 20px;
+        top: auto;
+        left: 20px;
+        right: 20px;
+        transform: none;
+        justify-content: space-around;
+        max-width: calc(100% - 40px);
+    }
+    
+    .zoom-info {
+        bottom: 80px;
+    }
+    
+    .custom-image-modal .close-btn {
+        top: 10px;
+        right: 10px;
+        width: 35px;
+        height: 35px;
+    }
 }
 
 /* HTML嵌入iframe相关样式 */
