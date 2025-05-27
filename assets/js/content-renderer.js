@@ -527,7 +527,16 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
                 headerIds: true,
                 mangle: false,
                 highlight(code, lang) {
-                    return hljs.highlight(lang || 'plaintext', code).value;
+                    // 检查Highlight.js是否已加载
+                    if (config.extensions.highlight && typeof window.hljs !== 'undefined') {
+                        try {
+                            return window.hljs.highlight(code, { language: lang || 'plaintext' }).value;
+                        } catch (e) {
+                            console.warn('语法高亮处理失败:', e);
+                            return code;
+                        }
+                    }
+                    return code;
                 }
             });
             
@@ -550,8 +559,12 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
             const preElement = block.parentElement;
             
             // 应用 highlight.js
-            if (config.extensions.highlight) {
-                hljs.highlightElement(block);
+            if (config.extensions.highlight && typeof window.hljs !== 'undefined') {
+                try {
+                    window.hljs.highlightElement(block);
+                } catch (e) {
+                    console.warn('语法高亮元素处理失败:', e);
+                }
             }
             
             // 创建代码块包装器
@@ -633,8 +646,8 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
         
         // Mermaid图表处理完成后，才处理其他元素
         const mermaidDivs = markdownBody.querySelectorAll('.mermaid');
-        if (mermaidDivs.length > 0 && typeof mermaid !== 'undefined' && config.extensions.mermaid) {
-            mermaid.init(undefined, mermaidDivs);
+        if (mermaidDivs.length > 0 && typeof window.mermaid !== 'undefined' && config.extensions.mermaid) {
+            window.mermaid.init(undefined, mermaidDivs);
         }
         
         // 处理图片链接
