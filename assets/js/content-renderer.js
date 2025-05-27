@@ -884,6 +884,9 @@ function fixExternalImageLinks(container) {
 }
 // 7. fixInternalLinks
 // 修复内部链接，维持root参数
+// 导入路径工具
+import { getDocumentPagePath } from './path-utils.js';
+
 function fixInternalLinks(container) {
     const links = container.querySelectorAll('a');
     links.forEach(link => {
@@ -891,7 +894,8 @@ function fixInternalLinks(container) {
         if (!href) return;
         
         // 跳过已经处理过的链接（以main.html开头的）
-        if (href.startsWith('/main/#')) {
+        const docPagePath = getDocumentPagePath();
+        if (href.startsWith(`${docPagePath}#`)) {
             return;
         }
         
@@ -944,20 +948,20 @@ function fixInternalLinks(container) {
                 if (path && path.startsWith(currentRoot + '/')) {
                     // 如果路径已经包含root前缀，移除它作为相对路径处理
                     const relativePath = path.substring(currentRoot.length + 1);
-                newHref = `/main/#${currentRoot}`;
+                newHref = `${docPagePath}#${currentRoot}`;
                 if (relativePath) {
                     newHref += `/${relativePath}`;
                     }
                 } else {
                     // 否则视为绝对路径，不使用当前root
-                    newHref = `/main/#/${path}`;
+                    newHref = `${docPagePath}#/${path}`;
                 }
                 if (anchor) {
                     newHref += `#${anchor}`;
                 }
             } else {
                 // 无root的情况
-                newHref = `/main/#/${path}`;
+                newHref = `${docPagePath}#/${path}`;
                 if (anchor) {
                     newHref += `#${anchor}`;
                 }
@@ -1002,17 +1006,17 @@ function fixInternalLinks(container) {
                 if (path && path.startsWith(currentRoot + '/')) {
                     // 如果路径已经包含root前缀，移除它作为相对路径处理
                     const relativePath = path.substring(currentRoot.length + 1);
-                newHref = `/main/#${currentRoot}`;
+                newHref = `${docPagePath}#${currentRoot}`;
                 if (relativePath) {
                     newHref += `/${relativePath}`;
                     }
                 } else {
                     // 否则视为绝对路径，不使用当前root
-                    newHref = `/main/#/${path}`;
+                    newHref = `${docPagePath}#/${path}`;
                 }
             } else {
                 // 无root的情况
-                newHref = `/main/#/${path}`;
+                newHref = `${docPagePath}#/${path}`;
             }
             
             link.setAttribute('href', newHref);

@@ -3,6 +3,7 @@
  * 提供整个应用程序中使用的通用工具函数
  */
 import config from '/config.js';
+import { generateNewUrl as pathGenerateNewUrl } from './path-utils.js';
 
 // 全局变量
 let pathData = null;
@@ -181,50 +182,7 @@ function parseUrlPath() {
  * @returns {string} 新格式URL
  */
 function generateNewUrl(path, root = null, anchor = '') {
-    const baseUrl = '/main/';
-    
-    // 移除扩展名的函数
-    const removeExtension = (filePath) => {
-        if (!filePath) return filePath;
-        return filePath.replace(/\.(md|html)$/i, '');
-    };
-    
-    // 构建新的hash格式
-    let hash = '';
-    
-    if (root) {
-        // 当有root时，需要检查path是否已经包含了root前缀
-        let relativePath = path;
-        if (path && path.startsWith(root + '/')) {
-            // 如果path已经包含root前缀，则移除它
-            relativePath = path.substring(root.length + 1);
-        }
-        
-        // 移除扩展名
-        relativePath = removeExtension(relativePath);
-        
-        // 有root的情况: #root/path#anchor
-        hash = root;
-        if (relativePath) {
-            hash += '/' + relativePath;
-        }
-        if (anchor) {
-            hash += '#' + anchor;
-        }
-    } else {
-        // 无root的情况: #/path#anchor (兼容原格式)
-        if (path) {
-            const cleanPath = removeExtension(path);
-            hash = '/' + cleanPath;
-            if (anchor) {
-                hash += '#' + anchor;
-            }
-        } else if (anchor) {
-            hash = '#' + anchor;
-        }
-    }
-    
-    return hash ? `${baseUrl}#${hash}` : baseUrl;
+    return pathGenerateNewUrl(path, root, anchor);
 }
 
 // 查找目录对应的索引页路径

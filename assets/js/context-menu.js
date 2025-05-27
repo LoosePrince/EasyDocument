@@ -2,6 +2,7 @@
  * 右键菜单处理器
  * 为左右侧边栏和文章中的链接添加右键菜单功能
  */
+import { getDocumentPagePath } from './path-utils.js';
 
 class ContextMenuManager {
     constructor() {
@@ -191,7 +192,8 @@ class ContextMenuManager {
         }
         
         // 检查是否是文档链接（内部链接或相对路径）
-        const isInternalLink = href.includes('/main/') || 
+        const docPagePath = getDocumentPagePath();
+        const isInternalLink = href.includes(docPagePath) || 
                               href.startsWith('#') || 
                               href.includes('.md');
         
@@ -341,7 +343,8 @@ class ContextMenuManager {
         }
         
         // 构建完整URL
-        const baseUrl = window.location.origin + window.location.pathname.replace('/main/', '');
+        const docPagePath = getDocumentPagePath();
+        const baseUrl = window.location.origin + window.location.pathname.replace(docPagePath, '');
         if (href.startsWith('#')) {
             return window.location.origin + window.location.pathname + href;
         }
