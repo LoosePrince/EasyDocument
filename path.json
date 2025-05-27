@@ -346,10 +346,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1748314262,
+                            "timestamp": 1748315599,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新文档",
+                            "message": "实现动态加载扩展资源功能，优化文档加载性能；添加对KaTeX、Highlight.js和Mermaid的加载检查，确保库存在时才进行处理；更新文档以反映新功能和动态加载机制的细节。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -357,10 +357,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 4,
+                                "commits": 5,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1748314262
+                                "last_commit_timestamp": 1748315599
                             }
                         ]
                     }
