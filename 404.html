@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>页面未找到 - EasyDocument</title>
+    <meta name="description" content="页面未找到，即将为您重定向到主页">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="assets/img/favicon.ico">
+    
+    <!-- TailwindCSS CDN -->
+    <script src="assets/js/tailwindcss.js" data-cfasync="false"></script>
+    
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- css -->
+    <link rel="stylesheet" href="assets/css/style.css">
+    
+    <!-- 配置文件 -->
+    <script type="module">
+        import config from '/config.js';
+        window.siteConfig = config;
+    </script>
+    
+    <!-- 自定义配置 -->
+    <script>
+        // Tailwind 配置
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: 'var(--color-primary, #3b82f6)',
+                    },
+                    fontFamily: {
+                        sans: ['system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <!-- 装饰性几何图形 -->
+    <div class="blob-shape w-96 h-96 top-0 right-0"></div>
+    <div class="blob-shape w-64 h-64 bottom-0 left-0" style="background-color: rgba(var(--color-primary-rgb, 249, 115, 22), 0.05);"></div>
+    
+    <!-- 404页面内容 -->
+    <div class="max-w-2xl mx-auto px-4 text-center relative" x-data="countdown()">
+        <!-- 404图标 -->
+        <div class="mb-8">
+            <div class="w-32 h-32 mx-auto bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mb-6">
+                <i class="fas fa-exclamation-triangle text-red-500 text-6xl"></i>
+            </div>
+        </div>
+        
+        <!-- 错误标题 -->
+        <h1 class="text-6xl font-bold text-gray-800 dark:text-white mb-4">404</h1>
+        <h2 class="text-3xl font-bold text-gray-700 dark:text-gray-200 mb-6">页面未找到</h2>
+        
+        <!-- 错误描述 -->
+        <div class="geometric-shape bg-white dark:bg-gray-800 p-8 mb-8">
+            <p class="text-lg text-gray-600 dark:text-gray-300 mb-4">
+                抱歉，您访问的页面不存在或已被移动。
+            </p>
+            
+            <!-- 显示用户想访问的页面 -->
+            <div x-show="targetPage" class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p class="text-blue-800 dark:text-blue-200 text-sm mb-2">
+                    您可能想去的页面：
+                </p>
+                <p class="text-blue-900 dark:text-blue-100 font-medium" x-text="targetPage"></p>
+            </div>
+            
+            <p class="text-gray-500 dark:text-gray-400">
+                <span x-text="seconds"></span> 秒后将自动重定向...
+            </p>
+        </div>
+        
+        <!-- 倒计时进度条 -->
+        <div class="mb-8">
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div class="bg-primary h-2 rounded-full transition-all duration-1000 ease-linear" 
+                     :style="`width: ${(8 - seconds) / 8 * 100}%`"></div>
+            </div>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
+            <a href="/main/" 
+               class="inline-block bg-primary hover:bg-primary text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105">
+                立即返回主页
+                <i class="fas fa-home ml-2"></i>
+            </a>
+            <a href="javascript:history.back()" 
+               class="inline-block bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105">
+                返回上一页
+                <i class="fas fa-arrow-left ml-2"></i>
+            </a>
+        </div>
+        
+        <!-- Logo和品牌 -->
+        <div class="mt-12 text-center">
+            <div class="flex justify-center mb-4">
+                <img class="site-logo h-12" id="site-logo" src="assets/img/logo.svg" alt="Logo">
+            </div>
+            <p class="text-gray-500 dark:text-gray-400 text-sm" id="site-info">
+                <span class="text-primary font-semibold"></span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 简化的夜间模式初始化
+        function initSimpleDarkMode() {
+            // 获取用户偏好或系统设置
+            const savedTheme = localStorage.getItem('theme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            let initialTheme;
+            if (savedTheme) {
+                initialTheme = savedTheme;
+            } else {
+                initialTheme = systemPrefersDark ? 'dark' : 'light';
+            }
+            
+            // 应用主题
+            if (initialTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+        
+        // 从配置文件更新网站信息
+        function updateSiteInfo() {
+            if (window.siteConfig) {
+                const config = window.siteConfig;
+                
+                // 更新Logo
+                const logoImg = document.getElementById('site-logo');
+                if (logoImg && config.appearance.logo) {
+                    logoImg.src = config.appearance.logo;
+                    logoImg.alt = config.site.name + ' Logo';
+                }
+                
+                // 更新品牌信息
+                const siteInfo = document.getElementById('site-info');
+                if (siteInfo && config.site.name && config.site.title) {
+                    siteInfo.innerHTML = `<span class="text-primary font-semibold">${config.site.name}</span> ${config.site.title}`;
+                }
+                
+                // 更新页面标题
+                if (config.site.name) {
+                    document.title = `页面未找到 - ${config.site.name}`;
+                }
+                
+                // 更新主题色
+                if (config.appearance.theme_color) {
+                    document.documentElement.style.setProperty('--color-primary', config.appearance.theme_color);
+                    
+                    // 提取RGB值
+                    const hexToRgb = (hex) => {
+                        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                        return result ? {
+                            r: parseInt(result[1], 16),
+                            g: parseInt(result[2], 16),
+                            b: parseInt(result[3], 16)
+                        } : null;
+                    };
+                    
+                    const rgbValues = hexToRgb(config.appearance.theme_color);
+                    if (rgbValues) {
+                        document.documentElement.style.setProperty('--color-primary-rgb', `${rgbValues.r}, ${rgbValues.g}, ${rgbValues.b}`);
+                    }
+                }
+            }
+        }
+        
+        function countdown() {
+            return {
+                seconds: 8,
+                targetPage: '',
+                
+                init() {
+                    // 初始化夜间模式
+                    initSimpleDarkMode();
+                    
+                    // 更新网站信息
+                    updateSiteInfo();
+                    
+                    // 解析当前URL，提取目标页面信息
+                    this.parseTargetPage();
+                    
+                    // 开始倒计时
+                    const timer = setInterval(() => {
+                        this.seconds--;
+                        
+                        if (this.seconds <= 0) {
+                            clearInterval(timer);
+                            this.redirect();
+                        }
+                    }, 1000);
+                },
+                
+                parseTargetPage() {
+                    try {
+                        const currentPath = window.location.pathname;
+                        const searchParams = window.location.search;
+                        const hash = window.location.hash;
+                        
+                        // 检查是否是从404.html访问的（带参数）
+                        if (currentPath.endsWith('/404.html') || currentPath.endsWith('404.html')) {
+                            // 如果404.html带有参数，说明用户想访问main/页面的对应内容
+                            if (searchParams || hash) {
+                                let targetPath = 'main/' + searchParams + hash;
+                                
+                                // 解码URL编码
+                                try {
+                                    targetPath = decodeURIComponent(targetPath);
+                                } catch (e) {
+                                    // 如果解码失败，使用原始路径
+                                }
+                                
+                                // 美化显示路径
+                                let displayPath = targetPath;
+                                
+                                // 替换URL编码的字符
+                                displayPath = displayPath.replace(/%20/g, ' ');
+                                displayPath = displayPath.replace(/%23/g, '#');
+                                
+                                // 限制显示长度
+                                if (displayPath.length > 60) {
+                                    displayPath = displayPath.substring(0, 57) + '...';
+                                }
+                                
+                                this.targetPage = `"${displayPath}"`;
+                            }
+                        } else {
+                            // 如果不是404.html，显示用户原本想访问的页面
+                            let fullPath = currentPath + searchParams + hash;
+                            
+                            // 移除开头的斜杠
+                            if (fullPath.startsWith('/')) {
+                                fullPath = fullPath.substring(1);
+                            }
+                            
+                            // 如果路径不为空
+                            if (fullPath) {
+                                // 解码URL编码
+                                try {
+                                    fullPath = decodeURIComponent(fullPath);
+                                } catch (e) {
+                                    // 如果解码失败，使用原始路径
+                                }
+                                
+                                // 美化显示路径
+                                let displayPath = fullPath;
+                                
+                                // 移除常见的文件扩展名
+                                displayPath = displayPath.replace(/\.(html|md)(\?|#|$)/, '$1');
+                                
+                                // 替换URL编码的字符
+                                displayPath = displayPath.replace(/%20/g, ' ');
+                                displayPath = displayPath.replace(/%23/g, '#');
+                                
+                                // 限制显示长度
+                                if (displayPath.length > 60) {
+                                    displayPath = displayPath.substring(0, 57) + '...';
+                                }
+                                
+                                this.targetPage = `"${displayPath}"`;
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('解析目标页面失败:', error);
+                        this.targetPage = '';
+                    }
+                },
+                
+                redirect() {
+                    // 获取当前URL的搜索参数和hash
+                    const searchParams = window.location.search;
+                    const hash = window.location.hash;
+                    
+                    // 重定向到主页，携带原有参数
+                    window.location.href = '/main/' + searchParams + hash;
+                }
+            }
+        }
+        
+        // 页面加载完成后立即初始化夜间模式（不等Alpine.js）
+        document.addEventListener('DOMContentLoaded', () => {
+            initSimpleDarkMode();
+            // 等待配置加载完成后更新网站信息
+            setTimeout(updateSiteInfo, 100);
+        });
+    </script>
+</body>
+</html> 
