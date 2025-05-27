@@ -346,10 +346,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1747222507,
+                            "timestamp": 1748314262,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "新增外部链接样式和提示卡片样式，优化文档链接处理逻辑，更新README文档中的链接格式，确保使用标准Markdown语法。",
+                            "message": "更新文档",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -357,10 +357,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 3,
+                                "commits": 4,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1747222507
+                                "last_commit_timestamp": 1748314262
                             }
                         ]
                     }
