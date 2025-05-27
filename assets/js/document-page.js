@@ -534,8 +534,36 @@ async function loadContentFromUrl() {
     if (root !== currentRoot) {
         currentRoot = root;
         
+        // 更新工具模块中的currentRoot
+        initUtils(pathData, currentRoot);
+        
+        // 重新初始化侧边栏导航模块
+        initSidebarNavigation(pathData, currentRoot, {
+            parseUrlPath,
+            generateNewUrl,
+            loadContentFromUrl,
+            loadDocument,
+            resolvePathFromData,
+            isIndexFile,
+            debounce,
+            getAllDocumentLinks,
+            generatePrevNextNavigation,
+            updatePageTitle,
+            generateBreadcrumb,
+            updateGitInfo,
+            setupHeadingIntersectionObserver,
+            updateReadingProgress,
+            createEnhancedImageModal,
+            showEnhancedImageModal,
+            isDarkMode,
+            filePathToUrl
+        });
+        
         // 重新生成侧边栏
         generateSidebar(pathData);
+        
+        // 重新初始化sundry模块（面包屑等）
+        initSundryModule(pathData, currentRoot, updateActiveHeading);
     }
     
     // 处理默认页面或目录索引页
