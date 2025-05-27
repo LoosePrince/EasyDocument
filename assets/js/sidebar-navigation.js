@@ -202,9 +202,8 @@ function handleFolderExpandMode(isSubRoot) {
     
     // 检查是否启用了自动折叠功能且当前不是首次加载（有当前文档）
     if (config.navigation.auto_collapse && !isSubRoot) {
-        // 获取当前URL的path参数
-        const url = new URL(window.location.href);
-        const currentPath = url.searchParams.get('path');
+        // 使用新的URL解析函数获取当前路径
+        const { path: currentPath, root } = parseUrlPath();
         
         // 如果存在当前路径，且不是根目录文档，则不应用默认展开模式
         if (currentPath) {
@@ -746,9 +745,8 @@ function collapseAllFolders() {
         return;
     }
     
-    // 获取当前URL的path参数以识别当前文档
-    const url = new URL(window.location.href);
-    const currentPath = url.searchParams.get('path');
+    // 使用新的URL解析函数获取当前路径
+    const { path: currentPath, root } = parseUrlPath();
     
     // 如果没有当前文档路径，则折叠所有文件夹
     if (!currentPath) {
