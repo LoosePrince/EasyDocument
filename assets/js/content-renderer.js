@@ -8,10 +8,22 @@ import config from '/config.js';
 import { initializeMermaid, processMermaidDiagrams } from './mermaid-handler.js';
 import { processKaTeXFormulas } from './katex-handler.js';
 import documentCache from './document-cache.js';
+import { hasSupportedExtension } from './utils.js';
 
 // 全局变量
 let pathData = null;
 let currentRoot = null;
+
+// 辅助函数：检查是否为支持的文档链接
+function isSupportedDocumentLink(href) {
+    if (!href) return false;
+    
+    // 移除锚点部分进行检查
+    const pathWithoutAnchor = href.split('#')[0];
+    
+    // 检查是否有支持的扩展名
+    return hasSupportedExtension(pathWithoutAnchor);
+}
 
 // 从主文件导入的函数引用
 let generateToc = null;
@@ -278,7 +290,7 @@ async function renderDocument(relativePath, content, contentDiv, tocNav) {
     markdownBody.className = 'markdown-body';
     
     try {
-        // 检查文件扩展名
+        // 检查文件扩展名  
         const isHtmlFile = relativePath.toLowerCase().endsWith('.html');
         
         if (isHtmlFile) {
@@ -925,12 +937,12 @@ function fixInternalLinks(container) {
         }
         
         // 跳过纯锚点链接（页面内跳转）
-        if (href === '#' || (href.startsWith('#') && !href.includes('.md') && !href.includes('.html'))) {
+        if (href === '#' || (href.startsWith('#') && !isSupportedDocumentLink(href))) {
             return;
         }
         
-        // 处理相对路径的.md和.html文件链接
-        if (href.includes('.md') || href.includes('.html')) {
+        // 处理相对路径的支持文档文件链接
+        if (isSupportedDocumentLink(href)) {
             // 提取路径和锚点，并解码
             let path = decodeURIComponent(href);
             let anchor = '';

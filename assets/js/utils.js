@@ -240,6 +240,13 @@ function isIndexFile(filename) {
         filename.toLowerCase() === indexName.toLowerCase());
 }
 
+// 检查文件是否有支持的扩展名
+function hasSupportedExtension(filename) {
+    if (!filename) return false;
+    return config.document.supported_extensions.some(ext => 
+        filename.toLowerCase().endsWith(ext.toLowerCase()));
+}
+
 // 从路径获取标题（基于侧边栏数据）
 function getTitleFromPath(path) {
     const link = document.querySelector(`#sidebar-nav a[data-path="${path}"]`);
@@ -675,8 +682,6 @@ function formatTimestamp(timestamp, options = {}) {
     });
 }
 
-
-
 // 导出所有工具函数
 export {
     // URL 和路径相关
@@ -688,6 +693,7 @@ export {
     
     // 文件和文档相关
     isIndexFile,
+    hasSupportedExtension,
     getTitleFromPath,
     findIndexPath,
     getAllDocumentLinks,

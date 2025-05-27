@@ -407,9 +407,10 @@ function createNavList(items, level) {
             // 通过索引页路径推断文件夹路径
             if (item.index && item.index.path) {
                 const pathParts = item.index.path.split('/');
-                // 如果最后一个部分是README.md，则移除它得到文件夹路径
+                // 如果最后一个部分是索引文件，则移除它得到文件夹路径
                 if (pathParts.length > 0) {
-                    if (pathParts[pathParts.length - 1].toLowerCase() === 'readme.md') {
+                    const lastPart = pathParts[pathParts.length - 1];
+                    if (isIndexFile(lastPart)) {
                         pathParts.pop();
                     }
                     span.dataset.folderPath = pathParts.join('/');
@@ -854,8 +855,8 @@ function highlightCurrentDocument() {
     }
     
     // 高亮侧边栏并处理文件夹展开
-    const isReadmeFile = searchPath.toLowerCase().endsWith('readme.md');
-    if (isReadmeFile && searchPath.includes('/')) {
+    const isIndexFileCheck = isIndexFile(searchPath.split('/').pop() || '');
+    if (isIndexFileCheck && searchPath.includes('/')) {
         const folderPath = searchPath.substring(0, searchPath.lastIndexOf('/'));
         const folderDiv = document.querySelector(`#sidebar-nav div.folder-title[data-folder-path="${folderPath}"]`);
         if (folderDiv) {

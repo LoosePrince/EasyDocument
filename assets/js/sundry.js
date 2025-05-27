@@ -38,8 +38,8 @@ function generateNewUrl(path, root = null, anchor = '') {
  * 检查是否为索引文件
  */
 function isIndexFile(filename) {
-    const indexFiles = ['README.md', 'readme.md', 'INDEX.md', 'index.md', 'index.html'];
-    return indexFiles.includes(filename);
+    return config.document.index_pages.some(indexName => 
+        filename.toLowerCase() === indexName.toLowerCase());
 }
 
 /**
