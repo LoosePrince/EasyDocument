@@ -89,6 +89,7 @@ import {
     parseUrlPath,
     generateNewUrl,
     isIndexFile,
+    hasSupportedExtension,
     getTitleFromPath,
     findIndexPath,
     getAllDocumentLinks,
@@ -647,8 +648,8 @@ async function loadContentFromUrl() {
         }
         
     } else {
-        // 支持省略/README.md，检查路径是否为目录
-        const hasExtension = /\.(md|html)$/i.test(path);
+        // 支持省略文件扩展名，检查路径是否为目录
+        const hasExtension = hasSupportedExtension(path);
         if (!hasExtension) {
             // 尝试在目录后面添加索引文件
             const indexPath = findDirectoryIndexPath(path);
@@ -820,8 +821,8 @@ window.loadContentFromUrl = loadContentFromUrl;
 
 // 加载并渲染文档
 async function loadDocument(relativePath) {
-    // 如果路径没有扩展名，尝试从path.json中解析实际路径
-    if (relativePath && !relativePath.match(/\.(md|html)$/i)) {
+    // 如果路径没有支持的扩展名，尝试从path.json中解析实际路径
+    if (relativePath && !hasSupportedExtension(relativePath)) {
         const { actualPath } = resolvePathFromData(relativePath);
         if (actualPath && actualPath !== relativePath) {
             relativePath = actualPath;
