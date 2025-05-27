@@ -93,7 +93,7 @@
         
         <!-- 操作按钮 -->
         <div class="space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
-            <a href="/main/" 
+            <a href="#" id="main-page-link"
                class="inline-block bg-primary hover:bg-primary text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105">
                 立即返回主页
                 <i class="fas fa-home ml-2"></i>
@@ -159,6 +159,14 @@
                 // 更新页面标题
                 if (config.site.name) {
                     document.title = `页面未找到 - ${config.site.name}`;
+                }
+                
+                // 更新主页链接
+                const mainPageLink = document.getElementById('main-page-link');
+                if (mainPageLink) {
+                    const baseUrl = config.site.base_url.replace(/\/$/, '');
+                    const mainPath = baseUrl ? `${baseUrl}/main/` : '/main/';
+                    mainPageLink.href = mainPath;
                 }
                 
                 // 更新主题色
@@ -289,8 +297,15 @@
                     const searchParams = window.location.search;
                     const hash = window.location.hash;
                     
-                    // 重定向到主页，携带原有参数
-                    window.location.href = '/main/' + searchParams + hash;
+                    // 动态获取base_url配置并重定向到主页
+                    if (window.siteConfig) {
+                        const baseUrl = window.siteConfig.site.base_url.replace(/\/$/, '');
+                        const mainPath = baseUrl ? `${baseUrl}/main/` : '/main/';
+                        window.location.href = mainPath + searchParams + hash;
+                    } else {
+                        // 兜底方案
+                        window.location.href = '/main/' + searchParams + hash;
+                    }
                 }
             }
         }

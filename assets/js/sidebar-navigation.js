@@ -3,6 +3,7 @@
  * 负责生成和管理侧边栏导航、目录(TOC)以及相关的交互功能
  */
 import config from '/config.js';
+import { getDocumentPagePath } from './path-utils.js';
 
 // 存储模块数据
 let pathData = null;
@@ -197,7 +198,7 @@ function generateSidebar(node) {
                     navigateToFolderIndex(rootFolder);
                 } else {
                     // 如果没有索引页，直接跳转到首页
-                    window.location.href = '/main/';
+                    window.location.href = getDocumentPagePath();
                 }
             });
             
@@ -716,10 +717,104 @@ function expandParentFolders(element) {
     }
 }
 
+// 更新"返回完整目录"链接
+function updateBackToFullDirectoryLink() {
+    if (!currentRoot) return; // 如果不在子目录模式，不需要更新
+    
+    // 查找包含"返回完整目录"文本的链接
+    const backLink = document.querySelector('#sidebar-nav a[href*="#/"]');
+    if (!backLink || !backLink.textContent.includes('返回完整目录')) return;
+    
+    // 获取当前解析的路径信息
+    const currentParsed = parseUrlPath();
+    
+    // 构造完整路径：如果当前在root模式下，需要加上root前缀
+    let fullPath = currentParsed.path;
+    if (currentParsed.root && currentParsed.path && !currentParsed.path.startsWith(currentParsed.root + '/')) {
+        fullPath = currentParsed.root + '/' + currentParsed.path;
+    }
+    
+    // 生成新的返回链接URL
+    const backUrl = generateNewUrl(fullPath, null, currentParsed.anchor);
+    backLink.href = backUrl;
+    
+    // 更新点击事件处理器中使用的路径
+    const newClickHandler = function(e) {
+        e.preventDefault();
+        
+        // 先保存要跳转的完整路径
+        const targetFullPath = fullPath;
+        const targetAnchor = currentParsed.anchor;
+        
+        // 更新URL去掉root参数，但保持完整路径
+        window.history.pushState({path: targetFullPath}, '', backUrl);
+        
+        // 重置currentRoot为null（切换到完整目录模式）
+        currentRoot = null;
+        
+        // 同步更新其他模块的currentRoot
+        const initUtilsFunction = getMainFunction('initUtils');
+        const initSundryFunction = getMainFunction('initSundryModule');
+        const updateActiveHeadingFunction = getMainFunction('updateActiveHeading');
+        
+        if (initUtilsFunction) initUtilsFunction(pathData, null);
+        if (initSundryFunction && updateActiveHeadingFunction) {
+            initSundryFunction(pathData, null, updateActiveHeadingFunction);
+        }
+        
+        // 重新生成侧边栏（不带root参数）
+        generateSidebar(pathData);
+        
+        // 延迟重新加载内容，确保侧边栏生成完成
+        setTimeout(() => {
+            // 直接加载目标文档而不是通过loadContentFromUrl
+            // 这样可以避免URL解析可能的时序问题
+            if (targetFullPath) {
+                // 根据path.json解析实际的文件路径
+                const { actualPath } = resolvePathFromData(targetFullPath);
+                const loadPath = actualPath || targetFullPath;
+                
+                // 直接加载文档
+                loadDocument(loadPath);
+                
+                // 更新页面标题和面包屑
+                const titleFunction = getMainFunction('updatePageTitle');
+                const breadcrumbFunction = getMainFunction('generateBreadcrumb');
+                const gitInfoFunction = getMainFunction('updateGitInfo');
+                
+                if (titleFunction) titleFunction(targetFullPath);
+                if (breadcrumbFunction) breadcrumbFunction(targetFullPath);
+                if (gitInfoFunction) gitInfoFunction(targetFullPath);
+                
+                // 处理锚点滚动
+                if (targetAnchor) {
+                    setTimeout(() => {
+                        const handleUrlHashFunction = getMainFunction('handleUrlHash');
+                        if (handleUrlHashFunction) {
+                            handleUrlHashFunction(`#${targetAnchor}`);
+                        }
+                    }, 500);
+                }
+            } else {
+                // 如果没有路径，加载默认页面
+                loadContentFromUrl();
+            }
+        }, 100);
+    };
+    
+    // 移除旧的事件监听器并添加新的
+    const clonedBackLink = backLink.cloneNode(true);
+    backLink.parentNode.replaceChild(clonedBackLink, backLink);
+    clonedBackLink.addEventListener('click', newClickHandler);
+}
+
 // 高亮当前文档在侧边栏中的链接
 function highlightCurrentDocument() {
     const { path: currentPath, root } = parseUrlPath();
     if (!currentPath) return;
+    
+    // 更新"返回完整目录"链接（如果在子目录模式下）
+    updateBackToFullDirectoryLink();
     
     // 清除所有现有的高亮状态
     document.querySelectorAll('#sidebar-nav a').forEach(link => link.classList.remove('active'));
@@ -1757,6 +1852,7 @@ export {
     setActiveLink,
     expandParentFolders,
     highlightCurrentDocument,
+    updateBackToFullDirectoryLink,
     collapseAllFolders,
     highlightParentFolders,
     scrollSidebarToActiveItem,

@@ -9,7 +9,7 @@ const config = {
     title: "简易静态文档系统", // 网站标题，显示在浏览器标签页
     description: "一个轻量级、免编译的纯静态前端文档系统", // 网站描述，用于SEO
     keywords: "文档,静态网站,Markdown,Alpine.js", // 网站关键词，用于SEO
-    base_url: "index.html" // 网站基础URL，如果部署在子目录则需要修改
+    base_url: "/" // 网站基础URL，如果部署在子目录则需要修改
   },
 
   // 外观设置
@@ -82,24 +82,24 @@ const config = {
       },
       {
         text: "文档",
-        url: "/main/",
+        url: "main/",
       },
       {
         text: "教程",
         url: [
           {
             text: "快速开始",
-            url: "/main/#快速入门/",
+            url: "main/#快速入门/",
             icon: "fas fa-rocket"
           },
           {
             text: "使用指南",
-            url: "/main/#使用指南/",
+            url: "main/#使用指南/",
             icon: "fas fa-book"
           },
           {
             text: "详细配置",
-            url: "/main/#配置详解/",
+            url: "main/#配置详解/",
             icon: "fas fa-cog"
           }
         ],

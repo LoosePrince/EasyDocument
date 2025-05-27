@@ -24,50 +24,14 @@ export function initSundryModule(data, root, updateActiveHeadingFn) {
     updateActiveHeading = updateActiveHeadingFn;
 }
 
+// 导入路径工具
+import { generateNewUrl as pathGenerateNewUrl } from './path-utils.js';
+
 /**
  * 生成新格式URL
  */
 function generateNewUrl(path, root = null, anchor = '') {
-    const baseUrl = '/main/';
-    
-    // 移除扩展名的函数
-    const removeExtension = (filePath) => {
-        if (!filePath) return filePath;
-        return filePath.replace(/\.(md|html)$/i, '');
-    };
-    
-    // 构建新的hash格式
-    let hash = '';
-    
-    if (root) {
-        // 当有root时，需要检查path是否已经包含了root前缀
-        let relativePath = path;
-        if (path && path.startsWith(root + '/')) {
-            // 如果path已经包含root前缀，则移除它
-            relativePath = path.substring(root.length + 1);
-        }
-        
-        // 移除扩展名
-        relativePath = removeExtension(relativePath);
-        
-        // 有root的情况: #root/path#anchor
-        hash = root;
-        if (relativePath) {
-            hash += '/' + relativePath;
-        }
-        if (anchor) {
-            hash += '#' + anchor;
-        }
-    } else {
-        // 无root的情况: #/path#anchor
-        const cleanPath = removeExtension(path);
-        hash = '/' + (cleanPath || '');
-        if (anchor) {
-            hash += '#' + anchor;
-        }
-    }
-    
-    return baseUrl + (hash ? '#' + hash : '');
+    return pathGenerateNewUrl(path, root, anchor);
 }
 
 /**

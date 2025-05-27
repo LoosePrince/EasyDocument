@@ -64,6 +64,7 @@ import {
     setActiveLink,
     expandParentFolders,
     highlightCurrentDocument,
+    updateBackToFullDirectoryLink,
     collapseAllFolders,
     highlightParentFolders,
     scrollSidebarToActiveItem,
@@ -247,12 +248,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // 添加浏览器原生hash变化处理，用于处理浏览器中使用后退按钮等操作导致的hash变化
     window.addEventListener('hashchange', function(e) {
-        // 获取新的哈希值
-        const newHash = window.location.hash;
-        if (newHash && newHash.length > 1) {
-            // 处理哈希变化
-            handleUrlHash(newHash);
-        }
+        // hash变化时，需要重新加载内容（可能涉及root参数变化）
+        loadContentFromUrl();
     });
 
     // 设置目录宽度调整功能
@@ -505,14 +502,62 @@ function setupMobileMenu() {
 
 // 从URL加载内容
 async function loadContentFromUrl() {
-    // 如果已经在加载中，则不重复加载
+    // 使用新的URL解析函数获取当前URL信息
+    const { path: initialPath, root, anchor } = parseUrlPath();
+    
+
+    
+    // 如果已经在加载中，检查是否是root参数变化的情况
     if (isLoadingDocument) {
+        // 如果root参数发生变化，需要强制重新生成侧边栏
+        if (root !== currentRoot) {
+            
+            // 更新currentRoot
+            currentRoot = root;
+            
+            // 更新工具模块中的currentRoot
+            initUtils(pathData, currentRoot);
+            
+            // 重新初始化侧边栏导航模块
+            initSidebarNavigation(pathData, currentRoot, {
+                parseUrlPath,
+                generateNewUrl,
+                loadContentFromUrl,
+                loadDocument,
+                resolvePathFromData,
+                isIndexFile,
+                debounce,
+                getAllDocumentLinks,
+                generatePrevNextNavigation,
+                updatePageTitle,
+                generateBreadcrumb,
+                updateGitInfo,
+                setupHeadingIntersectionObserver,
+                updateReadingProgress,
+                createEnhancedImageModal,
+                showEnhancedImageModal,
+                isDarkMode,
+                filePathToUrl,
+                initUtils,
+                initSundryModule,
+                updateActiveHeading,
+                handleUrlHash
+            });
+            
+            // 重新生成侧边栏
+            generateSidebar(pathData);
+            
+            // 重新初始化sundry模块（面包屑等）
+            initSundryModule(pathData, currentRoot, updateActiveHeading);
+            
+            // 高亮当前文档（增加更长的延迟确保侧边栏完全生成）
+            setTimeout(() => {
+                highlightCurrentDocument();
+            }, 500);
+        }
         // console.log('文档正在加载中，跳过重复加载请求');
         return;
     }
-    
-    // 使用新的URL解析函数
-    const { path: initialPath, root, anchor } = parseUrlPath();
     let path = initialPath; // 使用let，因为可能需要修改
     
     // 如果有root参数且path不为空，需要检查是否需要转换为完整路径
@@ -534,7 +579,7 @@ async function loadContentFromUrl() {
     const searchQuery = url.searchParams.get('search');
     const searchOccurrence = url.searchParams.get('occurrence');
     
-    // 如果root参数更改或从无到有，需要重新生成侧边栏
+    // 如果root参数更改或从无到有，需要重新生成侧边栏（正常情况下的处理）
     if (root !== currentRoot) {
         currentRoot = root;
         
@@ -927,8 +972,13 @@ async function loadDocument(relativePath) {
         }
     }, 300);
     
-    // 如果成功加载，触发自动预加载
+    // 如果成功加载，触发自动预加载和更新侧边栏链接
     if (successfullyLoaded) {
+        // 更新"返回完整目录"链接
+        setTimeout(() => {
+            updateBackToFullDirectoryLink();
+        }, 100);
+        
         setTimeout(() => {
             // **修改**: 调用新的自动预加载逻辑
             documentCache.autoPreloadDocuments(relativePath, pathData, 3);

@@ -48,6 +48,9 @@ export async function initApp() {
     // 初始化搜索功能
     initSearch();
     
+    // 更新首页链接
+    updateHomePageLinks(config);
+    
     // Alpine.js初始化问题修复
     fixAlpineInit();
 }
@@ -831,44 +834,33 @@ function formatSiteName(siteName) {
     }
 }
 
+// 导入路径工具
+import { generateNewUrl as pathGenerateNewUrl } from './path-utils.js';
+
 /**
  * 生成新格式的文档URL
  */
 function generateNewDocumentUrl(path, root = null, anchor = '') {
-    const baseUrl = '/main/';
-    
-    // 构建新的hash格式
-    let hash = '';
-    
-    if (root) {
-        // 当有root时，需要检查path是否已经包含了root前缀
-        let relativePath = path;
-        if (path && path.startsWith(root + '/')) {
-            // 如果path已经包含root前缀，则移除它
-            relativePath = path.substring(root.length + 1);
-        }
-        
-        // 有root的情况: #root/path#anchor
-        hash = root;
-        if (relativePath) {
-            hash += '/' + relativePath;
-        }
-        if (anchor) {
-            hash += '#' + anchor;
-        }
-    } else {
-        // 无root的情况: #/path#anchor (兼容原格式)
-        if (path) {
-            hash = '/' + path;
-            if (anchor) {
-                hash += '#' + anchor;
-            }
-        } else if (anchor) {
-            hash = '#' + anchor;
-        }
+    return pathGenerateNewUrl(path, root, anchor);
+}
+
+// 更新首页链接
+function updateHomePageLinks(config) {
+    // 更新查看文档链接
+    const viewDocsLink = document.getElementById('view-docs-link');
+    if (viewDocsLink) {
+        const baseUrl = config.site.base_url.replace(/\/$/, '');
+        const mainPath = baseUrl ? `${baseUrl}/main/` : '/main/';
+        viewDocsLink.href = mainPath;
     }
     
-    return hash ? `${baseUrl}#${hash}` : baseUrl;
+    // 更新立即开始链接
+    const getStartedLink = document.getElementById('get-started-link');
+    if (getStartedLink) {
+        const baseUrl = config.site.base_url.replace(/\/$/, '');
+        const mainPath = baseUrl ? `${baseUrl}/main/` : '/main/';
+        getStartedLink.href = mainPath;
+    }
 }
 
 // 监听DOM加载完成，初始化应用
