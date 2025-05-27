@@ -155,7 +155,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             createEnhancedImageModal,
             showEnhancedImageModal,
             isDarkMode,
-            filePathToUrl
+            filePathToUrl,
+            initUtils,
+            initSundryModule,
+            updateActiveHeading,
+            handleUrlHash
         });
         
         // 初始化content-renderer模块
@@ -556,7 +560,11 @@ async function loadContentFromUrl() {
             createEnhancedImageModal,
             showEnhancedImageModal,
             isDarkMode,
-            filePathToUrl
+            filePathToUrl,
+            initUtils,
+            initSundryModule,
+            updateActiveHeading,
+            handleUrlHash
         });
         
         // 重新生成侧边栏
