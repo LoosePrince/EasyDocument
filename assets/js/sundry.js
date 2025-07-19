@@ -4,7 +4,7 @@
  */
 
 // 导入依赖的工具函数
-import config from '/config.js';
+import config from './validated-config.js';
 import { formatTimestamp, filePathToUrl } from './utils.js';
 
 // 需要从主文件导入的函数

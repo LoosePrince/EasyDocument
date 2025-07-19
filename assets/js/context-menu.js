@@ -2,7 +2,7 @@
  * 右键菜单处理器
  * 为左右侧边栏和文章中的链接添加右键菜单功能
  */
-import config from '/config.js';
+import config from './validated-config.js';
 import { getDocumentPagePath } from './path-utils.js';
 import { hasSupportedExtension } from './utils.js';
 

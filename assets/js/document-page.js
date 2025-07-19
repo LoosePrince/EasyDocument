@@ -1,7 +1,7 @@
 /**
  * 文档页面交互逻辑
  */
-import config from '/config.js';
+import config from './validated-config.js';
 import { initializeMermaid, processMermaidDiagrams } from './mermaid-handler.js';
 import { processKaTeXFormulas } from './katex-handler.js';
 import documentCache from './document-cache.js';

@@ -2,7 +2,7 @@
  * 路径工具模块
  * 确保所有路径都正确使用 base_url 配置
  */
-import config from '/config.js';
+import config from './validated-config.js';
 
 /**
  * 获取完整的站点路径

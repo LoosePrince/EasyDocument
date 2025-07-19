@@ -2,7 +2,7 @@
  * 文档缓存管理模块
  * 负责处理文档的预加载和缓存功能
  */
-import config from '/config.js';
+import config from './validated-config.js';
 
 // 全局缓存对象
 const documentCache = {

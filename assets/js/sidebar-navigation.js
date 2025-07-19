@@ -2,7 +2,7 @@
  * 侧边栏导航模块
  * 负责生成和管理侧边栏导航、目录(TOC)以及相关的交互功能
  */
-import config from '/config.js';
+import config from './validated-config.js';
 import { getDocumentPagePath } from './path-utils.js';
 
 // 存储模块数据

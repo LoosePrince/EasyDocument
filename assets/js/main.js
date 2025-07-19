@@ -2,7 +2,7 @@
  * 主应用入口文件
  * 负责初始化应用和加载配置
  */
-import config from '/config.js';
+import config from './validated-config.js';
 import { initDarkMode, initThemeEvents } from './theme.js';
 import { generateNavLinks, generateMobileNavLinks, updateFooterElements } from './navigation.js';
 import documentCache from './document-cache.js';
@@ -12,6 +12,9 @@ import {
     parseUrlPath,
     generateNewUrl
 } from './utils.js';
+
+// 导出验证后的配置供其他模块使用
+export { config };
 
 // 搜索数据
 let searchData = null;

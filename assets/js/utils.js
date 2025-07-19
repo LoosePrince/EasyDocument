@@ -2,7 +2,7 @@
  * 工具函数模块
  * 提供整个应用程序中使用的通用工具函数
  */
-import config from '/config.js';
+import config from './validated-config.js';
 import { generateNewUrl as pathGenerateNewUrl } from './path-utils.js';
 
 // 全局变量

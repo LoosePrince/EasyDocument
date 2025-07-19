@@ -36,6 +36,8 @@ const config = {
 
   // 动画设置
   animation: {
+    enable: true, // 动画总开关，设置为false时将禁用所有动画效果，优先级高于各子模块设置
+
     // 左侧边栏（文档导航）
     sidebar: {
       enable: true, // 是否启用左侧导航交错动画
@@ -44,7 +46,7 @@ const config = {
       enable_skeleton: true, // 是否启用骨架屏加载动画
       skeleton_duration: 1500 // 骨架屏shimmer动画周期(毫秒)
     },
-    
+
     // 右侧边栏（文章目录）
     toc: {
       enable: true, // 是否启用右侧目录交错动画
@@ -53,14 +55,14 @@ const config = {
       enable_skeleton: true, // 是否启用骨架屏加载动画
       skeleton_duration: 1500 // 骨架屏shimmer动画周期(毫秒)
     },
-    
+
     // 文章内容
     article: {
       enable_skeleton: true, // 是否启用文章加载骨架屏动画
       enable_render: true, // 是否启用文章内容渲染动画（淡入）
       render_duration: 600 // 渲染动画持续时间(毫秒)
     },
-    
+
     // 通用设置
     general: {
       min_duration: 300 // 加载动画最小显示时长(毫秒) - 确保用户能看到加载过程
@@ -162,6 +164,16 @@ const config = {
       enable: true, // 是否启用Git相关功能
       show_last_modified: true, // 启用文档最后编辑时间显示
       show_contributors: true // 启用参与者名称显示
+    },
+
+    // 进度条显示控制
+    progress_bar: {
+      enable: true // 是否显示文档顶部的阅读进度条，设置为false时隐藏进度指示器
+    },
+
+    // 缓存菜单显示控制
+    cache_menu: {
+      enable: true // 是否显示右下角的缓存菜单按钮，设置为false时隐藏缓存管理入口但不影响缓存功能本身
     }
   },
 

@@ -3,7 +3,7 @@
  * 负责处理缓存管理界面和相关功能
  */
 import documentCache from './document-cache.js';
-import config from '/config.js';
+import config from './validated-config.js';
 
 /**
  * 初始化缓存管理模块
