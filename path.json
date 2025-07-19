@@ -346,10 +346,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1748315599,
+                            "timestamp": 1752911665,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "实现动态加载扩展资源功能，优化文档加载性能；添加对KaTeX、Highlight.js和Mermaid的加载检查，确保库存在时才进行处理；更新文档以反映新功能和动态加载机制的细节。",
+                            "message": "更新文档",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -357,10 +357,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 5,
+                                "commits": 6,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1748315599
+                                "last_commit_timestamp": 1752911665
                             }
                         ]
                     }
@@ -421,10 +421,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1748258640,
+                            "timestamp": 1752911665,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "优化动画配置，新增文章加载和渲染动画功能；更新文档以反映新的配置结构和选项；调整样式以支持骨架屏和淡入效果。",
+                            "message": "更新文档",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -432,10 +432,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 2,
+                                "commits": 3,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1748258640
+                                "last_commit_timestamp": 1752911665
                             }
                         ]
                     }
@@ -471,10 +471,10 @@
                 "path": "配置详解/README.md",
                 "git": {
                     "last_modified": {
-                        "timestamp": 1748258640,
+                        "timestamp": 1752911665,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
-                        "message": "优化动画配置，新增文章加载和渲染动画功能；更新文档以反映新的配置结构和选项；调整样式以支持骨架屏和淡入效果。",
+                        "message": "更新文档",
                         "github_username": "LoosePrince",
                         "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                     },
@@ -482,10 +482,10 @@
                         {
                             "name": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "commits": 12,
+                            "commits": 13,
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                            "last_commit_timestamp": 1748258640
+                            "last_commit_timestamp": 1752911665
                         }
                     ]
                 }
