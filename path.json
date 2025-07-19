@@ -439,6 +439,31 @@
                             }
                         ]
                     }
+                },
+                {
+                    "title": "配置验证和默认值处理",
+                    "path": "配置详解/配置验证.md",
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "timestamp": 1752904646,
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "添加配置验证和默认值处理",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 1,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1752904646
+                            }
+                        ]
+                    }
                 }
             ],
             "index": {
