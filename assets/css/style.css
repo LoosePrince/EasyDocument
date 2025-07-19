@@ -4,6 +4,15 @@ body {
     color: #1f2937;
 }
 
+/* 进度条样式 */
+#reading-progress-bar {
+    transition: opacity 0.3s ease;
+}
+
+#reading-progress-bar.hidden {
+    display: none !important;
+}
+
 /* 全局文本选择颜色 */
 ::selection {
     background-color: rgba(var(--color-primary-rgb, 59, 130, 246), 0.3);
@@ -1075,3 +1084,59 @@ button.active, .button.active {
         animation-timing-function: ease-out;
     }
 } 
+/* 动画总开
+关关闭时禁用所有动画和过渡效果 */
+.animations-disabled,
+.animations-disabled *,
+.animations-disabled *::before,
+.animations-disabled *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    animation-fill-mode: none !important;
+}
+
+/* 确保骨架屏动画也被禁用 */
+.animations-disabled .skeleton-item,
+.animations-disabled .toc-skeleton-item,
+.animations-disabled .article-loader {
+    animation: none !important;
+    background: #e5e7eb !important; /* 使用静态背景色 */
+}
+
+/* 确保交错动画被禁用 */
+.animations-disabled .stagger-animation {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+/* 确保文章渲染动画被禁用 */
+.animations-disabled .article-fade-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+/* 确保markdown-body在动画禁用时可见 */
+.animations-disabled .markdown-body {
+    opacity: 1 !important;
+}
+
+/* 确保内容容器在动画禁用时可见 */
+.animations-disabled .content-container {
+    opacity: 1 !important;
+    transform: none !important;
+}
+/* 缓存菜单显示控
+制相关样式 */
+/* 当缓存菜单被隐藏时，返回顶部按钮向下移动 */
+.cache-menu-hidden #back-to-top {
+    bottom: 1rem !important; /* 从 bottom-14 (3.5rem) 调整为 1rem */
+}
+
+/* 确保缓存状态指示器在禁用时完全隐藏 */
+.cache-menu-disabled #cache-status-indicator {
+    display: none !important;
+}

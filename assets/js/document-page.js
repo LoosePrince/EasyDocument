@@ -102,12 +102,16 @@ import {
     setupTocResizer,
     debounce
 } from './utils.js';
+import { initAnimationController, isAnimationEnabled } from './animation-controller.js';
 
 let pathData = null; // 存储文档结构数据
 let currentRoot = null; // 当前根目录
 let isLoadingDocument = false; // 是否正在加载文档
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // 初始化动画控制器
+    initAnimationController();
+    
     // 初始化Mermaid
     initializeMermaid();
     
@@ -120,8 +124,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 创建顶部进度条
     createProgressBar();
     
-    // 添加阅读进度条
-    createReadingProgressBar();
+    // 根据配置决定是否添加阅读进度条
+    if (config.extensions.progress_bar.enable) {
+        createReadingProgressBar();
+    }
     
     // 加载文档结构
     try {
@@ -292,6 +298,15 @@ function applyLayoutConfig() {
     const backToTopButton = document.getElementById('back-to-top');
     if (!config.navigation.back_to_top && backToTopButton) {
         backToTopButton.remove();
+    }
+    
+    // 缓存菜单显示控制
+    if (!config.extensions.cache_menu.enable) {
+        // 如果缓存菜单被禁用，给body添加CSS类来调整返回顶部按钮位置
+        document.body.classList.add('cache-menu-hidden');
+    } else {
+        // 如果缓存菜单启用，移除CSS类
+        document.body.classList.remove('cache-menu-hidden');
     }
 }
 
@@ -833,8 +848,8 @@ async function loadDocument(relativePath) {
     const tocNav = document.getElementById('toc-nav');
     tocNav.innerHTML = '<p class="text-gray-400 text-sm">暂无目录</p>';
     
-    // 创建文章加载动画（如果启用）
-    if (config.animation?.article?.enable_skeleton !== false) {
+    // 创建文章加载动画（如果启用，考虑动画总开关）
+    if (isAnimationEnabled('article', 'enable_skeleton')) {
         const articleLoader = createArticleLoader();
         contentDiv.innerHTML = '';
         contentDiv.appendChild(articleLoader);
@@ -953,11 +968,18 @@ async function loadDocument(relativePath) {
             // 移除加载动画并显示错误信息
             const loader = contentDiv.querySelector('.article-loader');
             if (loader) {
-                loader.style.transition = 'opacity 0.3s ease-out';
-                loader.style.opacity = '0';
-                setTimeout(() => {
+                const animationEnabled = isAnimationEnabled('article', 'enable_render');
+                const fadeDelay = animationEnabled ? 300 : 0;
+                
+                if (animationEnabled) {
+                    loader.style.transition = 'opacity 0.3s ease-out';
+                    loader.style.opacity = '0';
+                    setTimeout(() => {
+                        contentDiv.innerHTML = `<p class="text-red-500">加载文档失败: ${error.message}</p>`;
+                    }, fadeDelay);
+                } else {
                     contentDiv.innerHTML = `<p class="text-red-500">加载文档失败: ${error.message}</p>`;
-                }, 300);
+                }
             } else {
                 contentDiv.innerHTML = `<p class="text-red-500">加载文档失败: ${error.message}</p>`;
             }
@@ -966,12 +988,22 @@ async function loadDocument(relativePath) {
     }
 
     // 移除加载指示器（添加淡出效果）
-    loadingIndicator.style.opacity = '0';
-    setTimeout(() => {
+    const animationEnabled = isAnimationEnabled('general');
+    const fadeDelay = animationEnabled ? 300 : 0;
+    
+    if (animationEnabled) {
+        loadingIndicator.style.opacity = '0';
+        setTimeout(() => {
+            if (loadingIndicator.parentNode) {
+                loadingIndicator.remove();
+            }
+        }, fadeDelay);
+    } else {
+        // 动画关闭时直接移除
         if (loadingIndicator.parentNode) {
             loadingIndicator.remove();
         }
-    }, 300);
+    }
     
     // 如果成功加载，触发自动预加载和更新侧边栏链接
     if (successfullyLoaded) {

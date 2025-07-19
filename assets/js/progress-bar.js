@@ -2,6 +2,7 @@
  * 进度条模块
  * 包含顶部加载进度条和阅读进度条的功能
  */
+import config from './validated-config.js';
 
 let progressBar = null; // 顶部加载进度条元素
 
@@ -32,7 +33,13 @@ export function createReadingProgressBar() {
     // 创建进度条容器
     const readingProgressBar = document.createElement('div');
     readingProgressBar.id = 'reading-progress-bar';
-    readingProgressBar.className = 'fixed top-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700 z-40';
+    
+    // 根据配置决定是否显示进度条
+    let className = 'fixed top-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700 z-40';
+    if (!config.extensions.progress_bar.enable) {
+        className += ' hidden'; // 通过 CSS 类隐藏进度条
+    }
+    readingProgressBar.className = className;
     
     // 创建进度条内部填充
     const progressFill = document.createElement('div');
@@ -44,17 +51,22 @@ export function createReadingProgressBar() {
     readingProgressBar.appendChild(progressFill);
     document.body.appendChild(readingProgressBar);
     
-    // 添加滚动监听器
-    window.addEventListener('scroll', updateReadingProgress);
-    
-    // 初始更新一次进度
-    setTimeout(updateReadingProgress, 500);
+    // 只有在启用进度条时才添加滚动监听器
+    if (config.extensions.progress_bar.enable) {
+        window.addEventListener('scroll', updateReadingProgress);
+        
+        // 初始更新一次进度
+        setTimeout(updateReadingProgress, 500);
+    }
 }
 
 /**
  * 更新阅读进度
  */
 export function updateReadingProgress() {
+    // 如果进度条被禁用，直接返回
+    if (!config.extensions.progress_bar.enable) return;
+    
     const contentDiv = document.getElementById('document-content');
     if (!contentDiv) return;
 
@@ -146,4 +158,42 @@ export function hideProgressBar() {
     setTimeout(() => {
         progressBar.classList.add('hidden');
     }, 300);
+}
+
+/**
+ * 显示阅读进度条
+ */
+export function showReadingProgressBar() {
+    const readingProgressBar = document.getElementById('reading-progress-bar');
+    if (readingProgressBar) {
+        readingProgressBar.classList.remove('hidden');
+        // 重新添加滚动监听器（如果之前被移除）
+        window.addEventListener('scroll', updateReadingProgress);
+        // 立即更新一次进度
+        setTimeout(updateReadingProgress, 100);
+    }
+}
+
+/**
+ * 隐藏阅读进度条
+ */
+export function hideReadingProgressBar() {
+    const readingProgressBar = document.getElementById('reading-progress-bar');
+    if (readingProgressBar) {
+        readingProgressBar.classList.add('hidden');
+        // 移除滚动监听器以节省性能
+        window.removeEventListener('scroll', updateReadingProgress);
+    }
+}
+
+/**
+ * 切换阅读进度条显示状态
+ * @param {boolean} enable - 是否启用进度条
+ */
+export function toggleReadingProgressBar(enable) {
+    if (enable) {
+        showReadingProgressBar();
+    } else {
+        hideReadingProgressBar();
+    }
 } 

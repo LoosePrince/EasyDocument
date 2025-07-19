@@ -6,6 +6,7 @@ import config from './validated-config.js';
 import { initDarkMode, initThemeEvents } from './theme.js';
 import { generateNavLinks, generateMobileNavLinks, updateFooterElements } from './navigation.js';
 import documentCache from './document-cache.js';
+import { initAnimationController } from './animation-controller.js';
 import {
     debounce,
     isDarkMode,
@@ -21,6 +22,9 @@ let searchData = null;
 
 // 应用初始化
 export async function initApp() {
+    // 初始化动画控制器
+    initAnimationController();
+    
     // 设置页面标题和元数据
     document.title = `${config.site.name} - ${config.site.title}`;
     document.querySelector('meta[name="description"]').content = config.site.description;
