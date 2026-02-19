@@ -24,10 +24,8 @@ const config = {
   // 布局设置
   layout: {
     show_header: true, // 是否显示顶栏
-    use_custom_header: false, // 是否使用自定义的header.html文件
     header_file: "/header.html", // 自定义顶栏文件路径
     show_footer: true, // 是否显示底栏
-    use_custom_footer: true, // 是否使用自定义的footer.html文件
     footer_file: "/footer.html", // 自定义底栏文件路径
     sidebar_width: "250px", // 侧边栏宽度
     toc_width: "280px", // 目录宽度
@@ -179,9 +177,35 @@ const config = {
 
   // 页脚设置
   footer: {
-    copyright: "© 2025 EasyDocument", // 版权信息
-    show_powered_by: true, // 显示技术支持信息
-    links: [ // 页脚链接
+    // 版权信息
+    copyright: "© 2025 EasyDocument",
+
+    // 技术支持信息配置
+    // enable: 是否显示整块 powered by 行
+    powered_by: {
+      enable: true,
+      text: "使用以下技术栈构建：",
+      links: [
+        {
+          text: "TailwindCSS",
+          url: "https://tailwindcss.com",
+          external: true
+        },
+        {
+          text: "Alpine.js",
+          url: "https://alpinejs.dev",
+          external: true
+        },
+        {
+          text: "FontAwesome",
+          url: "https://fontawesome.com",
+          external: true
+        }
+      ]
+    },
+
+    // 页脚链接（资源区）
+    links: [
       {
         text: "GitHub",
         url: "https://github.com/LoosePrince/EasyDocument"
@@ -190,6 +214,22 @@ const config = {
         text: "报告问题",
         url: "https://github.com/LoosePrince/EasyDocument/issues"
       }
+    ],
+
+    // 备案信息配置
+    // icp: 最多 1~3 条记录，每条记录为 { text: '备案号', url: '链接(可选)' }
+    // position: "top" 显示在版权信息附近；"bottom" 显示在页脚最底部信息行
+    beian: {
+      enable: false,
+      icp: [],
+      position: "bottom"
+    },
+
+    // 列配置：控制页脚中部各列的展示与类型
+    columns: [
+      { key: "nav", title: "导航", type: "nav", enable: true },
+      { key: "links", title: "资源", type: "links", enable: true },
+      { key: "stack", title: "技术栈", type: "stack", enable: true }
     ]
   }
 };

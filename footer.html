@@ -4,52 +4,41 @@
             <!-- 版权信息 -->
             <div class="mb-6 md:mb-0">
                 <div class="flex items-center space-x-2 mb-3">
-                    <img src="/assets/img/logo.svg" alt="EasyDocument" class="site-logo h-8 w-8" onerror="this.src='data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' rx=\'20\' fill=\'%233b82f6\'/%3E%3Cpath d=\'M30 40 L70 40 M30 50 L60 50 M30 60 L50 60\' stroke=\'%23fff\' stroke-width=\'8\' stroke-linecap=\'round\'/%3E%3C/svg%3E'">
-                    <span class="text-lg font-bold text-gray-800 dark:text-white">
-                        <span class="text-primary">Easy</span>Document
-                    </span>
+                    <img src="" alt="" class="site-logo h-8 w-8" id="footer-logo-img">
+                    <span class="text-lg font-bold text-gray-800 dark:text-white" id="footer-site-title"></span>
                 </div>
-                <p class="text-gray-600 dark:text-gray-300 copyright-text">© 2024 EasyDocument</p>
-                <p class="text-gray-500 dark:text-gray-400 text-sm mt-1 site-description">一个轻量级、免编译的纯静态前端文档系统</p>
+                <p class="text-gray-600 dark:text-gray-300 copyright-text">
+                    <!-- 由 JavaScript 基于 config.js 中的 footer.copyright 配置项动态注入版权信息 -->
+                </p>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-1 site-description">
+                    <!-- 由 JavaScript 基于 config.js 中的 site.description 配置项动态注入站点描述 -->
+                </p>
+                <p class="text-gray-400 dark:text-gray-500 text-xs beian-info-top" style="display: none;"></p>
             </div>
             
             <!-- 链接区域 -->
             <div class="grid grid-cols-2 gap-8 sm:grid-cols-3">
                 <!-- 导航链接 -->
-                <div>
+                <div data-footer-column="nav">
                     <h3 class="text-sm font-semibold text-gray-800 dark:text-white tracking-wider uppercase mb-4">导航</h3>
                     <ul class="space-y-3 nav-links">
-                        <!-- 由JS动态填充 -->
+                        <!-- 由 JavaScript 基于 config.js 中的 navigation.nav_links 配置项动态生成页脚导航链接 -->
                     </ul>
                 </div>
                 
                 <!-- 相关资源 -->
-                <div>
+                <div data-footer-column="links">
                     <h3 class="text-sm font-semibold text-gray-800 dark:text-white tracking-wider uppercase mb-4">资源</h3>
                     <ul class="space-y-3 footer-links">
-                        <!-- 由JS动态填充 -->
+                        <!-- 由 JavaScript 基于 config.js 中的 footer.links 配置项动态生成页脚资源链接 -->
                     </ul>
                 </div>
                 
                 <!-- 技术栈 -->
-                <div>
+                <div data-footer-column="stack">
                     <h3 class="text-sm font-semibold text-gray-800 dark:text-white tracking-wider uppercase mb-4">技术栈</h3>
-                    <ul class="space-y-3">
-                        <li>
-                            <a href="https://tailwindcss.com" target="_blank" class="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
-                                TailwindCSS
-                            </a>
-                        </li>
-                        <li>
-                            <a href="https://alpinejs.dev" target="_blank" class="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
-                                Alpine.js
-                            </a>
-                        </li>
-                        <li>
-                            <a href="https://fontawesome.com" target="_blank" class="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
-                                FontAwesome
-                            </a>
-                        </li>
+                    <ul class="space-y-3 footer-stack-links">
+                        <!-- 由 JavaScript 基于 config.js 中的 footer.powered_by.links 配置项动态生成技术栈链接 -->
                     </ul>
                 </div>
             </div>
@@ -57,13 +46,13 @@
         
         <!-- 底部信息 -->
         <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 flex flex-col-reverse md:flex-row md:justify-between md:items-center">
-            <p class="text-gray-500 dark:text-gray-400 text-sm mt-4 md:mt-0 powered-by-text">
-                使用 
-                <a href="https://tailwindcss.com" target="_blank" class="text-primary hover:underline">TailwindCSS</a>, 
-                <a href="https://alpinejs.dev" target="_blank" class="text-primary hover:underline">Alpine.js</a>, 
-                <a href="https://fontawesome.com" target="_blank" class="text-primary hover:underline">FontAwesome</a> 
-                构建
-            </p>
+            <div class="flex flex-col space-y-1">
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-4 md:mt-0 powered-by-text">
+                    <!-- 由 JavaScript 基于 config.js 中的 footer.powered_by.text 与 footer.powered_by.links 配置项动态生成 Powered By 内容 -->
+                </p>
+                <!-- 备案信息插槽：由 JavaScript 基于 config.js 中的 footer.beian 配置项按需动态填充 -->
+                <p class="text-gray-400 dark:text-gray-500 text-xs beian-info-bottom" style="display: none;"></p>
+            </div>
             
             <div class="flex space-x-6">
                 <a href="https://github.com/LoosePrince/EasyDocument" target="_blank" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
