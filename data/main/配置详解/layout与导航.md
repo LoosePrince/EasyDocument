@@ -11,13 +11,11 @@
 | 配置项 | 类型 | 默认值 | 说明 |
 |-------|------|-------|------|
 | `show_header` | 布尔值 | `true` | 是否显示顶栏 |
-| `use_custom_header` | 布尔值 | `false` | 是否使用自定义的header.html文件 |
-| `header_file` | 字符串 | `"header.html"` | 自定义顶栏文件路径 |
+| `header_file` | 字符串 | `"/header.html"` | 顶栏 HTML 文件路径 |
 | `show_footer` | 布尔值 | `true` | 是否显示底栏 |
-| `use_custom_footer` | 布尔值 | `true` | 是否使用自定义的footer.html文件 |
-| `footer_file` | 字符串 | `"footer.html"` | 自定义底栏文件路径 |
+| `footer_file` | 字符串 | `"/footer.html"` | 底栏 HTML 文件路径 |
 | `sidebar_width` | 字符串 | `"250px"` | 侧边栏宽度 |
-| `toc_width` | 字符串 | `"220px"` | 目录宽度 |
+| `toc_width` | 字符串 | `"280px"` | 右侧目录宽度 |
 | `mobile_breakpoint` | 字符串 | `"1024px"` | 移动设备断点 |
 
 ### 详细说明
@@ -33,18 +31,18 @@ layout: {
 }
 ```
 
-#### use_custom_header 和 use_custom_footer
+#### header_file 和 footer_file
 
-决定是否使用自定义的HTML文件作为顶栏或底栏。设为 `true` 时，系统会尝试加载 `header_file` 或 `footer_file` 指定的文件。
+顶栏、底栏显示时使用的 HTML 文件路径，通常为项目根目录下的自定义文件。
 
 ```javascript
 layout: {
-  use_custom_header: true,
-  header_file: "my-custom-header.html"
+  header_file: "/header.html",
+  footer_file: "/footer.html"
 }
 ```
 
-自定义顶栏和底栏允许您插入自定义HTML内容，例如添加特殊的导航元素、公司标识或版权信息。
+可在这些文件中插入自定义导航、品牌或版权信息。
 
 #### sidebar_width 和 toc_width
 
@@ -302,16 +300,18 @@ navigation: {
 
 ### 自定义顶栏和底栏
 
-使用自定义HTML进行品牌强化：
+使用自定义 HTML 文件进行品牌强化：
 
 ```javascript
 layout: {
-  use_custom_header: true,
-  header_file: "custom-brand-header.html",
-  use_custom_footer: true,
-  footer_file: "custom-brand-footer.html"
+  show_header: true,
+  header_file: "/header.html",
+  show_footer: true,
+  footer_file: "/footer.html"
 }
 ```
+
+在项目根目录或对应路径放置 `header.html`、`footer.html`，编写所需内容即可。
 
 ### 导航菜单与下拉组合
 

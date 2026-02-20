@@ -506,7 +506,7 @@ export function updateGitInfo(relativePath) {
     const githubEditContainer = document.getElementById('github-edit-container');
     const githubEditLink = document.getElementById('github-edit-link');
     
-    if (githubEnabled && config.extensions?.github?.show_edit_link !== false && 
+    if (githubEnabled && config.extensions?.github?.edit_link !== false && 
         config.extensions?.github?.repo_url && githubEditContainer && githubEditLink) {
         
         const repoUrl = config.extensions.github.repo_url;

@@ -1005,8 +1005,9 @@ async function loadDocument(relativePath) {
 
 // 生成上一篇/下一篇导航
 function generatePrevNextNavigation(currentPath) {
+    if (config.navigation?.prev_next_buttons === false) return;
     const contentDiv = document.getElementById('document-content');
-    
+    if (!contentDiv) return;
     // 移除现有的导航（如果有）
     const existingNav = document.getElementById('prev-next-navigation');
     if (existingNav) {
