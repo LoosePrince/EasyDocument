@@ -23,13 +23,13 @@ const config = {
     title: "简易静态文档系统", // 网站标题，显示在浏览器标签页
     description: "一个轻量级、免编译的纯静态前端文档系统", // 网站描述，用于SEO
     keywords: "文档,静态网站,Markdown,Alpine.js", // 网站关键词，用于SEO
-    base_url: "index.html" // 网站基础URL，如果部署在子目录则需要修改
+    base_url: "/" // 网站基础URL，如果部署在子目录则需要修改
   },
 
   // 外观设置
   appearance: {
-    logo: "assets/img/logo.svg", // 网站Logo路径
-    favicon: "assets/img/favicon.ico", // 网站图标路径
+    logo: "/assets/img/logo.svg", // 网站Logo路径
+    favicon: "/assets/img/favicon.ico", // 网站图标路径
     theme_color: "#3b82f6", // 主题色(蓝色)
     default_dark_mode: "auto", // 默认是否启用暗黑模式
     font_family: "system-ui, -apple-system, sans-serif" // 字体设置
@@ -38,13 +38,11 @@ const config = {
   // 布局设置
   layout: {
     show_header: true, // 是否显示顶栏
-    use_custom_header: false, // 是否使用自定义的header.html文件
-    header_file: "header.html", // 自定义顶栏文件路径
+    header_file: "/header.html", // 自定义顶栏文件路径
     show_footer: true, // 是否显示底栏
-    use_custom_footer: true, // 是否使用自定义的footer.html文件
-    footer_file: "footer.html", // 自定义底栏文件路径
+    footer_file: "/footer.html", // 自定义底栏文件路径
     sidebar_width: "250px", // 侧边栏宽度
-    toc_width: "220px", // 目录宽度
+    toc_width: "280px", // 右侧目录宽度
     mobile_breakpoint: "1024px" // 移动设备断点
   },
 
@@ -92,11 +90,7 @@ const config = {
     prev_next_buttons: true, // 显示上一篇/下一篇导航
     folder_expand_mode: 5, // 文件夹默认展开方式：1-展开全部第一级文件夹，2-展开全部文件夹，3-展开第一个文件夹的第一级，4-展开第一个文件夹的全部文件夹，5-不默认展开任何文件夹
     nav_links: [ // 导航栏链接
-      {
-        text: "首页",
-        url: "index.html",
-        icon: "fas fa-house"
-      },
+      { text: "首页", url: "/" },
       {
         text: "文档",
         url: "main/",
@@ -105,21 +99,9 @@ const config = {
       {
         text: "教程",
         url: [
-          {
-            text: "快速开始",
-            url: "main/#/快速入门",
-            icon: "fas fa-rocket"
-          },
-          {
-            text: "使用指南",
-            url: "main/#/使用指南",
-            icon: "fas fa-book"
-          },
-          {
-            text: "详细配置",
-            url: "main/#/配置详解",
-            icon: "fas fa-cog"
-          }
+          { text: "快速开始", url: "main/#/快速入门", icon: "fas fa-rocket" },
+          { text: "使用指南", url: "main/#/使用指南", icon: "fas fa-book" },
+          { text: "详细配置", url: "main/#/配置详解", icon: "fas fa-cog" }
         ],
         icon: "fas fa-graduation-cap"
       },
@@ -132,25 +114,30 @@ const config = {
     ]
   },
 
+  // 首页设置（详见 首页设置.md）
+  home: {
+    use_file: false, // 是否使用外部HTML文件作为首页内容
+    file_path: "/home.html", // 首页内容文件路径（use_file 为 true 时生效）
+    hero: { title: "EasyDocument", subtitle: "简易静态文档系统", description: "...", logo: "/assets/img/logo.svg", button_text: "查看文档", button_link: "/main/" },
+    features: [ /* 特性卡片：icon, title, description, color */ ],
+    get_started: { enable: true, title: "快速开始使用", steps: [ /* { title, description } */ ], button_text: "立即开始", button_link: "/main/" }
+  },
+
   // 文档设置
   document: {
-    root_dir: "data", // 文档根目录
+    root_dir: "/data", // 文档根目录
+    branch_support: true, // 是否启用分支支持
+    default_branch: "main", // 默认分支名称
+    available_branches: [ { name: "main", label: "main" } ], // 可用分支列表（与 data/ 下目录一致）
     default_page: "README.md", // 默认文档
     index_pages: ["README.md", "README.html", "index.md", "index.html"], // 索引页文件名
     supported_extensions: [".md", ".html"], // 支持的文档扩展名
     toc_depth: 3, // 目录深度，显示到几级（h1~hx）标题
     toc_numbering: true, // 目录是否显示编号（如1，2.3，5.1.3）
-    toc_ignore_h1: true, // 生成目录编号时是否忽略h1标题，避免所有标题都以1开头
-    toc_dynamic_expand: true, // 是否启用动态展开功能
+    toc_ignore_h1: true, // 生成目录编号时是否忽略h1标题
+    toc_dynamic_expand: true, // 是否启用目录动态展开功能
     code_copy_button: true, // 代码块是否显示复制按钮
-    code_block: {
-      line_numbers: true, // 是否显示行号
-      start_line: 1, // 起始行号
-      theme: {
-        light: "github", // 亮色主题
-        dark: "github-dark" // 暗色主题
-      }
-    }
+    code_block: { line_numbers: true, start_line: 1, theme: { light: "github", dark: "github-dark" } } // 代码块行号与亮/暗色主题
   },
 
   // 搜索功能
@@ -193,20 +180,13 @@ const config = {
     }
   },
 
-  // 页脚设置
+  // 页脚设置（详见 站点与页脚.md）
   footer: {
     copyright: "© 2025 EasyDocument", // 版权信息
-    show_powered_by: true, // 显示技术支持信息
-    links: [ // 页脚链接
-      {
-        text: "GitHub",
-        url: "https://github.com/LoosePrince/EasyDocument"
-      },
-      {
-        text: "报告问题",
-        url: "https://github.com/LoosePrince/EasyDocument/issues"
-      }
-    ]
+    powered_by: { enable: true, text: "使用以下技术栈构建：", links: [ /* ... */ ] }, // 技术支持信息
+    links: [ { text: "GitHub", url: "..." }, { text: "报告问题", url: "..." } ], // 页脚「资源」区链接
+    beian: { enable: false, icp: [], position: "bottom" }, // 备案信息（position: "top"|"bottom"）
+    columns: [ { key: "nav", title: "导航", type: "nav", enable: true }, { key: "links", title: "资源", type: "links", enable: true }, { key: "stack", title: "技术栈", type: "stack", enable: true } ] // 页脚中部各列展示与开关
   }
 };
 
@@ -271,6 +251,7 @@ layout: {
 
 查看各分类的详细配置说明，了解每个配置项的功能和可选值：
 
+- [首页设置](配置详解/首页设置.md)
 - [站点与页脚配置](配置详解/站点与页脚.md)
 - [外观设置](配置详解/外观设置.md)
 - [布局与导航配置](配置详解/layout与导航.md)
@@ -278,4 +259,5 @@ layout: {
 - [文档与插件配置](配置详解/文档与插件.md)
 - [搜索功能配置](配置详解/搜索功能.md)
 - [path.json 结构与手动编写](配置详解/path-json结构.md)
-- [GitHub与Git功能](配置详解/GitHub与Git功能.md) 
+- [GitHub与Git功能](配置详解/GitHub与Git功能.md)
+- [配置验证和默认值处理](配置详解/配置验证.md) 

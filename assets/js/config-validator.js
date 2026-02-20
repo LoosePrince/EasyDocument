@@ -34,6 +34,16 @@ const VALIDATION_RULES = {
         type: 'object',
         default: [],
         description: '可用分支列表'
+    },
+    'home.use_file': {
+        type: 'boolean',
+        default: false,
+        description: '首页是否使用外部文件'
+    },
+    'home.file_path': {
+        type: 'string',
+        default: '/home.html',
+        description: '首页外部文件路径'
     }
 };
 
@@ -58,6 +68,9 @@ export function validateAndApplyDefaults(config) {
     }
     if (!validatedConfig.extensions.cache_menu) {
         validatedConfig.extensions.cache_menu = {};
+    }
+    if (!validatedConfig.home) {
+        validatedConfig.home = {};
     }
     
     // 验证每个配置项
@@ -139,7 +152,7 @@ export function checkBackwardCompatibility(config) {
     // 目前没有废弃的配置项，但为将来扩展预留
     
     // 检查必要的基础配置是否存在
-    const requiredSections = ['site', 'appearance', 'layout', 'navigation', 'document'];
+    const requiredSections = ['site', 'appearance', 'layout', 'navigation', 'document', 'home'];
     for (const section of requiredSections) {
         if (!config[section]) {
             console.error(`缺少必要的配置节: ${section}`);

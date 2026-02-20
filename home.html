@@ -1,0 +1,115 @@
+<!-- 首页 Hero 区域 -->
+<div class="max-w-4xl mx-auto text-center mb-16">
+    <div class="flex justify-center mb-6">
+        <img class="site-logo h-16" src="assets/img/logo.svg" alt="EasyDocument Logo" id="home-logo">
+    </div>
+    <h1 class="text-5xl font-bold text-gray-800 dark:text-white mb-6" id="home-title">
+        <span class="text-primary">Easy</span>Document
+    </h1>
+    <p class="text-2xl text-gray-600 dark:text-gray-300 mb-8" id="home-subtitle">简易静态文档系统 (来自 home.html)</p>
+    <p class="text-lg text-gray-500 dark:text-gray-400 mb-10 max-w-2xl mx-auto" id="home-description">
+        一个轻量级、免编译的纯静态前端文档系统。简单添加 Markdown 或 HTML 文件，即可生成美观、结构化的文档网站。
+    </p>
+    <a href="#" id="view-docs-link"
+        class="inline-block bg-primary hover:bg-primary text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105">
+        查看文档
+        <i class="fas fa-arrow-right ml-2"></i>
+    </a>
+</div>
+
+<!-- 特性卡片 -->
+<div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+    <!-- 特性1 -->
+    <div class="geometric-shape bg-white dark:bg-gray-800 p-6 flex flex-col items-center text-center">
+        <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mb-4">
+            <i class="fas fa-feather text-primary text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3">轻量高效</h3>
+        <p class="text-gray-600 dark:text-gray-300">无需编译构建，纯前端实现，简单易用且响应迅速</p>
+    </div>
+
+    <!-- 特性2 -->
+    <div class="geometric-shape bg-white dark:bg-gray-800 p-6 flex flex-col items-center text-center">
+        <div
+            class="w-16 h-16 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center mb-4">
+            <i class="fas fa-paint-brush text-orange-500 text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3">美观现代</h3>
+        <p class="text-gray-600 dark:text-gray-300">精致排版，现代设计，丰富交互效果，呈现极致文档体验</p>
+    </div>
+
+    <!-- 特性3 -->
+    <div class="geometric-shape bg-white dark:bg-gray-800 p-6 flex flex-col items-center text-center">
+        <div
+            class="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
+            <i class="fas fa-cog text-green-500 text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3">灵活可配置</h3>
+        <p class="text-gray-600 dark:text-gray-300">丰富的配置选项，自定义网站外观、布局和功能特性</p>
+    </div>
+</div>
+
+<!-- 开始使用指南 -->
+<div class="max-w-4xl mx-auto mt-20 text-center">
+    <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-8">快速开始使用</h2>
+
+    <div class="geometric-shape bg-white dark:bg-gray-800 p-8 text-left">
+        <ol class="space-y-6">
+            <li class="flex items-start">
+                <div
+                    class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                    1</div>
+                <div>
+                    <h4 class="font-bold text-lg text-gray-800 dark:text-white">添加文档文件</h4>
+                    <p class="text-gray-600 dark:text-gray-300 mt-1">将 Markdown (.md) 或 HTML (.html) 文件放入 <code
+                            class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                        /data</code> 目录</p>
+                </div>
+            </li>
+            <li class="flex items-start">
+                <div
+                    class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                    2</div>
+                <div>
+                    <h4 class="font-bold text-lg text-gray-800 dark:text-white">组织目录结构</h4>
+                    <p class="text-gray-600 dark:text-gray-300 mt-1">按照需要创建分类目录，添加 README.md 作为分类介绍</p>
+                </div>
+            </li>
+            <li class="flex items-start">
+                <div
+                    class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                    3</div>
+                <div>
+                    <h4 class="font-bold text-lg text-gray-800 dark:text-white">自定义配置</h4>
+                    <p class="text-gray-600 dark:text-gray-300 mt-1">根据需要修改 <code
+                            class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">config.js</code> 文件调整网站外观和功能
+                    </p>
+                </div>
+            </li>
+            <li class="flex items-start">
+                <div
+                    class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                    4</div>
+                <div>
+                    <h4 class="font-bold text-lg text-gray-800 dark:text-white">运行 build.py 脚本</h4>
+                    <p class="text-gray-600 dark:text-gray-300 mt-1">创建 path.json 目录文件</p>
+                </div>
+            </li>
+            <li class="flex items-start">
+                <div
+                    class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                    5</div>
+                <div>
+                    <h4 class="font-bold text-lg text-gray-800 dark:text-white">打开浏览器访问</h4>
+                    <p class="text-gray-600 dark:text-gray-300 mt-1">直接在浏览器中打开 index.html 即可使用文档系统</p>
+                </div>
+            </li>
+        </ol>
+    </div>
+
+    <a href="#" id="get-started-link"
+        class="inline-block mt-10 bg-gray-800 dark:bg-gray-700 hover:bg-black dark:hover:bg-gray-600 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105">
+        立即开始
+        <i class="fas fa-rocket ml-2"></i>
+    </a>
+</div>

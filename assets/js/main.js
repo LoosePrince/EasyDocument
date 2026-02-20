@@ -53,6 +53,9 @@ export async function initApp() {
     // 加载头部和底部
     await loadHeaderAndFooter();
 
+    // 加载首页内容
+    await loadHomeContent();
+
     // 初始化搜索功能
     initSearch();
 
@@ -194,6 +197,120 @@ async function loadHeaderAndFooter() {
     } catch (error) {
         console.error('加载头部或底部失败:', error);
     }
+}
+
+// 加载首页内容
+async function loadHomeContent() {
+    const homeContainer = document.getElementById('home-content');
+    if (!homeContainer) return;
+
+    try {
+        if (config.home && config.home.use_file) {
+            const response = await fetch(config.home.file_path);
+            if (response.ok) {
+                const html = await response.text();
+                homeContainer.innerHTML = html;
+            } else {
+                console.error('加载首页文件失败:', response.status);
+                renderHomeFromConfig(homeContainer);
+            }
+        } else {
+            renderHomeFromConfig(homeContainer);
+        }
+    } catch (error) {
+        console.error('加载首页内容出错:', error);
+        renderHomeFromConfig(homeContainer);
+    }
+}
+
+// 从配置生成首页内容
+function renderHomeFromConfig(container) {
+    if (!config.home) return;
+
+    const { hero, features, get_started } = config.home;
+    let html = '';
+
+    // 渲染 Hero 区域
+    if (hero) {
+        let titleHtml = '';
+        const title = hero.title || config.site.name;
+        if (title.match(/^Easy/i)) {
+            titleHtml = `<span class="text-primary">${title.substring(0, 4)}</span>${title.substring(4)}`;
+        } else {
+            titleHtml = `<span class="text-primary">${title}</span>`;
+        }
+
+        html += `
+        <div class="max-w-4xl mx-auto text-center mb-16">
+            <div class="flex justify-center mb-6">
+                <img class="site-logo h-16" src="${hero.logo || 'assets/img/logo.svg'}" alt="${config.site.name} Logo">
+            </div>
+            <h1 class="text-5xl font-bold text-gray-800 dark:text-white mb-6">
+                ${titleHtml}
+            </h1>
+            <p class="text-2xl text-gray-600 dark:text-gray-300 mb-8">${hero.subtitle}</p>
+            <p class="text-lg text-gray-500 dark:text-gray-400 mb-10 max-w-2xl mx-auto">${hero.description}</p>
+            <a href="${hero.button_link || '#'}" id="view-docs-link"
+                class="inline-block bg-primary hover:bg-primary text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105">
+                ${hero.button_text}
+                <i class="fas fa-arrow-right ml-2"></i>
+            </a>
+        </div>`;
+    }
+
+    // 渲染特性卡片
+    if (features && features.length > 0) {
+        html += `<div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">`;
+        features.forEach(feature => {
+            const colorClasses = {
+                blue: 'bg-blue-100 dark:bg-blue-900 text-primary',
+                orange: 'bg-orange-100 dark:bg-orange-900 text-orange-500',
+                green: 'bg-green-100 dark:bg-green-900 text-green-500'
+            };
+            const colorClass = colorClasses[feature.color] || colorClasses.blue;
+
+            html += `
+            <div class="geometric-shape bg-white dark:bg-gray-800 p-6 flex flex-col items-center text-center">
+                <div class="w-16 h-16 ${colorClass} rounded-full flex items-center justify-center mb-4">
+                    <i class="${feature.icon} text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3">${feature.title}</h3>
+                <p class="text-gray-600 dark:text-gray-300">${feature.description}</p>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    // 渲染快速开始指南
+    if (get_started && get_started.enable) {
+        html += `
+        <div class="max-w-4xl mx-auto mt-20 text-center">
+            <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-8">${get_started.title}</h2>
+
+            <div class="geometric-shape bg-white dark:bg-gray-800 p-8 text-left">
+                <ol class="space-y-6">
+                    ${get_started.steps.map((step, index) => `
+                    <li class="flex items-start">
+                        <div class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                            ${index + 1}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg text-gray-800 dark:text-white">${step.title || step}</h4>
+                            ${step.description ? `<p class="text-gray-600 dark:text-gray-300 mt-1">${step.description}</p>` : ''}
+                        </div>
+                    </li>`).join('')}
+                </ol>
+            </div>
+
+            <a href="${get_started.button_link || '#'}" id="get-started-link"
+                class="inline-block mt-10 bg-gray-800 dark:bg-gray-700 hover:bg-black dark:hover:bg-gray-600 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105">
+                ${get_started.button_text}
+                <i class="fas fa-rocket ml-2"></i>
+            </a>
+        </div>`;
+    }
+
+    container.innerHTML = html;
 }
 
 // 加载自定义头部

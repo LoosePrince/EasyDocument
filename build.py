@@ -910,9 +910,7 @@ def main():
     
     # 更新HTML元数据
     html_files_to_update = glob.glob('*.html')
-    # 添加main目录下的HTML文件
-    main_html_files = glob.glob('main/*.html')
-    html_files_to_update.extend(main_html_files)
+    html_files_to_update.extend(glob.glob('main/*.html'))
     update_html_metadata(html_files_to_update, config)
     
     print(f"文档扫描完成: 共 {total_files} 个文件, {total_dirs} 个目录")

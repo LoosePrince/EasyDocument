@@ -114,6 +114,55 @@ const config = {
     ]
   },
 
+  // 首页设置
+  home: {
+    use_file: false, // 是否使用外部HTML文件作为首页内容
+    file_path: "/home.html", // 首页内容文件路径
+    // 如果 use_file 为 false，则使用以下配置动态生成内容
+    hero: {
+      title: "EasyDocument",
+      subtitle: "简易静态文档系统",
+      description: "一个轻量级、免编译的纯静态前端文档系统。简单添加 Markdown 或 HTML 文件，即可生成美观、结构化的文档网站。",
+      logo: "/assets/img/logo.svg",
+      button_text: "查看文档",
+      button_link: "/main/"
+    },
+    features: [
+      {
+        icon: "fas fa-feather",
+        title: "轻量高效",
+        description: "无需编译构建，纯前端实现，简单易用且响应迅速",
+        color: "blue"
+      },
+      {
+        icon: "fas fa-paint-brush",
+        title: "美观现代",
+        description: "精致排版，现代设计，丰富交互效果，呈现极致文档体验",
+        color: "orange"
+      },
+      {
+        icon: "fas fa-cog",
+        title: "灵活可配置",
+        description: "丰富的配置选项，自定义网站外观、布局和功能特性",
+        color: "green"
+      }
+    ],
+    // 快速开始指南
+    get_started: {
+      enable: true,
+      title: "快速开始使用",
+      steps: [
+        { title: "添加文档文件", description: "将 Markdown (.md) 或 HTML (.html) 文件放入 /data 目录" },
+        { title: "组织目录结构", description: "按照需要创建分类目录，添加 README.md 作为分类介绍" },
+        { title: "自定义配置", description: "根据需要修改 config.js 文件调整网站外观和功能" },
+        { title: "运行 build.py 脚本", description: "创建 path.json 目录文件" },
+        { title: "打开浏览器访问", description: "直接在浏览器中打开 index.html 即可使用文档系统" }
+      ],
+      button_text: "立即开始",
+      button_link: "/main/"
+    }
+  },
+
   // 文档设置
   document: {
     root_dir: "/data", // 文档根目录
