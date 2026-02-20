@@ -33,6 +33,7 @@ except ImportError:
 # 默认配置
 DEFAULT_CONFIG = {
     "root_dir": "data",                                 # 文档根目录
+    "branch_support": False,                            # 是否启用分支支持
     "default_page": "README.md",                        # 默认文档
     "index_pages": ["README.md", "README.html",         # 索引页文件名
                    "index.md", "index.html"], 
@@ -739,6 +740,10 @@ def main():
                     root_dir_match = re.search(r'root_dir:\s*[\'"]([^\'"]+)[\'"]', doc_config)
                     if root_dir_match:
                         config["root_dir"] = root_dir_match.group(1)
+                    
+                    branch_support_match = re.search(r'branch_support:\s*(true|false)', doc_config, re.IGNORECASE)
+                    if branch_support_match:
+                        config["branch_support"] = branch_support_match.group(1).lower() == 'true'
                 
                 # 提取Git相关配置
                 git_match = re.search(r'git:\s*{([^}]+)}', content_no_comments, re.DOTALL)
@@ -794,7 +799,16 @@ def main():
         print(f"错误: 文档根目录 {root_dir} 不存在")
         sys.exit(1)
     
-    print(f"开始扫描文档目录: {root_dir}")
+    # 确定要处理的目录列表
+    branches_to_process = []
+    if config.get("branch_support"):
+        print(f"检测到分支支持已启用，扫描 {root_dir} 下的子目录...")
+        for item in os.listdir(root_dir):
+            item_path = os.path.join(root_dir, item)
+            if os.path.isdir(item_path) and not item.startswith('.'):
+                branches_to_process.append(item)
+        if not branches_to_process:
+            print(f"警告: 分支支持已启用，但在 {root_dir} 下未找到任何子目录")
     
     # 检查是否在Git仓库中
     repo = None
@@ -841,32 +855,58 @@ def main():
         except Exception as e:
             print(f"Git初始化错误: {e}")
     
-    # 扫描目录结构
-    structure = scan_directory(root_dir, config, repo=repo)
+    # 处理流程
+    def process_dir(current_root, output_json, search_json):
+        print(f"处理目录: {current_root}")
+        # 扫描目录结构
+        # 需要克隆配置并临时修改 root_dir 供 build_search_tree 使用
+        local_config = config.copy()
+        local_config["root_dir"] = current_root
+        
+        structure = scan_directory(current_root, local_config, repo=repo)
+        
+        # 规范化路径
+        structure = normalize_paths(structure)
+        
+        # 如果需要合并已有结构
+        if args.merge and os.path.exists(output_json):
+            print(f"合并已有的JSON文件: {output_json}")
+            existing = load_existing_structure(output_json)
+            if existing:
+                structure = merge_structures(existing, structure, local_config)
+        
+        # 保存路径结构
+        with open(output_json, 'w', encoding='utf-8') as f:
+            json.dump(structure, f, ensure_ascii=False, indent=4)
+        
+        # 构建搜索索引
+        if not args.no_search:
+            print(f"构建搜索索引: {search_json}")
+            search_tree = build_search_tree(structure, local_config)
+            with open(search_json, 'w', encoding='utf-8') as f:
+                json.dump(search_tree, f, ensure_ascii=False, indent=4)
+        
+        return structure
+
+    # 根据是否启用分支支持来执行
+    total_files = 0
+    total_dirs = 0
     
-    # 规范化路径
-    structure = normalize_paths(structure)
-    
-    # 如果需要合并已有结构
-    if args.merge and os.path.exists(args.output):
-        print(f"合并已有的JSON文件: {args.output}")
-        existing = load_existing_structure(args.output)
-        if existing:
-            structure = merge_structures(existing, structure, config)
-    
-    # 保存路径结构
-    with open(args.output, 'w', encoding='utf-8') as f:
-        json.dump(structure, f, ensure_ascii=False, indent=4)
-    
-    # 构建搜索索引
-    if not args.no_search:
-        print(f"构建搜索索引: {args.search_index}")
-        search_tree = build_search_tree(structure, config)
-        with open(args.search_index, 'w', encoding='utf-8') as f:
-            json.dump(search_tree, f, ensure_ascii=False, indent=4)
-    
-    total_files = count_files(structure)
-    total_dirs = count_dirs(structure)
+    if branches_to_process:
+        print(f"将为 {len(branches_to_process)} 个分支生成数据文件...")
+        for branch in branches_to_process:
+            branch_dir = os.path.join(root_dir, branch)
+            branch_output = os.path.join(branch_dir, 'path.json')
+            branch_search = os.path.join(branch_dir, 'search.json')
+            
+            structure = process_dir(branch_dir, branch_output, branch_search)
+            total_files += count_files(structure)
+            total_dirs += count_dirs(structure)
+    else:
+        # 单根目录模式
+        structure = process_dir(root_dir, args.output, args.search_index)
+        total_files = count_files(structure)
+        total_dirs = count_dirs(structure)
     
     # 更新HTML元数据
     html_files_to_update = glob.glob('*.html')

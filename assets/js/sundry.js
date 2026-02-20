@@ -57,7 +57,7 @@ function getTitleFromPath(path) {
 function findNodeByPath(rootNode, targetPath) {
     if (!rootNode || !targetPath) return null;
     
-    function traverse(node, currentPath) {
+    function traverse(node) {
         // 检查当前节点的路径
         if (node.path === targetPath) {
             return node;
@@ -71,7 +71,7 @@ function findNodeByPath(rootNode, targetPath) {
         // 递归检查子节点
         if (node.children) {
             for (const child of node.children) {
-                const found = traverse(child, currentPath + '/' + child.name);
+                const found = traverse(child);
                 if (found) return found;
             }
         }
@@ -79,7 +79,7 @@ function findNodeByPath(rootNode, targetPath) {
         return null;
     }
     
-    return traverse(rootNode, '');
+    return traverse(rootNode);
 }
 
 // ===== 搜索高亮模块 =====

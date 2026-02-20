@@ -2,9 +2,9 @@
  * 侧边栏导航模块
  * 负责生成和管理侧边栏导航、目录(TOC)以及相关的交互功能
  */
+import { getAnimationConfig, getLoadingAnimationMinDuration, isAnimationEnabled } from './animation-controller.js';
+import { getCurrentBranch, getDocumentPagePath, generateNewUrl as pathUtilsGenerateNewUrl, parseUrlPath as pathUtilsParseUrlPath } from './path-utils.js';
 import config from './validated-config.js';
-import { getDocumentPagePath } from './path-utils.js';
-import { isAnimationEnabled, getAnimationConfig, getLoadingAnimationMinDuration } from './animation-controller.js';
 
 // 存储模块数据
 let pathData = null;
@@ -56,6 +56,61 @@ function generateSidebar(node) {
     // 使用平滑切换动画
     setTimeout(async () => {
         await fadeOutLoadingAndShowContent(nav, () => {
+            // 添加分支切换器 (如果启用)
+            if (config.document.branch_support && config.document.available_branches && config.document.available_branches.length > 0) {
+                const currentBranch = getCurrentBranch();
+                const branchObj = config.document.available_branches.find(b => b.name === currentBranch) ||
+                    { name: currentBranch, label: currentBranch };
+
+                const branchSwitcher = document.createElement('div');
+                branchSwitcher.className = 'mb-6 px-1';
+                branchSwitcher.innerHTML = `
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" @click.away="open = false" 
+                            class="w-full flex items-center justify-between bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:border-primary transition-colors">
+                            <span class="flex items-center">
+                                <i class="fas fa-code-branch mr-2 text-primary"></i>
+                                <span>${branchObj.label}</span>
+                            </span>
+                            <i class="fas fa-chevron-down text-xs transition-transform" :class="{'rotate-180': open}"></i>
+                        </button>
+                        <div x-show="open" 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 transform scale-95"
+                            x-transition:enter-end="opacity-100 transform scale-100"
+                            x-transition:leave="transition ease-in duration-75"
+                            x-transition:leave-start="opacity-100 transform scale-100"
+                            x-transition:leave-end="opacity-0 transform scale-95"
+                            class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-1 overflow-hidden">
+                            ${config.document.available_branches.map(branch => {
+                    const isActive = branch.name === currentBranch;
+                    return `
+                                    <a href="javascript:void(0)" 
+                                       @click="switchBranch('${branch.name}')"
+                                       class="flex items-center justify-between px-4 py-2 text-sm ${isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}">
+                                        <span>${branch.label}</span>
+                                        ${isActive ? '<i class="fas fa-check text-xs"></i>' : ''}
+                                    </a>
+                                `;
+                }).join('')}
+                        </div>
+                    </div>
+                `;
+
+                // 将 switchBranch 函数暴露给 window，方便在 HTML 模板中使用
+                window.switchBranch = (newBranch) => {
+                    const current = pathUtilsParseUrlPath();
+                    const newUrl = pathUtilsGenerateNewUrl(current.path, current.root, current.anchor, newBranch);
+                    window.history.pushState(null, '', newUrl);
+                    // 重新加载页面内容
+                    if (typeof window.loadContentFromUrl === 'function') {
+                        window.loadContentFromUrl();
+                    }
+                };
+
+                nav.appendChild(branchSwitcher);
+            }
+
             // 处理root参数
             if (currentRoot) {
                 // 查找指定的根目录节点
@@ -1841,38 +1896,12 @@ function generateTocSkeletonItems(count) {
 
 // 导出所有函数
 export {
+    addStaggerAnimation, applyFreshStaggerAnimation, collapseAllFolders, createNavLink, createNavList, ensureParentHeadingChildrenVisible, expandAllFolders, expandChildHeadings, expandParentFolders, fadeOutLoadingAndShowContent, findNodeByPath,
     // 侧边栏相关
-    generateSidebar,
-    handleFolderExpandMode,
-    expandAllFolders,
-    findNodeByPath,
-    getFolderPathFromIndexPath,
-    createNavList,
-    createNavLink,
-    navigateToFolderIndex,
-    toggleFolder,
-    applyFreshStaggerAnimation,
-    setActiveLink,
-    expandParentFolders,
-    highlightCurrentDocument,
-    updateBackToFullDirectoryLink,
-    collapseAllFolders,
-    highlightParentFolders,
-    scrollSidebarToActiveItem,
-
+    generateSidebar, generateSkeletonItems,
     // 目录(TOC)相关
-    generateToc,
-    expandChildHeadings,
-    ensureParentHeadingChildrenVisible,
-    updateActiveHeading,
-    handleTocScrollHighlight,
-    scrollTocToActiveItem,
-
+    generateToc, generateTocSkeletonItems, getFolderPathFromIndexPath, handleFolderExpandMode, handleTocScrollHighlight, highlightCurrentDocument, highlightParentFolders, navigateToFolderIndex, scrollSidebarToActiveItem, scrollTocToActiveItem, setActiveLink,
     // 工具函数
     showSidebarLoading,
-    showTocLoading,
-    fadeOutLoadingAndShowContent,
-    addStaggerAnimation,
-    generateSkeletonItems,
-    generateTocSkeletonItems
-}; 
+    showTocLoading, toggleFolder, updateActiveHeading, updateBackToFullDirectoryLink
+};

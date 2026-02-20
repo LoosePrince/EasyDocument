@@ -19,6 +19,21 @@ const VALIDATION_RULES = {
         type: 'boolean',
         default: true,
         description: '缓存菜单显示控制'
+    },
+    'document.branch_support': {
+        type: 'boolean',
+        default: false,
+        description: '是否启用分支支持'
+    },
+    'document.default_branch': {
+        type: 'string',
+        default: 'main',
+        description: '默认分支名称'
+    },
+    'document.available_branches': {
+        type: 'object',
+        default: [],
+        description: '可用分支列表'
     }
 };
 

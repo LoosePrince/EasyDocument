@@ -83,6 +83,7 @@ import {
 } from './sidebar-navigation.js';
 import {
     initUtils,
+    getBranchDataPath,
     filePathToUrl,
     resolvePathFromData,
     findDirectoryIndexPath,
@@ -106,6 +107,7 @@ import { initAnimationController, isAnimationEnabled } from './animation-control
 
 let pathData = null; // 存储文档结构数据
 let currentRoot = null; // 当前根目录
+let currentBranch = null; // 当前分支
 let isLoadingDocument = false; // 是否正在加载文档
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -131,13 +133,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // 加载文档结构
     try {
-        const response = await fetch('/path.json');
+        const { branch } = parseUrlPath();
+        const rootDir = config.document.root_dir.replace(/\/$/, '');
+        const pathJsonUrl = config.document.branch_support ? `${rootDir}/${branch}/path.json` : '/path.json';
+        
+        const response = await fetch(pathJsonUrl);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         pathData = await response.json();
         
         // 初始化sundry模块
-        const { path: currentPath, root } = parseUrlPath();
+        const { path: currentPath, root, branch: newBranch } = parseUrlPath();
         currentRoot = root;
+        currentBranch = newBranch;
         
         // 初始化工具模块
         initUtils(pathData, currentRoot);
@@ -519,91 +526,49 @@ function setupMobileMenu() {
 // 从URL加载内容
 async function loadContentFromUrl() {
     // 使用新的URL解析函数获取当前URL信息
-    const { path: initialPath, root, anchor } = parseUrlPath();
+    const parsed = parseUrlPath();
+    const { path: initialPath, root, anchor, branch } = parsed;
     
-
-    
-    // 如果已经在加载中，检查是否是root参数变化的情况
+    // 如果已经在加载中，检查是否是root或branch参数变化的情况
     if (isLoadingDocument) {
-        // 如果root参数发生变化，需要强制重新生成侧边栏
-        if (root !== currentRoot) {
-            
-            // 更新currentRoot
-            currentRoot = root;
-            
-            // 更新工具模块中的currentRoot
-            initUtils(pathData, currentRoot);
-            
-            // 重新初始化侧边栏导航模块
-            initSidebarNavigation(pathData, currentRoot, {
-                parseUrlPath,
-                generateNewUrl,
-                loadContentFromUrl,
-                loadDocument,
-                resolvePathFromData,
-                isIndexFile,
-                debounce,
-                getAllDocumentLinks,
-                generatePrevNextNavigation,
-                updatePageTitle,
-                generateBreadcrumb,
-                updateGitInfo,
-                setupHeadingIntersectionObserver,
-                updateReadingProgress,
-                createEnhancedImageModal,
-                showEnhancedImageModal,
-                isDarkMode,
-                filePathToUrl,
-                initUtils,
-                initSundryModule,
-                updateActiveHeading,
-                handleUrlHash
-            });
-            
-            // 重新生成侧边栏
-            generateSidebar(pathData);
-            
-            // 重新初始化sundry模块（面包屑等）
-            initSundryModule(pathData, currentRoot, updateActiveHeading);
-            
-            // 高亮当前文档（增加更长的延迟确保侧边栏完全生成）
-            setTimeout(() => {
-                highlightCurrentDocument();
-            }, 500);
-        }
-        // console.log('文档正在加载中，跳过重复加载请求');
-        return;
-    }
-    let path = initialPath; // 使用let，因为可能需要修改
-    
-    // 如果有root参数且path不为空，需要检查是否需要转换为完整路径
-    if (root && path && !path.startsWith(root + '/')) {
-        // 将相对路径转换为完整路径
-        path = root + '/' + path;
-    }
-    
-    // 根据path.json解析实际的文件路径
-    if (path) {
-        const { actualPath } = resolvePathFromData(path);
-        if (actualPath && actualPath !== path) {
-            path = actualPath;
+        // 如果root或branch参数发生变化，需要强制重新生成侧边栏和数据
+        if (root === currentRoot && (!config.document.branch_support || branch === currentBranch)) {
+            return;
         }
     }
-    
-    // 获取搜索参数（从旧的查询参数中获取，保持兼容性）
-    const url = new URL(window.location.href);
-    const searchQuery = url.searchParams.get('search');
-    const searchOccurrence = url.searchParams.get('occurrence');
-    
-    // 如果root参数更改或从无到有，需要重新生成侧边栏（正常情况下的处理）
-    if (root !== currentRoot) {
+
+    // 1. 处理分支或根目录变更（必须在解析路径之前完成数据更新）
+    if (root !== currentRoot || (config.document.branch_support && branch !== currentBranch)) {
         currentRoot = root;
+        const branchChanged = config.document.branch_support && branch !== currentBranch;
+        currentBranch = branch;
         
-        // 更新工具模块中的currentRoot
+        // 如果分支改变，重新加载 path.json 和 search.json
+        if (branchChanged) {
+            try {
+                const rootDir = config.document.root_dir.replace(/\/$/, '');
+                const branchDataPath = `${rootDir}/${branch}`;
+                
+                // 加载 path.json
+                const pathResponse = await fetch(`${branchDataPath}/path.json`);
+                if (pathResponse.ok) {
+                    pathData = await pathResponse.json();
+                }
+                
+                // 加载 search.json
+                if (typeof window.loadSearchData === 'function') {
+                    await window.loadSearchData();
+                }
+            } catch (e) {
+                console.error("分支切换数据加载失败:", e);
+            }
+        }
+
+        // 更新工具模块中的数据
         initUtils(pathData, currentRoot);
         
-        // 重新初始化侧边栏导航模块
-        initSidebarNavigation(pathData, currentRoot, {
+        // 重新初始化各模块依赖
+        const moduleDeps = {
             parseUrlPath,
             generateNewUrl,
             loadContentFromUrl,
@@ -626,7 +591,9 @@ async function loadContentFromUrl() {
             initSundryModule,
             updateActiveHeading,
             handleUrlHash
-        });
+        };
+
+        initSidebarNavigation(pathData, currentRoot, moduleDeps);
         
         // 重新生成侧边栏
         generateSidebar(pathData);
@@ -634,8 +601,29 @@ async function loadContentFromUrl() {
         // 重新初始化sundry模块（面包屑等）
         initSundryModule(pathData, currentRoot, updateActiveHeading);
     }
+
+    let path = initialPath; // 使用let，因为可能需要修改
     
-    // 处理默认页面或目录索引页
+    // 如果有root参数且path不为空，需要检查是否需要转换为完整路径
+    if (root && path && !path.startsWith(root + '/')) {
+        // 将相对路径转换为完整路径
+        path = root + '/' + path;
+    }
+    
+    // 2. 根据最新的 path.json 解析实际的文件路径
+    if (path) {
+        const { actualPath } = resolvePathFromData(path);
+        if (actualPath && actualPath !== path) {
+            path = actualPath;
+        }
+    }
+    
+    // 获取搜索参数
+    const url = new URL(window.location.href);
+    const searchQuery = url.searchParams.get('search');
+    const searchOccurrence = url.searchParams.get('occurrence');
+    
+    // 3. 处理默认页面或目录索引页
     if (!path) {
         // 如果没有指定页面，但有root参数，则加载root目录下的README.md
         if (currentRoot) {
@@ -662,20 +650,6 @@ async function loadContentFromUrl() {
             window.history.replaceState({ path: path }, '', newUrl);
         }
         
-    } else {
-        // 支持省略文件扩展名，检查路径是否为目录
-        const hasExtension = hasSupportedExtension(path);
-        if (!hasExtension) {
-            // 尝试在目录后面添加索引文件
-            const indexPath = findDirectoryIndexPath(path);
-            if (indexPath) {
-                // 如果找到了索引页，更新实际加载的路径，但保持URL中的文件夹路径
-                // 不更新URL，保持显示文件夹路径
-                const originalPath = path; // 保存原始的文件夹路径
-                path = indexPath; // 用于加载内容
-                // 不调用 window.history.replaceState，保持URL显示为文件夹路径
-            }
-        }
     }
     
     // 如果经过上述处理后仍然没有有效的路径，则显示欢迎信息
@@ -872,9 +846,9 @@ async function loadDocument(relativePath) {
     } else {
         // 如果是相对路径，拼接上根目录
         // 确保路径中不会有双斜杠
-        const rootDir = config.document.root_dir.replace(/\/$/, '');
+        const branchDataPath = getBranchDataPath().replace(/\/$/, '');
         const cleanPath = relativePath.replace(/^\//, '');
-        fetchPath = `${rootDir}/${cleanPath}`;
+        fetchPath = `${branchDataPath}/${cleanPath}`;
     }
     
     let successfullyLoaded = false; // 标记是否成功加载了内容

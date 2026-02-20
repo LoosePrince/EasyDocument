@@ -7,7 +7,8 @@ import documentCache from './document-cache.js';
 import { updateFooterElements, updateHeaderElements } from './navigation.js';
 import { initDarkMode } from './theme.js';
 import {
-    debounce
+    debounce,
+    getBranchDataPath
 } from './utils.js';
 import config from './validated-config.js';
 
@@ -240,9 +241,12 @@ function initSearch() {
 }
 
 // 加载搜索数据
-async function loadSearchData() {
+export async function loadSearchData() {
     try {
-        const response = await fetch('/search.json');
+        const branchDataPath = getBranchDataPath().replace(/\/$/, '');
+        const searchJsonUrl = config.document.branch_support ? `${branchDataPath}/search.json` : '/search.json';
+        
+        const response = await fetch(searchJsonUrl);
         if (response.ok) {
             searchData = await response.json();
             console.log('搜索数据加载成功，共 ' + searchData.length + ' 条记录');
@@ -253,6 +257,8 @@ async function loadSearchData() {
         console.error('加载搜索数据出错:', error);
     }
 }
+
+window.loadSearchData = loadSearchData;
 
 // 绑定搜索相关事件
 function bindSearchEvents() {

@@ -3,7 +3,12 @@
  * 提供整个应用程序中使用的通用工具函数
  */
 import config from './validated-config.js';
-import { generateNewUrl as pathGenerateNewUrl } from './path-utils.js';
+import { 
+    generateNewUrl as pathGenerateNewUrl, 
+    parseUrlPath as pathParseUrlPath,
+    getCurrentBranch,
+    getBranchDataPath as pathGetBranchDataPath
+} from './path-utils.js';
 
 // 全局变量
 let pathData = null;
@@ -15,6 +20,13 @@ export function initUtils(data, root) {
     currentRoot = root;
 }
 
+/**
+ * 获取分支对应的数据根路径
+ */
+export function getBranchDataPath(branch = null) {
+    return pathGetBranchDataPath(branch);
+}
+
 // 通用工具函数
 // 这些函数将由用户从各个文件移动到这里
 
@@ -22,8 +34,8 @@ export function initUtils(data, root) {
 
 /**
  * 解析URL路径，支持新的URL格式
- * 新格式: main.html#root/path/to/file.md#anchor
- * 兼容格式: main.html#/path/to/file.md#anchor (无root)
+ * 新格式: main.html#branch/#root/path/to/file.md#anchor
+ * 兼容格式: main.html#/path/to/file.md#anchor (无root, 默认分支)
  * 旧格式兼容: main.html?path=xxx&root=xxx#anchor
  */
 /**
@@ -31,7 +43,7 @@ export function initUtils(data, root) {
  * @param {string} cleanPath 无扩展名的路径
  * @returns {object} { actualPath: 实际文件路径, isDirectory: 是否为目录 }
  */
-function resolvePathFromData(cleanPath) {
+export function resolvePathFromData(cleanPath) {
     if (!pathData || !cleanPath) {
         return { actualPath: cleanPath, isDirectory: false };
     }
@@ -126,52 +138,8 @@ function resolvePathFromData(cleanPath) {
     return { actualPath: cleanPath, isDirectory: false };
 }
 
-function parseUrlPath() {
-    const url = new URL(window.location.href);
-    const hash = decodeURIComponent(url.hash.substring(1)); // 去掉#并解码
-    
-    let path = '';
-    let root = null;
-    let anchor = '';
-    
-    if (hash) {
-        // 处理新格式: #root/path/to/file#anchor 或 #/path/to/file#anchor (无扩展名)
-        if (hash.startsWith('/')) {
-            // 无root的情况: #/path/to/file#anchor
-            const anchorIndex = hash.indexOf('#', 1);
-            if (anchorIndex !== -1) {
-                path = hash.substring(1, anchorIndex); // 去掉开头的/
-                anchor = hash.substring(anchorIndex + 1);
-            } else {
-                path = hash.substring(1); // 去掉开头的/
-            }
-        } else {
-            // 有root的情况: #root/path/to/file#anchor
-            const anchorIndex = hash.indexOf('#');
-            let pathPart = anchorIndex !== -1 ? hash.substring(0, anchorIndex) : hash;
-            
-            if (anchorIndex !== -1) {
-                anchor = hash.substring(anchorIndex + 1);
-            }
-            
-            // 解析root和path
-            const slashIndex = pathPart.indexOf('/');
-            if (slashIndex !== -1) {
-                root = pathPart.substring(0, slashIndex);
-                path = pathPart.substring(slashIndex + 1);
-            } else {
-                // 只有root，没有具体文档
-                root = pathPart;
-                path = '';
-            }
-        }
-    } else {
-        // 旧格式兼容: ?path=xxx&root=xxx
-        path = url.searchParams.get('path') || '';
-        root = url.searchParams.get('root') || null;
-    }
-    
-    return { path, root, anchor };
+export function parseUrlPath() {
+    return pathParseUrlPath();
 }
 
 /**
@@ -214,22 +182,7 @@ function findDirectoryIndexPath(dirPath) {
     
     // 从路径数据中查找
     const indexPath = findNode(pathData, '');
-    if (indexPath) return indexPath;
-    
-    // 如果在路径数据中没找到，尝试一些常见的索引文件名
-    // 创建可能的索引文件路径数组
-    const possiblePaths = [];
-    for (const indexName of config.document.index_pages) {
-        possiblePaths.push(`${dirPath}/${indexName}`);
-    }
-    
-    // 返回第一个可能的路径，后续在loadDocument中会检查文件是否存在
-    // 如果需要更精确，可以在此处使用fetch检查文件是否存在，但会增加额外网络请求
-    if (possiblePaths.length > 0) {
-        return possiblePaths[0];
-    }
-    
-    return null;
+    return indexPath;
 }
 
 // 文件和文档相关工具函数
@@ -686,9 +639,7 @@ function formatTimestamp(timestamp, options = {}) {
 export {
     // URL 和路径相关
     filePathToUrl,
-    resolvePathFromData,
     findDirectoryIndexPath,
-    parseUrlPath,
     generateNewUrl,
     
     // 文件和文档相关

@@ -1,3 +1,17 @@
+# 配置详解
+
+本节详细介绍 EasyDocument 系统的配置选项。通过调整 `config.js` 文件，您可以自定义网站的外观、行为和功能，以满足您的特定需求。
+
+## 配置文件路径
+
+配置文件位于项目根目录下的 `config.js`。这是一个标准的 JavaScript 模块，导出一个包含所有配置选项的对象。
+
+
+## 配置文件示例
+
+以下是完整的 `config.js` 文件示例，包含所有可用选项及其默认值：
+
+```javascript
 /**
  * EasyDocument 配置文件
  */
@@ -9,13 +23,13 @@ const config = {
     title: "简易静态文档系统", // 网站标题，显示在浏览器标签页
     description: "一个轻量级、免编译的纯静态前端文档系统", // 网站描述，用于SEO
     keywords: "文档,静态网站,Markdown,Alpine.js", // 网站关键词，用于SEO
-    base_url: "/" // 网站基础URL，如果部署在子目录则需要修改
+    base_url: "index.html" // 网站基础URL，如果部署在子目录则需要修改
   },
 
   // 外观设置
   appearance: {
-    logo: "/assets/img/logo.svg", // 网站Logo路径
-    favicon: "/assets/img/favicon.ico", // 网站图标路径
+    logo: "assets/img/logo.svg", // 网站Logo路径
+    favicon: "assets/img/favicon.ico", // 网站图标路径
     theme_color: "#3b82f6", // 主题色(蓝色)
     default_dark_mode: "auto", // 默认是否启用暗黑模式
     font_family: "system-ui, -apple-system, sans-serif" // 字体设置
@@ -24,11 +38,13 @@ const config = {
   // 布局设置
   layout: {
     show_header: true, // 是否显示顶栏
-    header_file: "/header.html", // 自定义顶栏文件路径
+    use_custom_header: false, // 是否使用自定义的header.html文件
+    header_file: "header.html", // 自定义顶栏文件路径
     show_footer: true, // 是否显示底栏
-    footer_file: "/footer.html", // 自定义底栏文件路径
+    use_custom_footer: true, // 是否使用自定义的footer.html文件
+    footer_file: "footer.html", // 自定义底栏文件路径
     sidebar_width: "250px", // 侧边栏宽度
-    toc_width: "280px", // 目录宽度
+    toc_width: "220px", // 目录宽度
     mobile_breakpoint: "1024px" // 移动设备断点
   },
 
@@ -44,7 +60,7 @@ const config = {
       enable_skeleton: true, // 是否启用骨架屏加载动画
       skeleton_duration: 1500 // 骨架屏shimmer动画周期(毫秒)
     },
-
+    
     // 右侧边栏（文章目录）
     toc: {
       enable: true, // 是否启用右侧目录交错动画
@@ -53,14 +69,14 @@ const config = {
       enable_skeleton: true, // 是否启用骨架屏加载动画
       skeleton_duration: 1500 // 骨架屏shimmer动画周期(毫秒)
     },
-
+    
     // 文章内容
     article: {
       enable_skeleton: true, // 是否启用文章加载骨架屏动画
       enable_render: true, // 是否启用文章内容渲染动画（淡入）
       render_duration: 600 // 渲染动画持续时间(毫秒)
     },
-
+    
     // 通用设置
     general: {
       min_duration: 300 // 加载动画最小显示时长(毫秒) - 确保用户能看到加载过程
@@ -78,28 +94,30 @@ const config = {
     nav_links: [ // 导航栏链接
       {
         text: "首页",
-        url: "/",
+        url: "index.html",
+        icon: "fas fa-house"
       },
       {
         text: "文档",
-        url: "main/",
+        url: "main.html",
+        icon: "fas fa-file-lines"
       },
       {
         text: "教程",
         url: [
           {
             text: "快速开始",
-            url: "main/#快速入门/",
+            url: "main.html?root=快速入门",
             icon: "fas fa-rocket"
           },
           {
             text: "使用指南",
-            url: "main/#使用指南/",
+            url: "main.html?root=使用指南",
             icon: "fas fa-book"
           },
           {
             text: "详细配置",
-            url: "main/#配置详解/",
+            url: "main.html?root=配置详解",
             icon: "fas fa-cog"
           }
         ],
@@ -116,13 +134,7 @@ const config = {
 
   // 文档设置
   document: {
-    root_dir: "/data", // 文档根目录
-    branch_support: true, // 是否启用分支支持
-    default_branch: "main", // 默认分支名称
-    available_branches: [ // 可用分支列表（与 data/ 下目录一致）
-      { name: "main", label: "main" },
-      { name: "1.3.4", label: "v1.3.4" }
-    ],
+    root_dir: "data", // 文档根目录
     default_page: "README.md", // 默认文档
     index_pages: ["README.md", "README.html", "index.md", "index.html"], // 索引页文件名
     supported_extensions: [".md", ".html"], // 支持的文档扩展名
@@ -183,35 +195,9 @@ const config = {
 
   // 页脚设置
   footer: {
-    // 版权信息
-    copyright: "© 2025 EasyDocument",
-
-    // 技术支持信息配置
-    // enable: 是否显示整块 powered by 行
-    powered_by: {
-      enable: true,
-      text: "使用以下技术栈构建：",
-      links: [
-        {
-          text: "TailwindCSS",
-          url: "https://tailwindcss.com",
-          external: true
-        },
-        {
-          text: "Alpine.js",
-          url: "https://alpinejs.dev",
-          external: true
-        },
-        {
-          text: "FontAwesome",
-          url: "https://fontawesome.com",
-          external: true
-        }
-      ]
-    },
-
-    // 页脚链接（资源区）
-    links: [
+    copyright: "© 2025 EasyDocument", // 版权信息
+    show_powered_by: true, // 显示技术支持信息
+    links: [ // 页脚链接
       {
         text: "GitHub",
         url: "https://github.com/LoosePrince/EasyDocument"
@@ -220,25 +206,76 @@ const config = {
         text: "报告问题",
         url: "https://github.com/LoosePrince/EasyDocument/issues"
       }
-    ],
-
-    // 备案信息配置
-    // icp: 最多 1~3 条记录，每条记录为 { text: '备案号', url: '链接(可选)' }
-    // position: "top" 显示在版权信息附近；"bottom" 显示在页脚最底部信息行
-    beian: {
-      enable: false,
-      icp: [],
-      position: "bottom"
-    },
-
-    // 列配置：控制页脚中部各列的展示与类型
-    columns: [
-      { key: "nav", title: "导航", type: "nav", enable: true },
-      { key: "links", title: "资源", type: "links", enable: true },
-      { key: "stack", title: "技术栈", type: "stack", enable: true }
     ]
   }
 };
 
 // 导出配置
 export default config; 
+```
+
+## 配置修改方法
+
+要修改配置，请按照以下步骤操作：
+
+1. 打开项目根目录下的 `config.js` 文件
+2. 找到需要修改的配置项
+3. 更改其值为您需要的设置
+4. 保存文件
+5. 刷新浏览器查看更改效果
+
+## 配置注意事项
+
+- 修改配置后无需重新构建，系统会在页面加载时读取最新配置
+- 保持 JavaScript 语法的正确性，包括逗号、引号等
+- 路径配置（如 logo、favicon 等）可以使用相对路径或绝对路径
+- 某些设置可能与其他设置有关联，请阅读每个配置项的详细说明
+
+## 配置实例
+
+以下是一些常见的配置修改场景：
+
+### 修改网站标题和描述
+
+```javascript
+site: {
+  name: "我的项目文档",
+  title: "项目技术文档中心",
+  description: "提供项目的架构、API和使用说明",
+  keywords: "项目文档,技术文档,API文档",
+  base_url: "/"
+}
+```
+
+### 更改主题颜色
+
+```javascript
+appearance: {
+  // ... 其他设置
+  theme_color: "#10b981", // 绿色主题
+  // ... 其他设置
+}
+```
+
+### 调整侧边栏宽度
+
+```javascript
+layout: {
+  // ... 其他设置
+  sidebar_width: "300px", // 更宽的侧边栏
+  // ... 其他设置
+}
+```
+
+## 下一步
+
+查看各分类的详细配置说明，了解每个配置项的功能和可选值：
+
+- [站点与页脚配置](配置详解/站点与页脚.md)
+- [外观设置](配置详解/外观设置.md)
+- [布局与导航配置](配置详解/layout与导航.md)
+- [动画参数配置](配置详解/动画参数.md)
+- [文档与插件配置](配置详解/文档与插件.md)
+- [搜索功能配置](配置详解/搜索功能.md)
+- [path.json 结构与手动编写](配置详解/path-json结构.md)
+- [GitHub与Git功能](配置详解/GitHub与Git功能.md) 
