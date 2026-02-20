@@ -34,9 +34,7 @@ export function getBranchDataPath(branch = null) {
 
 /**
  * 解析URL路径，支持新的URL格式
- * 新格式: main.html#branch/#root/path/to/file.md#anchor
- * 兼容格式: main.html#/path/to/file.md#anchor (无root, 默认分支)
- * 旧格式兼容: main.html?path=xxx&root=xxx#anchor
+ * 格式: main/#branch/#/path#anchor 或 main/#/path#anchor (默认分支)
  */
 /**
  * 根据path.json解析路径，返回实际文件路径

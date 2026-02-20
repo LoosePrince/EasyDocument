@@ -4,10 +4,6 @@
 
 EasyDocument 是一个轻量级、免编译的纯静态前端文档系统。它允许用户通过简单地添加 Markdown 或 HTML 文件到 `/data` 目录，即可自动生成美观、结构化的文档网站。无需后端支持，纯前端实现，简单易用。
 
-**新特性**:
-- 🖱️ 右键菜单功能：复制链接、生成MD格式链接、快速预览（v1.2.5+）
-- 🔗 新版链接格式：更简洁的 `main/#path/file` 格式（v1.2.7+）
-
 ## 设计风格
 
 ![image](https://github.com/user-attachments/assets/f9a14da2-d50a-421d-8805-de2eda484da8)
@@ -28,57 +24,40 @@ EasyDocument 是一个轻量级、免编译的纯静态前端文档系统。它�
 
 ```
 EasyDocument/
-├── index.html          # 网站首页（项目首页，如项目介绍、"开始"进入文档页）
+├── index.html          # 网站首页（项目介绍、入口）
+├── main/
+│   └── index.html      # 文档页 SPA（基于 hash 路由，渲染 data 下文档）
+├── 404.html            # 自定义 404 页
 ├── header.html         # 全局顶栏（可选）
 ├── footer.html         # 全局底栏（可选）
-├── main.html           # 重定向
-├── config.js           # 网站配置文件
-├── path.json           # 文档路径文件（data文件夹中的文档结构）
-├── search.json         # 搜索索引文件
-├── build.py            # 一键创建文档路径脚本
-├── path-editor.html    # 可视化路径编辑器
-├── requirements.txt    # Python依赖文件
-├── LICENSE             # 开源协议
-├── main/
-│   └── index.html      # 文档页面模板（文档首页，文档渲染，基于get属性）
-├── assets/             # 静态资源
-│   ├── css/            # CSS文件
-│   │   ├── style.css           # 主样式文件
-│   │   ├── md.css              # Markdown渲染样式
-│   │   └── context-menu.css    # 右键菜单样式
-│   ├── js/             # JavaScript文件
-│   │   ├── main.js             # 主要功能逻辑
-│   │   ├── document-page.js    # 文档页面处理
-│   │   ├── content-renderer.js # 内容渲染模块
-│   │   ├── sidebar-navigation.js # 侧边栏导航模块
-│   │   ├── context-menu.js     # 右键菜单功能
-│   │   ├── cache-manager.js    # 缓存管理
-│   │   ├── document-cache.js   # 文档缓存
-│   │   ├── navigation.js       # 导航功能
-│   │   ├── progress-bar.js     # 进度条组件
-│   │   ├── theme.js            # 主题切换
-│   │   ├── image-modal.js      # 图片放大模态框
-│   │   ├── utils.js            # 通用工具函数
-│   │   ├── sundry.js           # 杂项功能
-│   │   ├── katex-handler.js    # 数学公式处理
-│   │   ├── mermaid-handler.js  # 图表处理
-│   │   └── tailwindcss.js      # TailwindCSS框架
-│   └── img/            # 图片资源
-│       ├── favicon.ico         # 网站图标
-│       └── logo.svg            # 网站Logo
-└── data/               # 文档存储目录
-    ├── README.md       # 根目录文档
-    ├── 分类1/
-    │   ├── README.md   # 分类1的介绍文档
-    │   ├── 文档1.md     # 具体文档
-    │   ├── 文档2.html   # HTML格式文档
-    │   └── 分类3/
-    │       ├── README.md   # 分类3的介绍文档
-    │       └── ...
-    └── 分类2/
-        ├── README.md   # 分类2的介绍文档
+├── config.js           # 网站与文档配置（分支、导航、搜索等）
+├── meta.json           # 项目元信息（版本、描述等）
+├── build.py            # 文档结构/搜索索引生成脚本
+├── requirements.txt    # Python 依赖（如 GitPython）
+├── LICENSE
+├── README.md
+├── tool/
+│   └── path-editor.html # 可视化 path.json 编辑器
+├── assets/
+│   ├── css/            # 主样式、Markdown、右键菜单等
+│   ├── js/             # 主逻辑、文档页、侧栏、渲染、缓存、主题等
+│   └── img/            # favicon、logo 等
+└── data/               # 文档根目录（config.js 中 document.root_dir）
+    ├── main/           # 默认分支（document.default_branch）
+    │   ├── path.json   # 该分支文档树（build.py 生成）
+    │   ├── search.json # 该分支搜索索引（build.py 生成）
+    │   ├── README.md   # 分支首页
+    │   └── 分类/       # 子目录
+    │       ├── README.md  # 目录索引（index_pages）
+    │       └── 文档.md
+    └── 1.3.4/          # 其他分支（可选，与 available_branches 一致）
+        ├── path.json
+        ├── search.json
         └── ...
 ```
+
+- 未启用 **分支支持**（`config.js` 中 `document.branch_support: false`）时，文档放在 `data/` 下，`path.json` / `search.json` 由 `build.py` 生成在项目根或 `data/`（视脚本参数而定）。
+- 启用 **分支支持** 时，`data/` 下每个子目录（如 `main`、`1.3.4`）对应一个分支，各分支目录内包含自己的 `path.json` 与 `search.json`。
 
 ## 核心功能
 
@@ -113,21 +92,26 @@ EasyDocument/
 - 文档内容中的内部链接
 - 面包屑导航和顶部导航链接
 
-### 5. 新版链接格式 (v1.2.7+)
+### 5. 新版链接格式 (v1.3.5+)
 
-EasyDocument 引入了更简洁的链接格式：
+文档页使用 **hash 路由**，链接格式如下。
 
-**新格式**: `main/#root/path/to/file#anchor`
-- 更简洁、直观的路径表示
-- SEO友好，更适合分享
-- 类似文件系统的路径结构
+**默认分支**（如 `main`）：
+- 文档链接：`main/#/路径/到/文档`（扩展名可省略）
+- 带锚点：`main/#/路径/到/文档#锚点`
 
-**兼容性**: 继续支持旧的查询参数格式 `main.html?path=xxx&root=xxx#anchor`
+**其他分支**（启用 `document.branch_support` 且切换分支时）：
+- 格式：`main/#分支名/#/路径/到/文档`，例如 `main/#1.3.4/#/配置详解/README`
 
-**推荐用法**:
-- 文档内链接优先使用 Markdown 相对路径: `[文档](./path/file)`
-- 特殊需求使用新哈希格式: `[文档](main/#path/file)`
-- 右键菜单自动生成最适合的链接格式
+**特点**：
+- 路径清晰、易分享、对 SEO 友好
+- 与「分支 + 路径」一一对应
+
+
+**推荐**：
+- 文档内优先用 Markdown 相对路径：`[文档](./path/file)`，系统会解析为上述 hash 格式
+- 需要写死链接时使用：`main/#/使用指南/README` 或带分支的 `main/#分支/#/路径`
+- 右键菜单「复制链接」会生成当前使用的 hash 格式
 
 ## 配置系统
 
@@ -146,35 +130,38 @@ EasyDocument 引入了更简洁的链接格式：
 
 ## 文档组织规则
 
-1. 每个目录可以包含一个 `README.md` 或 `README.html` 文件，作为该目录的介绍文档
-   - 例如: `/data/工具/README.md` 将作为"工具"分类的介绍文档
-   
-2. 其他文档按照以下规则组织:
-   - 例如: `/data/工具/Git使用指南.md` 将显示为"工具"分类下的"Git使用指南"文档
-   
-3. 如果目录没有 README 文件，则该目录在导航中不可点击，仅作为分类存在
+1. **索引页**：每个目录可包含一个索引页，由 `config.js` 中 `document.index_pages` 指定（默认包含 `README.md`、`README.html`、`index.md`、`index.html`）。访问该目录时优先加载第一个存在的索引文件。
+2. **文档文件**：仅 `document.supported_extensions` 中的扩展名（默认 `.md`、`.html`）会出现在导航与搜索中。
+3. **路径与分支**：
+   - 未启用分支时：所有文档放在 `data/` 下，按目录层级形成树。
+   - 启用分支时：`data/` 下每个子目录为一个分支（如 `data/main/`、`data/1.3.4/`），分支名需与 `document.available_branches` 一致；各分支内再按目录组织文档。
+4. **无索引页的目录**：若某目录下没有任何索引页，该目录在导航中仅作分组，不可点击进入；其子文档仍会出现在侧栏中。
 
 ## 使用方法
 
 ### 基本使用流程
 
-1. 将文档 (.md 或 .html) 放入 `/data` 目录
-2. 按照需要组织目录结构
-3. 根据需要修改 `config.js` 文件自定义网站
-4. 运行 `build.py` 脚本生成文档路径（可选，用于生成文档路径，你可以自己手写）
-5. 直接通过浏览器访问 `index.html`
+1. **放置文档**：将 `.md` 或 `.html` 放入 `data/`（单分支）或 `data/<分支名>/`（多分支，如 `data/main/`）。
+2. **组织目录**：用子目录分类，每目录可放索引页（如 `README.md`），其余为正文。
+3. **配置**：在 `config.js` 中设置站点信息、`document.branch_support`、`document.available_branches`（多分支时）等。
+4. **生成索引**：运行 `python build.py --merge` 生成或更新各分支的 `path.json`、`search.json`（可手写替代）。
+5. **访问**：用浏览器打开 `index.html` 进入首页，或打开 `main/` 进入文档页。
 
-### 右键菜单使用
+### 多分支时
 
-- 在任何文档链接或文件夹上右键点击即可使用菜单功能
-- 支持复制链接、生成Markdown格式链接、快速预览
-- 使用 `ESC` 键可以关闭预览窗口和右键菜单
+- 在 `config.js` 的 `document` 中设置 `branch_support: true`、`default_branch`、`available_branches`（与 `data/` 下子目录名一致）。
+- `build.py --merge` 会为每个分支目录生成各自的 `path.json` 和 `search.json`。
+- 文档页侧栏可切换分支，链接格式见上文「新版链接格式」。
+
+### 右键菜单
+
+- 在侧栏文档/文件夹、右侧目录、正文内链上右键，可复制链接、复制为 Markdown 链接、预览文档。
+- 使用 `ESC` 关闭预览或菜单。
 
 ### 自定义外观
 
-- 修改 `header.html` 和 `footer.html` 自定义网站的顶栏和底栏
-- 通过 TailwindCSS 类调整样式
-- 在 `config.js` 中调整颜色、字体等设置
+- 编辑 `header.html`、`footer.html` 自定义顶栏与底栏。
+- 在 `config.js` 的 `appearance`、`layout`、`footer` 等中调整 Logo、主题色、字体、页脚等。
 
 ## 部署说明
 

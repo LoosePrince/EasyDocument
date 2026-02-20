@@ -99,7 +99,7 @@ const config = {
       },
       {
         text: "文档",
-        url: "main.html",
+        url: "main/",
         icon: "fas fa-file-lines"
       },
       {
@@ -107,17 +107,17 @@ const config = {
         url: [
           {
             text: "快速开始",
-            url: "main.html?root=快速入门",
+            url: "main/#/快速入门",
             icon: "fas fa-rocket"
           },
           {
             text: "使用指南",
-            url: "main.html?root=使用指南",
+            url: "main/#/使用指南",
             icon: "fas fa-book"
           },
           {
             text: "详细配置",
-            url: "main.html?root=配置详解",
+            url: "main/#/配置详解",
             icon: "fas fa-cog"
           }
         ],

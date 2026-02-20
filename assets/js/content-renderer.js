@@ -946,7 +946,7 @@ function fixInternalLinks(container) {
         const href = link.getAttribute('href');
         if (!href) return;
 
-        // 跳过已经处理过的链接（以main.html开头的）
+        // 跳过已处理过的文档页链接（main/ 或含 #/ 的 hash）
         const docPagePath = getDocumentPagePath();
         if (href.startsWith(`${docPagePath}#`)) {
             return;
@@ -1025,25 +1025,6 @@ function fixInternalLinks(container) {
             // 标记为内部链接
             if (!link.classList.contains('internal-link')) {
                 link.classList.add('internal-link');
-            }
-        }
-        // 处理旧格式的链接（包含path参数）
-        else if (href.includes('path=')) {
-            try {
-                const url = new URL(href, window.location.origin);
-                const path = decodeURIComponent(url.searchParams.get('path') || '');
-                const anchor = url.hash ? url.hash.substring(1) : '';
-
-                // 转换为新格式
-                const newHref = generateNewUrl(path, currentRoot, anchor);
-                link.setAttribute('href', newHref);
-
-                // 标记为内部链接
-                if (!link.classList.contains('internal-link')) {
-                    link.classList.add('internal-link');
-                }
-            } catch (e) {
-                console.error('转换链接格式失败:', e);
             }
         }
         // 处理目录链接（没有扩展名的相对路径）

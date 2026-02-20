@@ -206,7 +206,7 @@ navigation: {
     },
     {
       text: "文档",
-      url: "main.html"
+      url: "main/"
     },
     {
       text: "GitHub",
@@ -238,12 +238,12 @@ navigation: {
       url: [
         {
           text: "快速开始",
-          url: "main.html?path=快速入门/README.md",
+          url: "main/#/快速入门/",
           icon: "fas fa-rocket"
         },
         {
           text: "使用指南",
-          url: "main.html?path=高级功能/README.md",
+          url: "main/#/高级功能/",
           icon: "fas fa-book"
         }
       ]
@@ -321,12 +321,12 @@ layout: {
 navigation: {
   nav_links: [
     { text: "首页", url: "index.html" },
-    { text: "文档", url: "main.html" },
+    { text: "文档", url: "main/" },
     {
       text: "教程",
       url: [
-        { text: "快速开始", url: "main.html?path=快速入门/README.md" },
-        { text: "高级功能", url: "main.html?path=高级功能/README.md" }
+        { text: "快速开始", url: "main/#/快速入门/" },
+        { text: "高级功能", url: "main/#/高级功能/" }
       ]
     },
     {
