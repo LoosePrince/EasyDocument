@@ -1,3 +1,7 @@
 *.zip
 .cursor
 .kiro
+uv.lock
+.venv
+.vscode
+.python-version
