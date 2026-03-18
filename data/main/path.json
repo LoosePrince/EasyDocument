@@ -62,10 +62,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1771569303,
+                            "timestamp": 1771572337,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "添加分支功能",
+                            "message": "更新文档结构，移除 main.html，优化更新包内容，增强文档链接格式，支持新哈希路由，添加目录编辑器工具。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -73,10 +73,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 1,
+                                "commits": 2,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1771569303
+                                "last_commit_timestamp": 1771572337
                             }
                         ]
                     }
@@ -112,10 +112,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1771570793,
+                            "timestamp": 1771572337,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新工作流配置以仅在 data/main 目录和 config.js 文件变更时触发，优化文档索引自动更新逻辑，增强导航生成条件，修正文档路径和配置项描述，添加分支支持相关信息。",
+                            "message": "更新文档结构，移除 main.html，优化更新包内容，增强文档链接格式，支持新哈希路由，添加目录编辑器工具。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -123,10 +123,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 2,
+                                "commits": 3,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1771570793
+                                "last_commit_timestamp": 1771572337
                             }
                         ]
                     }
@@ -302,10 +302,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1771570793,
+                            "timestamp": 1771572337,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新工作流配置以仅在 data/main 目录和 config.js 文件变更时触发，优化文档索引自动更新逻辑，增强导航生成条件，修正文档路径和配置项描述，添加分支支持相关信息。",
+                            "message": "更新文档结构，移除 main.html，优化更新包内容，增强文档链接格式，支持新哈希路由，添加目录编辑器工具。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -313,10 +313,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 2,
+                                "commits": 3,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1771570793
+                                "last_commit_timestamp": 1771572337
                             }
                         ]
                     }
@@ -452,10 +452,10 @@
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1771570793,
+                            "timestamp": 1771574031,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新工作流配置以仅在 data/main 目录和 config.js 文件变更时触发，优化文档索引自动更新逻辑，增强导航生成条件，修正文档路径和配置项描述，添加分支支持相关信息。",
+                            "message": "添加首页功能，支持从配置或外部文件加载首页内容，更新相关配置项，优化文档结构，移除冗余代码。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -463,10 +463,10 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 2,
+                                "commits": 3,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1771570793
+                                "last_commit_timestamp": 1771574031
                             }
                         ]
                     }
@@ -474,18 +474,13 @@
                 {
                     "title": "首页设置",
                     "path": "配置详解/首页设置.md",
-                    "children": []
-                },
-                {
-                    "title": "配置验证和默认值处理",
-                    "path": "配置详解/配置验证.md",
                     "children": [],
                     "git": {
                         "last_modified": {
-                            "timestamp": 1771570793,
+                            "timestamp": 1771574031,
                             "author": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "message": "更新工作流配置以仅在 data/main 目录和 config.js 文件变更时触发，优化文档索引自动更新逻辑，增强导航生成条件，修正文档路径和配置项描述，添加分支支持相关信息。",
+                            "message": "添加首页功能，支持从配置或外部文件加载首页内容，更新相关配置项，优化文档结构，移除冗余代码。",
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                         },
@@ -493,10 +488,35 @@
                             {
                                 "name": "树梢",
                                 "email": "pfingan@foxmail.com",
-                                "commits": 2,
+                                "commits": 1,
                                 "github_username": "LoosePrince",
                                 "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                                "last_commit_timestamp": 1771570793
+                                "last_commit_timestamp": 1771574031
+                            }
+                        ]
+                    }
+                },
+                {
+                    "title": "配置验证和默认值处理",
+                    "path": "配置详解/配置验证.md",
+                    "children": [],
+                    "git": {
+                        "last_modified": {
+                            "timestamp": 1771574031,
+                            "author": "树梢",
+                            "email": "pfingan@foxmail.com",
+                            "message": "添加首页功能，支持从配置或外部文件加载首页内容，更新相关配置项，优化文档结构，移除冗余代码。",
+                            "github_username": "LoosePrince",
+                            "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
+                        },
+                        "contributors": [
+                            {
+                                "name": "树梢",
+                                "email": "pfingan@foxmail.com",
+                                "commits": 3,
+                                "github_username": "LoosePrince",
+                                "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
+                                "last_commit_timestamp": 1771574031
                             }
                         ]
                     }
@@ -507,10 +527,10 @@
                 "path": "配置详解/README.md",
                 "git": {
                     "last_modified": {
-                        "timestamp": 1771569303,
+                        "timestamp": 1771574031,
                         "author": "树梢",
                         "email": "pfingan@foxmail.com",
-                        "message": "添加分支功能",
+                        "message": "添加首页功能，支持从配置或外部文件加载首页内容，更新相关配置项，优化文档结构，移除冗余代码。",
                         "github_username": "LoosePrince",
                         "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4"
                     },
@@ -518,10 +538,10 @@
                         {
                             "name": "树梢",
                             "email": "pfingan@foxmail.com",
-                            "commits": 1,
+                            "commits": 3,
                             "github_username": "LoosePrince",
                             "github_avatar": "https://avatars.githubusercontent.com/u/107794785?v=4",
-                            "last_commit_timestamp": 1771569303
+                            "last_commit_timestamp": 1771574031
                         }
                     ]
                 }
