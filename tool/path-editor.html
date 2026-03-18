@@ -1,1055 +1,539 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简易静态文档系统</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <title>path.json 可视化编辑器</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <!-- 引入 Sortable.js -->
+    <script src="https://unpkg.com/sortablejs@1.15.0/Sortable.min.js"></script>
+    <!-- 引入 VueDraggable Next -->
+    <script src="https://unpkg.com/vuedraggable@4.1.0/dist/vuedraggable.umd.js"></script>
     <style>
-        [x-cloak] { display: none !important; }
-        .edited { border-left: 3px solid #10b981; }
+        :root {
+            --primary-color: #007bff;
+            --bg-color: #f8f9fa;
+            --border-color: #dee2e6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: var(--bg-color);
+        }
+
+        header {
+            background-color: #212529;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .toolbar-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 10px;
+            transition: 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            background: #0056b3;
+        }
+
+        .toolbar-btn.export {
+            background: #28a745;
+        }
+
+        .toolbar-btn.export:hover {
+            background: #218838;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .tree-panel {
+            width: 45%;
+            border-right: 1px solid var(--border-color);
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .edit-panel {
+            width: 55%;
+            padding: 30px;
+            background: #fff;
+            overflow-y: auto;
+        }
+
+        /* 拖拽树样式 */
+        .drag-area {
+            min-height: 20px;
+        }
+
+        .nested-area {
+            margin-left: 20px;
+            padding-left: 10px;
+            border-left: 2px dashed #ccc;
+            margin-top: 5px;
+        }
+
+        .node-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            border: 1px solid #eee;
+            margin-bottom: 5px;
+            background: #fff;
+            border-radius: 4px;
+            transition: 0.2s;
+            user-select: none;
+        }
+
+        .node-item:hover {
+            background: #f1f8ff;
+            border-color: #c0dffd;
+        }
+
+        .node-item.active {
+            background: #e6f2ff;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 1px var(--primary-color);
+        }
+
+        .drag-handle {
+            cursor: grab;
+            margin-right: 10px;
+            color: #adb5bd;
+            font-size: 18px;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .node-title {
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .node-path {
+            margin-left: 10px;
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .node-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 4px;
+            border-radius: 3px;
+        }
+
+        .icon-btn:hover {
+            background: #e9ecef;
+        }
+
+        /* 表单样式 */
+        .form-section {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .form-section h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #495057;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.15s ease-in-out;
+        }
+
+        .form-group input:focus {
+            border-color: #80bdff;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, .25);
+        }
+
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+            resize: vertical;
+            min-height: 120px;
+            white-space: pre;
+            background: #f8f9fa;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #adb5bd;
+            margin-top: 100px;
+        }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen" x-data="pathEditor()">
-    <div class="container mx-auto py-8 px-4">
-        <h1 class="text-3xl font-bold text-center mb-8">EasyDocument 目录编辑器</h1>
-        
-        <!-- 文件上传区域 -->
-        <div class="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow p-6" x-show="!pathData">
-            <h2 class="text-xl font-semibold mb-4">上传 path.json 文件</h2>
-            <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
-                <input type="file" id="fileInput" accept=".json" class="hidden" @change="handleFileUpload">
-                <label for="fileInput" class="cursor-pointer inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    选择文件
-                </label>
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">或拖放 path.json 文件到此处</p>
+
+<body>
+
+    <div id="app">
+        <header>
+            <div style="font-size: 18px; font-weight: bold;">📖 path.json 结构编辑器</div>
+            <div>
+                <input type="file" id="fileInput" accept=".json" style="display: none" @change="importJson">
+                <button class="toolbar-btn" @click="triggerFileInput">📁 导入 path.json</button>
+                <button class="toolbar-btn export" @click="exportJson">💾 导出 JSON</button>
             </div>
-        </div>
-        
-        <!-- 编辑区域 -->
-        <div x-show="pathData" x-cloak>
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold">目录结构编辑</h2>
-                <div class="flex space-x-2">
-                    <button @click="expandAllFolders" class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                        全部展开
-                    </button>
-                    <button @click="collapseAllFolders" class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                        全部收起
-                    </button>
-                                                        <button @click="editRootDirectory()" class="px-3 py-1 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm">
-                        编辑根目录
-                    </button>
-                    <button @click="savePathJson" class="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
-                        下载配置
-                    </button>
-                    <button @click="resetPathData" class="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 text-sm">
-                        重置
-                    </button>
-                </div>
-            </div>
-            
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <!-- 根目录 -->
-                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center">
-                            <template x-if="pathData">
-                                <div class="flex items-center">
-                                    <span class="font-bold text-lg" x-text="pathData.title"></span>
-                                    <span class="ml-2 text-gray-500 dark:text-gray-400 text-sm" x-text="pathData.index.path"></span>
-                                </div>
-                            </template>
-                        </div>
-                        <button @click="addNewFolder" class="px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                            添加新目录
-                        </button>
-                    </div>
-                    
-                    <!-- 子目录列表 -->
-                    <div class="ml-4 mt-4">
-                        <template x-if="pathData && pathData.children">
-                            <div>
-                                <template x-for="(child, index) in pathData.children" :key="index">
-                                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-3" 
-                                         :class="{'edited': child.isEdited}">
-                                        <div class="flex items-center justify-between">
-                                            <div class="flex items-center">
-                                                <span class="font-semibold" x-text="child.title"></span>
-                                                <span class="ml-2 text-gray-500 dark:text-gray-400 text-sm" x-text="child.index ? child.index.path : child.path"></span>
-                                                <span x-show="child.index" class="ml-2 text-xs bg-gray-200 dark:bg-gray-700 rounded px-2 py-0.5">索引文件</span>
-                                                <span x-show="child.hidden" class="ml-2 text-xs bg-red-200 dark:bg-red-700 text-red-800 dark:text-red-200 rounded px-2 py-0.5">隐藏</span>
-                                                <span x-show="child.order" class="ml-2 text-xs bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded px-2 py-0.5" x-text="'排序: ' + child.order"></span>
-                                                <span x-show="child.external_url" class="ml-2 text-xs bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200 rounded px-2 py-0.5">外链</span>
-                                            </div>
-                                            <div class="flex space-x-2">
-                                                <button @click="moveItem('up', 'folder', index)" :disabled="index === 0" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': index === 0}">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-                                                    </svg>
-                                                </button>
-                                                <button @click="moveItem('down', 'folder', index)" :disabled="index === pathData.children.length - 1" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': index === pathData.children.length - 1}">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                </button>
-                                                <button @click="editFolder(child, index)" class="text-yellow-600 hover:text-yellow-800 focus:outline-none">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                                    </svg>
-                                                </button>
-                                                <button @click="addNewFile(index)" class="text-green-600 hover:text-green-800 focus:outline-none" title="添加新文件">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                    </svg>
-                                                </button>
-                                                <button @click="addNewSubFolder(index)" class="text-purple-600 hover:text-purple-800 focus:outline-none" title="添加子文件夹">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-4.586a1 1 0 01-.707-.293l-1.414-1.414A1 1 0 009.586 3H5a2 2 0 00-2 2v2z" />
-                                                    </svg>
-                                                </button>
-                                                <button @click="removeFolder(index)" class="text-red-600 hover:text-red-800 focus:outline-none">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                </button>
-                                                <button @click="toggleSubItems(index)" 
-                                                        class="text-blue-600 dark:text-blue-400 focus:outline-none">
-                                                    <span x-show="!child.expanded">展开</span>
-                                                    <span x-show="child.expanded">收起</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- 子项目列表 -->
-                                        <div x-show="child.expanded" class="ml-6 mt-3">
-                                            <template x-if="child.children && child.children.length > 0">
-                                                <div>
-                                                    <template x-for="(subItem, subIndex) in child.children" :key="subIndex">
-                                                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-3"
-                                                             :class="{'edited': subItem.isEdited}">
-                                                            <!-- 子文件夹 -->
-                                                            <template x-if="subItem.children && Array.isArray(subItem.children)">
-                                                                <div>
-                                                                    <div class="flex items-center justify-between mb-2">
-                                                                        <div class="flex items-center">
-                                                                            <span class="font-medium" x-text="subItem.title"></span>
-                                                                            <span class="ml-2 text-gray-500 dark:text-gray-400 text-xs" x-text="subItem.index ? subItem.index.path : subItem.path"></span>
-                                                                            <span x-show="subItem.index" class="ml-2 text-xs bg-gray-200 dark:bg-gray-700 rounded px-2 py-0.5">索引文件</span>
-                                                                            <span x-show="subItem.hidden" class="ml-2 text-xs bg-red-200 dark:bg-red-700 text-red-800 dark:text-red-200 rounded px-1 py-0.5">隐藏</span>
-                                                                            <span x-show="subItem.order" class="ml-2 text-xs bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded px-1 py-0.5" x-text="'排序: ' + subItem.order"></span>
-                                                                            <span x-show="subItem.external_url" class="ml-2 text-xs bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200 rounded px-1 py-0.5">外链</span>
-                                                                        </div>
-                                                                        <div class="flex space-x-2">
-                                                                            <button @click="moveSubItem('up', subIndex, index)" :disabled="subIndex === 0" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': subIndex === 0}">
-                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-                                                                                </svg>
-                                                                            </button>
-                                                                            <button @click="moveSubItem('down', subIndex, index)" :disabled="subIndex === child.children.length - 1" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': subIndex === child.children.length - 1}">
-                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                                                                </svg>
-                                                                            </button>
-                                                                            <button @click="editSubFolder(subItem, index, subIndex)" class="text-yellow-600 hover:text-yellow-800 focus:outline-none" title="编辑子文件夹">
-                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                                                                </svg>
-                                                                            </button>
-                                                                            <button @click="addNewFileToSubFolder(index, subIndex)" class="text-green-600 hover:text-green-800 focus:outline-none" title="添加文件到子文件夹">
-                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                                                </svg>
-                                                                            </button>
-                                                                            <button @click="removeSubFolder(index, subIndex)" class="text-red-600 hover:text-red-800 focus:outline-none" title="删除子文件夹">
-                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                                </svg>
-                                                                            </button>
-                                                                            <button @click="toggleSubFolderItems(index, subIndex)" class="text-blue-600 dark:text-blue-400 focus:outline-none" title="展开/收起子文件夹">
-                                                                                <span x-show="!subItem.expanded">展开</span>
-                                                                                <span x-show="subItem.expanded">收起</span>
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                    
-                                                                    <!-- 子文件夹的内容 -->
-                                                                    <div x-show="subItem.expanded" class="ml-4 mt-2">
-                                                                        <template x-if="subItem.children && subItem.children.length > 0">
-                                                                            <div>
-                                                                                <template x-for="(subSubItem, subSubIndex) in subItem.children" :key="subSubIndex">
-                                                                                    <div class="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700 last:border-0"
-                                                                                         :class="{'edited': subSubItem.isEdited}">
-                                                                                        <div class="flex items-center">
-                                                                                            <span x-text="subSubItem.title"></span>
-                                                                                            <span class="ml-2 text-gray-500 dark:text-gray-400 text-xs" x-text="subSubItem.path"></span>
-                                                                                            <span x-show="subSubItem.hidden" class="ml-2 text-xs bg-red-200 dark:bg-red-700 text-red-800 dark:text-red-200 rounded px-1 py-0.5">隐藏</span>
-                                                                                            <span x-show="subSubItem.order" class="ml-2 text-xs bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded px-1 py-0.5" x-text="'排序: ' + subSubItem.order"></span>
-                                                                                            <span x-show="subSubItem.external_url" class="ml-2 text-xs bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200 rounded px-1 py-0.5">外链</span>
-                                                                                        </div>
-                                                                                        <div class="flex space-x-2">
-                                                                                            <button @click="editSubFolderFile(subSubItem, index, subIndex, subSubIndex)" class="text-yellow-600 hover:text-yellow-800 focus:outline-none" title="编辑文件">
-                                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                                                                                </svg>
-                                                                                            </button>
-                                                                                            <button @click="removeSubFolderFile(index, subIndex, subSubIndex)" class="text-red-600 hover:text-red-800 focus:outline-none" title="删除文件">
-                                                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                                                </svg>
-                                                                                            </button>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </template>
-                                                                            </div>
-                                                                        </template>
-                                                                        <div x-show="!subItem.children || subItem.children.length === 0" class="text-gray-500 dark:text-gray-400 text-xs">
-                                                                            无文件
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </template>
-                                                            
-                                                            <!-- 普通文件 -->
-                                                            <template x-if="!subItem.children || !Array.isArray(subItem.children)">
-                                                                <div class="flex items-center justify-between">
-                                                            <div class="flex items-center">
-                                                                <span x-text="subItem.title"></span>
-                                                                <span class="ml-2 text-gray-500 dark:text-gray-400 text-xs" x-text="subItem.path"></span>
-                                                                        <span x-show="subItem.hidden" class="ml-2 text-xs bg-red-200 dark:bg-red-700 text-red-800 dark:text-red-200 rounded px-1 py-0.5">隐藏</span>
-                                                                        <span x-show="subItem.order" class="ml-2 text-xs bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded px-1 py-0.5" x-text="'排序: ' + subItem.order"></span>
-                                                                        <span x-show="subItem.external_url" class="ml-2 text-xs bg-green-200 dark:bg-green-700 text-green-800 dark:text-green-200 rounded px-1 py-0.5">外链</span>
-                                                            </div>
-                                                            <div class="flex space-x-2">
-                                                                        <button @click="moveSubItem('up', subIndex, index)" :disabled="subIndex === 0" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': subIndex === 0}">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-                                                                    </svg>
-                                                                </button>
-                                                                        <button @click="moveSubItem('down', subIndex, index)" :disabled="subIndex === child.children.length - 1" class="text-gray-600 hover:text-gray-800 focus:outline-none" :class="{'opacity-50 cursor-not-allowed': subIndex === child.children.length - 1}">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                                                    </svg>
-                                                                </button>
-                                                                        <button @click="editFile(subItem, index, subIndex)" class="text-yellow-600 hover:text-yellow-800 focus:outline-none" title="编辑文件">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                                                    </svg>
-                                                                </button>
-                                                                        <button @click="removeFile(index, subIndex)" class="text-red-600 hover:text-red-800 focus:outline-none" title="删除文件">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                    </svg>
-                                                                </button>
-                                                            </div>
-                                                                </div>
-                                                            </template>
-                                                        </div>
-                                                    </template>
-                                                </div>
-                                            </template>
-                                            <div x-show="!child.children || child.children.length === 0" class="text-gray-500 dark:text-gray-400 text-sm">
-                                                无子项目
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 编辑模态框 -->
-        <div x-show="showEditModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" @click.outside="showEditModal = false">
-                <h3 class="text-xl font-semibold mb-4" x-text="currentEditItem.isRoot ? '编辑根目录' : (currentEditItem.isFolder ? '编辑目录' : '编辑文件')"></h3>
-                
-                <div class="space-y-6">
-                    <!-- 基本信息 -->
-                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                        <h4 class="text-lg font-medium mb-3 text-gray-800 dark:text-gray-200">
-                            <span x-show="currentEditItem.isRoot">根目录信息</span>
-                            <span x-show="currentEditItem.isFolder">目录信息</span>
-                            <span x-show="currentEditItem.isFile">文件信息</span>
-                        </h4>
-                        
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    <span x-show="currentEditItem.isRoot">根目录标题</span>
-                                    <span x-show="currentEditItem.isFolder">目录标题</span>
-                                    <span x-show="currentEditItem.isFile">文件标题</span>
-                                </label>
-                                <input type="text" x-model="currentEditItem.title" 
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                                       placeholder="输入标题">
-                            </div>
-                            
-                            <div x-show="currentEditItem.isRoot">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">根目录路径</label>
-                                <input type="text" x-model="currentEditItem.rootPath" 
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                                       placeholder="通常为空或根路径">
-                            </div>
-                            
-                            <div x-show="currentEditItem.isFolder">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">目录路径</label>
-                                <input type="text" x-model="currentEditItem.folderPath" 
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                                       placeholder="如：配置详解">
-                            </div>
-                            
-                            <div x-show="currentEditItem.isFile">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">文件路径</label>
-                                <input type="text" x-model="currentEditItem.path" 
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                                       placeholder="如：配置详解/README.md">
-                            </div>
+        </header>
+
+        <div class="main-container">
+            <!-- 左侧：目录树区域 -->
+            <div class="tree-panel">
+                <div v-if="rootNode">
+                    <div style="margin-bottom: 10px; font-weight: bold; color: #666;">根节点 (Root)</div>
+                    <!-- 根节点固定项 -->
+                    <div class="node-item" :class="{ active: selectedNode === rootNode }" @click="selectNode(rootNode)">
+                        <span style="margin-right: 10px;">🏠</span>
+                        <span class="node-title">{{ rootNode.title || '未命名' }}</span>
+                        <span class="node-path">{{ rootNode.path }}</span>
+                        <div class="node-actions">
+                            <button class="icon-btn" @click.stop="addChildNode(rootNode)" title="添加子节点">➕</button>
                         </div>
                     </div>
 
-                    <!-- 索引文件信息 (仅目录和根目录) -->
-                    <div x-show="!currentEditItem.isFile" class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                        <h4 class="text-lg font-medium mb-3 text-gray-800 dark:text-gray-200">索引文件信息</h4>
-                <div class="space-y-4">
-                    <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">索引文件标题</label>
-                                <input type="text" x-model="currentEditItem.indexTitle" 
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                                       placeholder="索引文件显示的标题">
-                            </div>
-                            
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">索引文件路径</label>
-                                <input type="text" x-model="currentEditItem.indexPath" 
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                                       placeholder="如：README.md 或 配置详解/README.md">
-                            </div>
+                    <div style="margin-top: 15px; font-weight: bold; color: #666; font-size: 13px;">子结构 (可拖拽排序)：</div>
+                    <!-- 递归组件入口 -->
+                    <nested-draggable :tasks="rootNode.children"></nested-draggable>
+                </div>
+                <div v-else class="empty-state">
+                    <p>请点击右上角导入 path.json 文件，</p>
+                    <button class="toolbar-btn" @click="createEmptyTemplate">或者创建一个空模板</button>
+                </div>
+            </div>
+
+            <!-- 右侧：编辑区域 -->
+            <div class="edit-panel">
+                <div v-if="selectedNode">
+                    <div class="form-section">
+                        <h3>基础信息配置</h3>
+                        <div class="form-group">
+                            <label>节点名称 (title) :</label>
+                            <input type="text" v-model="selectedNode.title" placeholder="如：首页、GUGUbot">
+                        </div>
+                        <div class="form-group">
+                            <label>节点路径 (path) :</label>
+                            <input type="text" v-model="selectedNode.path" placeholder="如：PF-gugubot 或留空">
                         </div>
                     </div>
 
-                    <!-- 自定义属性 -->
-                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                        <h4 class="text-lg font-medium mb-3 text-gray-800 dark:text-gray-200">自定义属性</h4>
-                        
-                        <!-- 显示排序 -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">显示排序</label>
-                            <input type="number" x-model="currentEditItem.order" 
-                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                                   placeholder="数字越小越靠前，留空使用默认排序">
-                        </div>
-                        
-                        <!-- 描述信息 -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">描述信息</label>
-                            <textarea x-model="currentEditItem.description" rows="3"
-                                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                                      placeholder="可选的描述信息"></textarea>
-                        </div>
-                        
-                        <!-- 自定义标签 -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">标签 (逗号分隔)</label>
-                            <input type="text" x-model="currentEditItem.tags" 
-                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                                   placeholder="如：重要,配置,指南">
-                        </div>
-                        
-                        <!-- 是否隐藏 -->
-                        <div class="flex items-center">
-                            <input type="checkbox" x-model="currentEditItem.hidden" id="hiddenCheck"
-                                   class="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                            <label for="hiddenCheck" class="text-sm text-gray-700 dark:text-gray-300">隐藏此项目 (不在导航中显示)</label>
-                        </div>
-                    </div>
-                    
-                    <!-- 高级选项 -->
-                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                        <details class="group">
-                            <summary class="cursor-pointer text-lg font-medium text-gray-800 dark:text-gray-200 mb-3 list-none">
-                                <span class="flex items-center">
-                                    高级选项
-                                    <svg class="ml-2 h-4 w-4 transform group-open:rotate-90 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </span>
-                            </summary>
-                            
-                            <div class="space-y-4 mt-3">
-                                <!-- 外部链接 -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">外部链接</label>
-                                    <input type="url" x-model="currentEditItem.external_url" 
-                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                                           placeholder="如：https://example.com">
-                                </div>
-                                
-                                <!-- 图标 -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">图标 (FontAwesome类名)</label>
-                                    <input type="text" x-model="currentEditItem.icon" 
-                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                                           placeholder="如：fas fa-book">
-                                </div>
-                                
-                                <!-- 自定义CSS类 -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">自定义CSS类</label>
-                                    <input type="text" x-model="currentEditItem.css_class" 
-                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                                           placeholder="如：highlight important">
-                                </div>
-                                
-                                <!-- 自定义元数据 JSON -->
-                    <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">自定义元数据 (JSON格式)</label>
-                                    <textarea x-model="currentEditItem.metadata" rows="3"
-                                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 font-mono text-sm"
-                                              placeholder='{"key": "value", "author": "张三"}'></textarea>
-                                    <p class="text-xs text-gray-500 mt-1">请输入有效的JSON格式，留空表示无自定义元数据</p>
-                                </div>
+                    <div class="form-section">
+                        <h3>
+                            主页索引 (index)
+                            <button class="toolbar-btn" style="padding: 4px 8px; font-size: 12px;"
+                                v-if="!selectedNode.index" @click="addIndexObj">➕ 开启 Index 配置</button>
+                            <button class="toolbar-btn" style="padding: 4px 8px; font-size: 12px; background: #dc3545;"
+                                v-if="selectedNode.index" @click="removeIndexObj">🗑️ 移除 Index</button>
+                        </h3>
+                        <div v-if="selectedNode.index">
+                            <div class="form-group">
+                                <label>Index 标题 (index.title) :</label>
+                                <input type="text" v-model="selectedNode.index.title" placeholder="如：README、前言">
                             </div>
-                        </details>
+                            <div class="form-group">
+                                <label>Index 路径 (index.path) :</label>
+                                <input type="text" v-model="selectedNode.index.path"
+                                    placeholder="如：PF-gugubot/README.md">
+                            </div>
+                            <div class="form-group">
+                                <label>Index Git 数据 (高级 / JSON格式) :</label>
+                                <textarea :value="getGitJson(selectedNode.index)"
+                                    @change="setGitJson(selectedNode.index, $event.target.value)"
+                                    placeholder="此处粘贴或编辑Git贡献者JSON数据..."></textarea>
+                            </div>
+                        </div>
+                        <div v-else style="color: #6c757d; font-size: 13px;">该节点当前没有 index 属性。(一般仅目录级别节点需要)</div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>节点 Git 数据 (git)</h3>
+                        <div class="form-group">
+                            <label>Node Git 数据 (高级 / JSON格式) :</label>
+                            <textarea :value="getGitJson(selectedNode)"
+                                @change="setGitJson(selectedNode, $event.target.value)"
+                                placeholder="此处粘贴或编辑Git贡献者JSON数据..."></textarea>
+                            <p style="font-size: 12px; color: #888; margin-top: 5px;">* 提示：直接修改内容并在框外点击任意处即可应用保存。如果不需要
+                                git 对象，请清空内容。</p>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="flex justify-end space-x-3 mt-6">
-                    <button @click="showEditModal = false" class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400">
-                        取消
-                    </button>
-                    <button @click="saveEdit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        保存
-                    </button>
+                <div v-else-if="rootNode" class="empty-state">
+                    <p>👈 请在左侧选择一个节点进行编辑</p>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-    function pathEditor() {
-        return {
-            pathData: null,
-            originalData: null,
-            showEditModal: false,
-            currentEditItem: {},
-            
-            handleFileUpload(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-                
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const json = JSON.parse(e.target.result);
-                        this.initializePathData(json);
-                    } catch (error) {
-                        alert('无效的JSON文件: ' + error.message);
-                    }
-                };
-                reader.readAsText(file);
+        const { createApp, ref, provide, inject } = Vue;
+
+        // --- 定义递归子组件 NestedDraggable ---
+        const NestedDraggable = {
+            name: "nested-draggable",
+            components: {
+                draggable: window.vuedraggable
             },
-            
-            initializePathData(data) {
-                // 确保pathData具有合法的标题和路径
-                if (!data.title) data.title = "根目录";
-                if (!data.index.path) data.index.path = "";
-                
-                // 递归添加扩展属性用于UI交互
-                function initializeExpandedState(item) {
-                    if (item.children && Array.isArray(item.children)) {
-                        item.expanded = false;
-                        item.children.forEach(child => {
-                            initializeExpandedState(child);
-                        });
-                    }
-                }
-                
-                if (data.children) {
-                    data.children.forEach(child => {
-                        initializeExpandedState(child);
-                    });
-                } else {
-                    data.children = [];
-                }
-                
-                this.pathData = data;
-                this.originalData = JSON.parse(JSON.stringify(data));
-                
-                // 打印日志以便调试
-                console.log("已加载数据:", this.pathData);
+            props: {
+                tasks: { required: true, type: Array }
             },
-            
-            expandAllFolders() {
-                function expandRecursively(item) {
-                    if (item.children && Array.isArray(item.children)) {
-                        item.expanded = true;
-                        item.children.forEach(child => {
-                            expandRecursively(child);
-                        });
-                    }
-                }
-                
-                if (this.pathData && this.pathData.children) {
-                    this.pathData.children.forEach(child => {
-                        expandRecursively(child);
-                    });
-                }
+            setup() {
+                const selectNode = inject('selectNode');
+                const selectedNode = inject('selectedNode');
+                const deleteNode = inject('deleteNode');
+                const addChildNode = inject('addChildNode');
+                return { selectNode, selectedNode, deleteNode, addChildNode };
             },
-            
-            collapseAllFolders() {
-                function collapseRecursively(item) {
-                    if (item.children && Array.isArray(item.children)) {
-                        item.expanded = false;
-                        item.children.forEach(child => {
-                            collapseRecursively(child);
-                        });
-                    }
-                }
-                
-                if (this.pathData && this.pathData.children) {
-                    this.pathData.children.forEach(child => {
-                        collapseRecursively(child);
-                    });
-                }
-            },
-            
-            toggleSubItems(index) {
-                if (this.pathData && this.pathData.children && this.pathData.children[index]) {
-                    this.pathData.children[index].expanded = !this.pathData.children[index].expanded;
-                }
-            },
-            
-            moveItem(direction, type, index, parentIndex = null) {
-                if (type === 'folder') {
-                    if (direction === 'up' && index > 0) {
-                        // 上移文件夹
-                        const temp = this.pathData.children[index];
-                        this.pathData.children[index] = this.pathData.children[index - 1];
-                        this.pathData.children[index - 1] = temp;
-                        this.pathData.children[index - 1].isEdited = true;
-                    } else if (direction === 'down' && index < this.pathData.children.length - 1) {
-                        // 下移文件夹
-                        const temp = this.pathData.children[index];
-                        this.pathData.children[index] = this.pathData.children[index + 1];
-                        this.pathData.children[index + 1] = temp;
-                        this.pathData.children[index + 1].isEdited = true;
-                    }
-                } else if (type === 'file' && parentIndex !== null) {
-                    const parent = this.pathData.children[parentIndex];
-                    if (!parent.children) return;
-                    
-                    if (direction === 'up' && index > 0) {
-                        // 上移文件
-                        const temp = parent.children[index];
-                        parent.children[index] = parent.children[index - 1];
-                        parent.children[index - 1] = temp;
-                        parent.children[index - 1].isEdited = true;
-                    } else if (direction === 'down' && index < parent.children.length - 1) {
-                        // 下移文件
-                        const temp = parent.children[index];
-                        parent.children[index] = parent.children[index + 1];
-                        parent.children[index + 1] = temp;
-                        parent.children[index + 1].isEdited = true;
-                    }
-                }
-            },
-            
-            saveEdit() {
-                try {
-                if (this.currentEditItem.isRoot) {
-                        // 更新根目录
-                    this.pathData.title = this.currentEditItem.title;
-                        this.pathData.path = this.currentEditItem.rootPath || "";
+            template: `
+            <draggable class="drag-area" :list="tasks" group="g1" item-key="path" handle=".drag-handle" :animation="150" :fallbackOnBody="true" :swapThreshold="0.65">
+                <template #item="{ element, index }">
+                    <div>
+                        <div class="node-item" :class="{ active: selectedNode === element }" @click.stop="selectNode(element)">
+                            <span class="drag-handle" title="按住拖拽排序">☰</span>
+                            <span class="node-title">{{ element.title || '未命名' }}</span>
+                            <span class="node-path">{{ element.path }}</span>
+                            <span v-if="element.children && element.children.length > 0" style="margin-left:5px; font-size:12px; color:#aaa">({{element.children.length}})</span>
+                            
+                            <div class="node-actions">
+                                <button class="icon-btn" @click.stop="addChildNode(element)" title="添加子节点">➕</button>
+                                <button class="icon-btn" @click.stop="deleteNode(tasks, index)" title="删除此节点" style="color: #dc3545;">🗑️</button>
+                            </div>
+                        </div>
                         
-                        // 更新根目录索引文件
-                        if (!this.pathData.index) {
-                            this.pathData.index = {};
-                        }
-                        this.pathData.index.title = this.currentEditItem.indexTitle;
-                        this.pathData.index.path = this.currentEditItem.indexPath;
-                        
-                        // 添加自定义属性
-                        this.addCustomProperties(this.pathData);
-                        
-                } else if (this.currentEditItem.isFolder) {
-                        let folder;
-                        
-                        if (this.currentEditItem.isSubFolder) {
-                            // 子文件夹
-                            const parentIndex = this.currentEditItem.parentIndex;
-                            const index = this.currentEditItem.index;
-                            folder = this.pathData.children[parentIndex].children[index];
-                        } else {
-                            // 顶级文件夹
-                    const index = this.currentEditItem.index;
-                            folder = this.pathData.children[index];
-                        }
-                        
-                        // 更新文件夹信息
-                        folder.title = this.currentEditItem.title;
-                        folder.path = this.currentEditItem.folderPath;
-                        
-                        // 更新索引文件
-                        if (!folder.index) {
-                            folder.index = {};
-                    }
-                        folder.index.title = this.currentEditItem.indexTitle;
-                        folder.index.path = this.currentEditItem.indexPath;
-                        
-                        // 添加自定义属性
-                        this.addCustomProperties(folder);
-                        folder.isEdited = true;
-                        
-                } else if (this.currentEditItem.isFile) {
-                        let file;
-                        
-                        if (this.currentEditItem.isSubFolderFile) {
-                            // 子文件夹中的文件
-                            const parentIndex = this.currentEditItem.parentIndex;
-                            const subFolderIndex = this.currentEditItem.subFolderIndex;
-                            const index = this.currentEditItem.index;
-                            file = this.pathData.children[parentIndex].children[subFolderIndex].children[index];
-                        } else {
-                            // 普通文件
-                    const parentIndex = this.currentEditItem.parentIndex;
-                    const index = this.currentEditItem.index;
-                            file = this.pathData.children[parentIndex].children[index];
-                        }
-                        
-                        // 更新文件信息
-                        file.title = this.currentEditItem.title;
-                        file.path = this.currentEditItem.path;
-                        
-                        // 添加自定义属性
-                        this.addCustomProperties(file);
-                        file.isEdited = true;
-                    }
-                    
-                    this.showEditModal = false;
-                } catch (error) {
-                    alert('保存失败: ' + error.message);
-                }
-            },
-            
-            addCustomProperties(item) {
-                // 添加排序
-                if (this.currentEditItem.order && this.currentEditItem.order.toString().trim()) {
-                    item.order = parseInt(this.currentEditItem.order);
-                } else {
-                    delete item.order;
-                }
-                
-                // 添加描述
-                if (this.currentEditItem.description && this.currentEditItem.description.trim()) {
-                    item.description = this.currentEditItem.description.trim();
-                } else {
-                    delete item.description;
-                }
-                
-                // 添加标签
-                if (this.currentEditItem.tags && this.currentEditItem.tags.trim()) {
-                    item.tags = this.currentEditItem.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-                } else {
-                    delete item.tags;
-                }
-                
-                // 添加隐藏状态
-                if (this.currentEditItem.hidden) {
-                    item.hidden = true;
-                } else {
-                    delete item.hidden;
-                }
-                
-                // 添加外部链接
-                if (this.currentEditItem.external_url && this.currentEditItem.external_url.trim()) {
-                    item.external_url = this.currentEditItem.external_url.trim();
-                } else {
-                    delete item.external_url;
-                }
-                
-                // 添加图标
-                if (this.currentEditItem.icon && this.currentEditItem.icon.trim()) {
-                    item.icon = this.currentEditItem.icon.trim();
-                } else {
-                    delete item.icon;
-                }
-                
-                // 添加CSS类
-                if (this.currentEditItem.css_class && this.currentEditItem.css_class.trim()) {
-                    item.css_class = this.currentEditItem.css_class.trim();
-                } else {
-                    delete item.css_class;
-                }
-                
-                // 添加自定义元数据
-                if (this.currentEditItem.metadata && this.currentEditItem.metadata.trim()) {
-                    try {
-                        item.metadata = JSON.parse(this.currentEditItem.metadata.trim());
-                    } catch (e) {
-                        throw new Error('自定义元数据JSON格式不正确: ' + e.message);
-                    }
-                } else {
-                    delete item.metadata;
-                }
-            },
-            
-            editRootDirectory() {
-                this.currentEditItem = {
-                    isRoot: true,
-                    title: this.pathData.title,
-                    rootPath: this.pathData.path || "",
-                    indexTitle: this.pathData.index?.title || "",
-                    indexPath: this.pathData.index?.path || "",
-                    order: this.pathData.order || "",
-                    description: this.pathData.description || "",
-                    tags: this.pathData.tags ? this.pathData.tags.join(', ') : "",
-                    hidden: this.pathData.hidden || false,
-                    external_url: this.pathData.external_url || "",
-                    icon: this.pathData.icon || "",
-                    css_class: this.pathData.css_class || "",
-                    metadata: this.pathData.metadata ? JSON.stringify(this.pathData.metadata, null, 2) : ""
-                };
-                this.showEditModal = true;
-            },
-            
-            editFolder(folder, index) {
-                this.currentEditItem = {
-                    isFolder: true,
-                    index: index,
-                    title: folder.title,
-                    folderPath: folder.path,
-                    indexTitle: folder.index?.title || "",
-                    indexPath: folder.index?.path || "",
-                    order: folder.order || "",
-                    description: folder.description || "",
-                    tags: folder.tags ? folder.tags.join(', ') : "",
-                    hidden: folder.hidden || false,
-                    external_url: folder.external_url || "",
-                    icon: folder.icon || "",
-                    css_class: folder.css_class || "",
-                    metadata: folder.metadata ? JSON.stringify(folder.metadata, null, 2) : ""
-                };
-                this.showEditModal = true;
-            },
-            
-            editFile(file, parentIndex, fileIndex) {
-                this.currentEditItem = {
-                    isFile: true,
-                    parentIndex: parentIndex,
-                    index: fileIndex,
-                    title: file.title,
-                    path: file.path,
-                    order: file.order || "",
-                    description: file.description || "",
-                    tags: file.tags ? file.tags.join(', ') : "",
-                    hidden: file.hidden || false,
-                    external_url: file.external_url || "",
-                    icon: file.icon || "",
-                    css_class: file.css_class || "",
-                    metadata: file.metadata ? JSON.stringify(file.metadata, null, 2) : ""
-                };
-                this.showEditModal = true;
-            },
-            
-            addNewFolder() {
-                const newFolder = {
-                    title: '新目录',
-                    path: '新目录',
-                    index: {
-                        title: '新目录',
-                        path: '新目录/README.md'
-                    },
-                    children: [],
-                    expanded: true,
-                    isEdited: true
-                };
-                
-                if (!this.pathData) {
-                    this.pathData = { children: [] };
-                }
-                
-                if (!this.pathData.children) {
-                    this.pathData.children = [];
-                }
-                
-                this.pathData.children.push(newFolder);
-                
-                // 编辑新增的文件夹
-                this.editFolder(newFolder, this.pathData.children.length - 1);
-            },
-            
-            addNewFile(parentIndex) {
-                if (!this.pathData || !this.pathData.children) return;
-                
-                const newFile = {
-                    title: '新文件',
-                    path: '新文件.md',
-                    children: [],
-                    isEdited: true
-                };
-                
-                if (!this.pathData.children[parentIndex].children) {
-                    this.pathData.children[parentIndex].children = [];
-                }
-                
-                this.pathData.children[parentIndex].children.push(newFile);
-                this.pathData.children[parentIndex].expanded = true;
-                
-                // 编辑新增的文件
-                this.editFile(newFile, parentIndex, this.pathData.children[parentIndex].children.length - 1);
-            },
-            
-            addNewSubFolder(parentIndex) {
-                if (!this.pathData || !this.pathData.children) return;
-                
-                const newSubFolder = {
-                    title: '新子目录',
-                    path: '新子目录',
-                    index: {
-                        title: '新子目录',
-                        path: '新子目录/README.md'
-                    },
-                    children: [],
-                    expanded: true,
-                    isEdited: true
-                };
-                
-                if (!this.pathData.children[parentIndex].children) {
-                    this.pathData.children[parentIndex].children = [];
-                }
-                
-                this.pathData.children[parentIndex].children.push(newSubFolder);
-                this.pathData.children[parentIndex].expanded = true;
-                
-                // 编辑新增的子文件夹
-                this.editSubFolder(newSubFolder, parentIndex, this.pathData.children[parentIndex].children.length - 1);
-            },
-            
-            editSubFolder(subFolder, parentIndex, subIndex) {
-                this.currentEditItem = {
-                    isFolder: true,
-                    parentIndex: parentIndex,
-                    index: subIndex,
-                    title: subFolder.title,
-                    folderPath: subFolder.path,
-                    indexTitle: subFolder.index?.title || "",
-                    indexPath: subFolder.index?.path || "",
-                    order: subFolder.order || "",
-                    description: subFolder.description || "",
-                    tags: subFolder.tags ? subFolder.tags.join(', ') : "",
-                    hidden: subFolder.hidden || false,
-                    external_url: subFolder.external_url || "",
-                    icon: subFolder.icon || "",
-                    css_class: subFolder.css_class || "",
-                    metadata: subFolder.metadata ? JSON.stringify(subFolder.metadata, null, 2) : "",
-                    isSubFolder: true
-                };
-                this.showEditModal = true;
-            },
-            
-            addNewFileToSubFolder(parentIndex, subFolderIndex) {
-                if (!this.pathData || !this.pathData.children) return;
-                
-                const newFile = {
-                    title: '新文件',
-                    path: '新文件.md',
-                    children: [],
-                    isEdited: true
-                };
-                
-                const subFolder = this.pathData.children[parentIndex].children[subFolderIndex];
-                if (!subFolder.children) {
-                    subFolder.children = [];
-                }
-                
-                subFolder.children.push(newFile);
-                subFolder.expanded = true;
-                
-                // 编辑新增的文件
-                this.editSubFolderFile(newFile, parentIndex, subFolderIndex, subFolder.children.length - 1);
-            },
-            
-            editSubFolderFile(file, parentIndex, subFolderIndex, fileIndex) {
-                this.currentEditItem = { 
-                    isFile: true,
-                    parentIndex: parentIndex,
-                    subFolderIndex: subFolderIndex,
-                    index: fileIndex,
-                    title: file.title,
-                    path: file.path,
-                    order: file.order || "",
-                    description: file.description || "",
-                    tags: file.tags ? file.tags.join(', ') : "",
-                    hidden: file.hidden || false,
-                    external_url: file.external_url || "",
-                    icon: file.icon || "",
-                    css_class: file.css_class || "",
-                    metadata: file.metadata ? JSON.stringify(file.metadata, null, 2) : "",
-                    isSubFolderFile: true
-                };
-                this.showEditModal = true;
-            },
-            
-            removeSubFolder(parentIndex, subIndex) {
-                if (!this.pathData || !this.pathData.children) return;
-                
-                const subFolder = this.pathData.children[parentIndex].children[subIndex];
-                if (confirm(`确定要删除子目录 "${subFolder.title}" 及其所有内容吗？`)) {
-                    this.pathData.children[parentIndex].children.splice(subIndex, 1);
-                }
-            },
-            
-            removeSubFolderFile(parentIndex, subFolderIndex, fileIndex) {
-                if (!this.pathData || !this.pathData.children) return;
-                
-                const file = this.pathData.children[parentIndex].children[subFolderIndex].children[fileIndex];
-                if (confirm(`确定要删除文件 "${file.title}" 吗？`)) {
-                    this.pathData.children[parentIndex].children[subFolderIndex].children.splice(fileIndex, 1);
-                }
-            },
-            
-            toggleSubFolderItems(parentIndex, subIndex) {
-                if (this.pathData && this.pathData.children && this.pathData.children[parentIndex] && this.pathData.children[parentIndex].children && this.pathData.children[parentIndex].children[subIndex]) {
-                    this.pathData.children[parentIndex].children[subIndex].expanded = !this.pathData.children[parentIndex].children[subIndex].expanded;
-                }
-            },
-            
-            moveSubItem(direction, subIndex, parentIndex) {
-                const parent = this.pathData.children[parentIndex];
-                if (!parent.children) return;
-                
-                if (direction === 'up' && subIndex > 0) {
-                    // 上移子项目
-                    const temp = parent.children[subIndex];
-                    parent.children[subIndex] = parent.children[subIndex - 1];
-                    parent.children[subIndex - 1] = temp;
-                    parent.children[subIndex - 1].isEdited = true;
-                } else if (direction === 'down' && subIndex < parent.children.length - 1) {
-                    // 下移子项目
-                    const temp = parent.children[subIndex];
-                    parent.children[subIndex] = parent.children[subIndex + 1];
-                    parent.children[subIndex + 1] = temp;
-                    parent.children[subIndex + 1].isEdited = true;
-                }
-            },
-            
-            removeFolder(index) {
-                if (!this.pathData || !this.pathData.children) return;
-                
-                if (confirm(`确定要删除目录 "${this.pathData.children[index].title}" 及其所有子项目吗？`)) {
-                    this.pathData.children.splice(index, 1);
-                }
-            },
-            
-            removeFile(parentIndex, index) {
-                if (!this.pathData || !this.pathData.children) return;
-                
-                if (confirm(`确定要删除文件 "${this.pathData.children[parentIndex].children[index].title}" 吗？`)) {
-                    this.pathData.children[parentIndex].children.splice(index, 1);
-                }
-            },
-            
-            savePathJson() {
-                if (!this.pathData) return;
-                
-                // 移除UI特定属性
-                const cleanData = JSON.parse(JSON.stringify(this.pathData));
-                
-                // 递归清理UI属性但保留自定义属性
-                function cleanUIProperties(item) {
-                    delete item.expanded;
-                    delete item.isEdited;
-                    
-                    if (item.children && Array.isArray(item.children)) {
-                        item.children.forEach(child => {
-                            cleanUIProperties(child);
-                        });
-                    }
-                }
-                
-                cleanUIProperties(cleanData);
-                if (cleanData.children) {
-                    cleanData.children.forEach(child => {
-                        cleanUIProperties(child);
-                    });
-                }
-                
-                const blob = new Blob([JSON.stringify(cleanData, null, 4)], { type: 'application/json' });
-                saveAs(blob, 'path.json');
-            },
-            
-            resetPathData() {
-                if (confirm('确定要重置所有更改吗？')) {
-                    this.initializePathData(JSON.parse(JSON.stringify(this.originalData)));
-                }
-            }
+                        <!-- 递归渲染子列表 -->
+                        <nested-draggable v-if="element.children" :tasks="element.children" class="nested-area" />
+                    </div>
+                </template>
+            </draggable>
+        `
         };
-    }
-    
-    // 添加拖放文件上传功能
-    document.addEventListener('DOMContentLoaded', () => {
-        const dropArea = document.querySelector('.border-dashed');
-        if (!dropArea) return;
-        
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, preventDefaults, false);
-        });
-        
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-        
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropArea.addEventListener(eventName, highlight, false);
-        });
-        
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, unhighlight, false);
-        });
-        
-        function highlight() {
-            dropArea.classList.add('border-blue-500');
-            dropArea.classList.remove('border-gray-300', 'dark:border-gray-600');
-        }
-        
-        function unhighlight() {
-            dropArea.classList.remove('border-blue-500');
-            dropArea.classList.add('border-gray-300', 'dark:border-gray-600');
-        }
-        
-        dropArea.addEventListener('drop', handleDrop, false);
-        
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const file = dt.files[0];
-            
-            if (file && file.type === 'application/json') {
-                document.getElementById('fileInput').files = dt.files;
-                document.getElementById('fileInput').dispatchEvent(new Event('change'));
-            } else {
-                alert('请上传JSON文件');
+
+        // --- 主 Vue 实例 ---
+        const app = createApp({
+            setup() {
+                const rootNode = ref(null);
+                const selectedNode = ref(null);
+
+                // 选择节点
+                const selectNode = (node) => {
+                    selectedNode.value = node;
+                };
+
+                // 添加子节点
+                const addChildNode = (parentNode) => {
+                    if (!parentNode.children) {
+                        parentNode.children = [];
+                    }
+                    const newNode = {
+                        title: "新建节点",
+                        path: parentNode.path ? parentNode.path + "/new" : "new",
+                        children: []
+                    };
+                    parentNode.children.push(newNode);
+                    selectedNode.value = newNode; // 自动选中新节点
+                };
+
+                // 删除节点
+                const deleteNode = (parentList, index) => {
+                    if (confirm('确定要删除此节点及其所有内容吗？')) {
+                        const deleted = parentList.splice(index, 1)[0];
+                        // 如果删除的是当前选中的节点，重置选中项为根节点
+                        if (selectedNode.value === deleted) {
+                            selectedNode.value = rootNode.value;
+                        }
+                    }
+                };
+
+                // 递归格式化引入的数据，确保 children 数组存在，防止拖拽报错
+                const sanitizeData = (node) => {
+                    if (!node.children) node.children = [];
+                    node.children.forEach(sanitizeData);
+                };
+
+                // 触发文件选择
+                const triggerFileInput = () => {
+                    document.getElementById('fileInput').click();
+                };
+
+                // 导入 JSON
+                const importJson = (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const parsed = JSON.parse(e.target.result);
+                            sanitizeData(parsed);
+                            rootNode.value = parsed;
+                            selectedNode.value = rootNode.value;
+                        } catch (err) {
+                            alert("JSON 文件解析失败，请检查文件格式是否正确。\n错误信息：" + err.message);
+                        }
+                        // 清空input以便重复上传同名文件
+                        event.target.value = '';
+                    };
+                    reader.readAsText(file);
+                };
+
+                // 导出 JSON
+                const exportJson = () => {
+                    if (!rootNode.value) {
+                        alert("当前没有可导出的数据！");
+                        return;
+                    }
+                    // 使用四个空格格式化 JSON 字符串
+                    const dataStr = JSON.stringify(rootNode.value, null, 4);
+                    const blob = new Blob([dataStr], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = "path.json";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                };
+
+                // 创建空模板
+                const createEmptyTemplate = () => {
+                    rootNode.value = {
+                        title: "首页",
+                        path: "",
+                        children: []
+                    };
+                    selectedNode.value = rootNode.value;
+                };
+
+                // Index 属性的添加与移除
+                const addIndexObj = () => {
+                    if (selectedNode.value) {
+                        selectedNode.value.index = {
+                            title: "README",
+                            path: selectedNode.value.path ? selectedNode.value.path + "/README.md" : "README.md",
+                            git: {}
+                        };
+                    }
+                };
+
+                const removeIndexObj = () => {
+                    if (selectedNode.value && confirm("确定要移除该节点的 index 属性吗？")) {
+                        delete selectedNode.value.index;
+                    }
+                };
+
+                // 处理 Git JSON 的显示与编辑
+                const getGitJson = (targetObj) => {
+                    if (!targetObj || !targetObj.git) return "";
+                    return JSON.stringify(targetObj.git, null, 4);
+                };
+
+                const setGitJson = (targetObj, jsonString) => {
+                    if (!targetObj) return;
+
+                    // 如果清空了输入框，直接删除 git 属性
+                    if (!jsonString || jsonString.trim() === "") {
+                        delete targetObj.git;
+                        return;
+                    }
+
+                    try {
+                        const parsed = JSON.parse(jsonString);
+                        targetObj.git = parsed;
+                    } catch (err) {
+                        alert("Git 数据 JSON 格式错误，请检查语法！\n错误信息: " + err.message);
+                    }
+                };
+
+                // 通过 provide 将方法与状态注入给递归的子组件 NestedDraggable
+                provide('selectNode', selectNode);
+                provide('selectedNode', selectedNode);
+                provide('deleteNode', deleteNode);
+                provide('addChildNode', addChildNode);
+
+                return {
+                    rootNode,
+                    selectedNode,
+                    selectNode,
+                    addChildNode,
+                    triggerFileInput,
+                    importJson,
+                    exportJson,
+                    createEmptyTemplate,
+                    addIndexObj,
+                    removeIndexObj,
+                    getGitJson,
+                    setGitJson
+                };
             }
-        }
-        
-        // 支持暗色模式切换
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.classList.add('dark');
-        }
-        
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-            if (e.matches) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
         });
-    });
+
+        // 注册递归组件
+        app.component('nested-draggable', NestedDraggable);
+
+        // 挂载实例
+        app.mount('#app');
     </script>
+
 </body>
-</html> 
+
+</html>
