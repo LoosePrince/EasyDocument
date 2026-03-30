@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 需要写入权限来提交文件
+      contents: read
       pages: write    # 需要Pages写入权限
       id-token: write # 需要部署Pages的权限
 
@@ -47,34 +47,6 @@ jobs:
           python build.py --merge
           # 添加--merge参数保留现有结构
           # Git 信息改由前端通过 GitHub API 动态获取
-
-      - name: 检查是否有更改
-        id: check_changes
-        run: |
-          if [[ -n $(git status -s data/main/path.json data/main/search.json) ]]; then
-            echo "changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "changes=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 配置Git
-        if: steps.check_changes.outputs.changes == 'true'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-      - name: 提交更改
-        if: steps.check_changes.outputs.changes == 'true'
-        run: |
-          git add data/main/path.json data/main/search.json
-          git commit -m "自动更新 main 文档索引 [skip ci]"
-
-      - name: 推送更改
-        if: steps.check_changes.outputs.changes == 'true'
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
           
       # 部署到GitHub Pages的步骤
       - name: 设置Pages
