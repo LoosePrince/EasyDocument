@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 初始化工具模块
         initUtils(pathData, currentRoot);
         
-        initSundryModule(pathData, currentRoot, updateActiveHeading);
+        initSundryModule(pathData, currentRoot, currentBranch, updateActiveHeading);
         
         // 初始化侧边栏导航模块
         initSidebarNavigation(pathData, currentRoot, {
@@ -599,7 +599,7 @@ async function loadContentFromUrl() {
         generateSidebar(pathData);
         
         // 重新初始化sundry模块（面包屑等）
-        initSundryModule(pathData, currentRoot, updateActiveHeading);
+        initSundryModule(pathData, currentRoot, currentBranch, updateActiveHeading);
     }
 
     let path = initialPath; // 使用let，因为可能需要修改
