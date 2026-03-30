@@ -104,11 +104,21 @@ import {
     debounce
 } from './utils.js';
 import { initAnimationController, isAnimationEnabled } from './animation-controller.js';
+import { loadExternalDocsIntoPathData, resolveExternalDocumentUrl } from './external-docs.js';
 
 let pathData = null; // 存储文档结构数据
 let currentRoot = null; // 当前根目录
 let currentBranch = null; // 当前分支
 let isLoadingDocument = false; // 是否正在加载文档
+
+async function loadPathDataForBranch(branch) {
+    const rootDir = config.document.root_dir.replace(/\/$/, '');
+    const pathJsonUrl = config.document.branch_support ? `${rootDir}/${branch}/path.json` : '/path.json';
+    const response = await fetch(pathJsonUrl);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const basePathData = await response.json();
+    return await loadExternalDocsIntoPathData(basePathData, branch);
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 初始化动画控制器
@@ -134,12 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 加载文档结构
     try {
         const { branch } = parseUrlPath();
-        const rootDir = config.document.root_dir.replace(/\/$/, '');
-        const pathJsonUrl = config.document.branch_support ? `${rootDir}/${branch}/path.json` : '/path.json';
-        
-        const response = await fetch(pathJsonUrl);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        pathData = await response.json();
+        pathData = await loadPathDataForBranch(branch);
         
         // 初始化sundry模块
         const { path: currentPath, root, branch: newBranch } = parseUrlPath();
@@ -546,14 +551,8 @@ async function loadContentFromUrl() {
         // 如果分支改变，重新加载 path.json 和 search.json
         if (branchChanged) {
             try {
-                const rootDir = config.document.root_dir.replace(/\/$/, '');
-                const branchDataPath = `${rootDir}/${branch}`;
-                
-                // 加载 path.json
-                const pathResponse = await fetch(`${branchDataPath}/path.json`);
-                if (pathResponse.ok) {
-                    pathData = await pathResponse.json();
-                }
+                // 加载 path.json（并在默认分支注入外部挂载）
+                pathData = await loadPathDataForBranch(branch);
                 
                 // 加载 search.json
                 if (typeof window.loadSearchData === 'function') {
@@ -839,8 +838,15 @@ async function loadDocument(relativePath) {
     document.body.appendChild(loadingIndicator);
     
     // 构建完整的获取路径，正确处理相对路径和绝对路径
+    const externalUrl = resolveExternalDocumentUrl(relativePath);
     let fetchPath;
-    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+    if (externalUrl) {
+        fetchPath = externalUrl;
+    } else if (
+        relativePath.startsWith('http://') ||
+        relativePath.startsWith('https://') ||
+        relativePath.startsWith('data:')
+    ) {
         // 如果已经是完整URL，直接使用
         fetchPath = relativePath;
     } else {
@@ -893,13 +899,10 @@ async function loadDocument(relativePath) {
                 console.log(`已将请求URL从HTTP转换为HTTPS: ${fetchUrl}`);
             }
             
+            // 仅使用简单请求，避免对跨域资源（如 raw.githubusercontent.com）触发预检请求导致 CORS 失败
             const response = await fetch(fetchUrl, {
                 method: 'GET',
-                cache: 'no-store', // 显式禁用缓存
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
-                }
+                cache: 'no-store'
             });
             
             updateProgressBar(70);

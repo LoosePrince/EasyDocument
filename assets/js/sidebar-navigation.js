@@ -38,7 +38,22 @@ const loadContentFromUrl = () => getMainFunction('loadContentFromUrl')();
 const loadDocument = (...args) => getMainFunction('loadDocument')(...args);
 const resolvePathFromData = (...args) => getMainFunction('resolvePathFromData')(...args);
 const isIndexFile = (...args) => getMainFunction('isIndexFile')(...args);
-const debounce = (...args) => getMainFunction('debounce')(...args);
+const fallbackDebounce = (func, wait) => {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+};
+const debounce = (...args) => {
+    const maybeDebounce = mainFunctions && typeof mainFunctions.debounce === 'function'
+        ? mainFunctions.debounce
+        : null;
+    if (maybeDebounce) {
+        return maybeDebounce(...args);
+    }
+    return fallbackDebounce(...args);
+};
 
 // EasyDocument - 文档页面处理
 // 管理文档页面的主要功能，包括URL路由、文档加载、导航生成等
@@ -176,10 +191,11 @@ function generateSidebar(node) {
                         const initUtilsFunction = getMainFunction('initUtils');
                         const initSundryFunction = getMainFunction('initSundryModule');
                         const updateActiveHeadingFunction = getMainFunction('updateActiveHeading');
+                        const parsedForBranch = parseUrlPath();
 
                         if (initUtilsFunction) initUtilsFunction(pathData, null);
                         if (initSundryFunction && updateActiveHeadingFunction) {
-                            initSundryFunction(pathData, null, updateActiveHeadingFunction);
+                            initSundryFunction(pathData, null, parsedForBranch.branch, updateActiveHeadingFunction);
                         }
 
                         // 重新生成侧边栏（不带root参数）
@@ -458,6 +474,9 @@ function createNavList(items, level) {
             // 创建span元素
             const span = document.createElement('span');
             span.textContent = item.title;
+            if (item.external_source_url) {
+                div.appendChild(createExternalSourceBadge(item.external_source_url));
+            }
 
             // 存储文件夹路径，用于高亮匹配
             // 通过索引页路径推断文件夹路径
@@ -526,9 +545,17 @@ function createNavLink(item, level, isIndex = false) {
 
     // 使用新的URL格式
     a.href = generateNewUrl(item.path, currentRoot);
-    a.textContent = item.title;
     a.classList.add('block', 'text-gray-700', 'dark:text-gray-300', 'hover:text-primary', 'dark:hover:text-primary');
     a.classList.add(`file-level-${level}`); // 添加层级类名，用于CSS控制缩进
+
+    if (item.external_source_url) {
+        const badge = createExternalSourceBadge(item.external_source_url);
+        badge.classList.add('mr-1');
+        a.appendChild(badge);
+    }
+    const textSpan = document.createElement('span');
+    textSpan.textContent = item.title;
+    a.appendChild(textSpan);
 
     if (isIndex) {
         a.classList.add('italic', 'text-sm'); // 索引页样式
@@ -577,6 +604,21 @@ function createNavLink(item, level, isIndex = false) {
         });
     });
     return a;
+}
+
+function createExternalSourceBadge(sourceUrl) {
+    const badge = document.createElement('button');
+    badge.type = 'button';
+    badge.className = 'inline-flex items-center justify-center w-4 h-4 mr-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 align-middle';
+    badge.title = `外部来源: ${sourceUrl}`;
+    badge.setAttribute('aria-label', '打开外部来源链接');
+    badge.innerHTML = '<i class="fas fa-up-right-from-square"></i>';
+    badge.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open(sourceUrl, '_blank', 'noopener,noreferrer');
+    });
+    return badge;
 }
 
 // 点击文件夹名称切换到文件夹描述页面的处理函数

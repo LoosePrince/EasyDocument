@@ -35,6 +35,11 @@ const VALIDATION_RULES = {
         default: [],
         description: '可用分支列表'
     },
+    'document.external_docs': {
+        type: 'object',
+        default: [],
+        description: '外部文档挂载配置'
+    },
     'home.use_file': {
         type: 'boolean',
         default: false,

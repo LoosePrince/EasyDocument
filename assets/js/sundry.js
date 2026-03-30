@@ -7,6 +7,7 @@
 import config from './validated-config.js';
 import { formatTimestamp, filePathToUrl } from './utils.js';
 import { fetchFileCommits, parseRepoUrl } from './github-api.js';
+import { resolveExternalGitMeta } from './external-docs.js';
 
 // 需要从主文件导入的函数
 let pathData = null;
@@ -363,19 +364,25 @@ export function updateGitInfo(relativePath) {
 
     // 异步加载提交信息（不阻塞渲染）
     void (async () => {
-        const repoParsed = parseRepoUrl(config.extensions.github.repo_url);
+        const externalMeta = resolveExternalGitMeta(relativePath);
+        const repoParsed = externalMeta
+            ? { owner: externalMeta.owner, repo: externalMeta.repo }
+            : parseRepoUrl(config.extensions.github.repo_url);
         if (!repoParsed) {
             hideGitInfoElements();
             return;
         }
 
-        // 计算仓库内的文件路径：data/<branch>/<relativePath> 或 data/<relativePath>
-        const rootDir = (config.document?.root_dir || 'data').replace(/^\/+/, '').replace(/\/+$/, '');
-        const branch = currentBranch || config.extensions.github.branch || 'main';
-        const cleanRelativePath = String(relativePath || '').replace(/^\/+/, '');
-        const repoFilePath = config.document?.branch_support
-            ? `${rootDir}/${branch}/${cleanRelativePath}`
-            : `${rootDir}/${cleanRelativePath}`;
+        // 外部 github_tree 挂载优先使用其自身仓库路径；本地文档仍使用主仓库规则
+        const branch = externalMeta?.branch || config.extensions.github.branch || 'main';
+        let repoFilePath = externalMeta?.filePath || null;
+        if (!repoFilePath) {
+            const rootDir = (config.document?.root_dir || 'data').replace(/^\/+/, '').replace(/\/+$/, '');
+            const cleanRelativePath = String(relativePath || '').replace(/^\/+/, '');
+            repoFilePath = config.document?.branch_support
+                ? `${rootDir}/${branch}/${cleanRelativePath}`
+                : `${rootDir}/${cleanRelativePath}`;
+        }
 
         let commits = [];
         try {
@@ -497,14 +504,15 @@ export function updateGitInfo(relativePath) {
     
     if (githubEnabled && config.extensions?.github?.edit_link !== false && 
         config.extensions?.github?.repo_url && githubEditContainer && githubEditLink) {
-        
-        const repoUrl = config.extensions.github.repo_url;
-        const branch = currentBranch || config.extensions.github.branch || 'main';
-        // 获取文档根目录配置，并确保路径格式正确
-        const rootDir = config.document?.root_dir || 'data';
-        // 移除根目录路径开头的斜杠（如果有）
-        const cleanRootDir = rootDir.replace(/^\/+/, '');
-        const editUrl = `${repoUrl}/edit/${branch}/${cleanRootDir}/${relativePath}`;
+        const externalMeta = resolveExternalGitMeta(relativePath);
+        const repoUrl = externalMeta?.repoUrl || config.extensions.github.repo_url;
+        const branch = externalMeta?.branch || currentBranch || config.extensions.github.branch || 'main';
+        let editPath = externalMeta?.filePath || null;
+        if (!editPath) {
+            const rootDir = (config.document?.root_dir || 'data').replace(/^\/+/, '');
+            editPath = `${rootDir}/${relativePath}`;
+        }
+        const editUrl = `${repoUrl}/edit/${branch}/${editPath}`;
         
         githubEditLink.href = editUrl;
         githubEditContainer.style.display = 'flex';

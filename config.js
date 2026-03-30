@@ -187,7 +187,26 @@ const config = {
         light: "github", // 亮色主题
         dark: "github-dark" // 暗色主题
       }
-    }
+    },
+    // 外部文档挂载（仅在默认分支下生效，不参与版本分支切换）
+    // mode: "path_json" | "github_tree"
+    // - path_json: url 填写外部 path.json 的完整链接
+    // - github_tree: url 填写 GitHub 目录链接，例如：
+    //   https://github.com/LoosePrince/EasyDocument/tree/main/data/main
+    external_docs: [
+      // {
+      //   mount_path: "外部文档",
+      //   mode: "path_json",
+      //   url: "https://example.com/docs/path.json",
+      //   title: "外部文档"
+      // },
+      // {
+      //   mount_path: "GitHub文档",
+      //   mode: "github_tree",
+      //   url: "https://github.com/owner/repo/tree/main/docs",
+      //   title: "GitHub文档"
+      // }
+    ]
   },
 
   // 搜索功能
