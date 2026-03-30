@@ -155,6 +155,26 @@ export function generateNewUrl(path, root = null, anchor = '', branch = null) {
         if (!filePath) return filePath;
         return filePath.replace(/\.(md|html)$/i, '');
     };
+
+    // 将目录索引文件规范化为目录路径：
+    // 例如 "guide/README.md" -> "guide"，"README.md" -> ""
+    const normalizeIndexPath = (rawPath) => {
+        const pathNoExt = removeExtension(rawPath || '');
+        if (!pathNoExt) return '';
+
+        const parts = pathNoExt.split('/').filter(Boolean);
+        if (parts.length === 0) return '';
+
+        const last = parts[parts.length - 1].toLowerCase();
+        const indexNames = (config.document.index_pages || [])
+            .map(name => String(name).replace(/\.(md|html)$/i, '').toLowerCase());
+
+        if (indexNames.includes(last)) {
+            parts.pop();
+        }
+
+        return parts.join('/');
+    };
     
     // 构建路径hash部分
     let pathHash = '';
@@ -164,14 +184,14 @@ export function generateNewUrl(path, root = null, anchor = '', branch = null) {
         if (path && path.startsWith(root + '/')) {
             relativePath = path.substring(root.length + 1);
         }
-        relativePath = removeExtension(relativePath);
+        relativePath = normalizeIndexPath(relativePath);
         pathHash = root;
         if (relativePath) {
             pathHash += '/' + relativePath;
         }
     } else {
         if (path) {
-            pathHash = '/' + removeExtension(path);
+            pathHash = '/' + normalizeIndexPath(path);
         }
     }
 

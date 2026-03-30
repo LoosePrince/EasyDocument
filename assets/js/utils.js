@@ -61,7 +61,11 @@ export function resolvePathFromData(cleanPath) {
                 if (child.path) {
                     const childCleanPath = removeExtension(child.path);
                     if (childCleanPath === targetPath) {
-                        return { node: child, isDirectory: !!child.children };
+                        const isDirLike = (Array.isArray(child.children) && child.children.length > 0) || !!child.index;
+                        if (isDirLike && child.index && child.index.path) {
+                            return { node: child.index, isDirectory: true };
+                        }
+                        return { node: child, isDirectory: false };
                     }
                 }
                 
