@@ -5,7 +5,7 @@ uv.lock
 .venv
 .vscode
 .python-version
-**/path.json
+# **/path.json 提交 path.json 文件以支持导航调整
 **/search.json
 __pycache__
 *.pyc
