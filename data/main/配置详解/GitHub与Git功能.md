@@ -158,19 +158,9 @@ GitHub与Git功能配置项之间存在一些交互关系：
 
 ## 如何工作
 
-当前版本中，Git 信息在前端运行时通过 GitHub API 实时获取，不再依赖 `build.py` 写入 `path.json.git`。  
-
-前端会基于以下信息查询：
-
-1. 仓库地址：`extensions.github.repo_url`
-2. 分支：`extensions.github.branch`
-3. 当前文档在仓库中的文件路径
-
-然后动态显示：
-
-- 最后修改时间
-- 贡献者列表（头像或名称）
-- GitHub 编辑链接
+1. **优先（推荐）**：在含 Git 历史的仓库中运行 `build.py`，脚本将各文档对应的 **最后修改时间、贡献者** 等写入 `path.json` 的 `git` 字段（仅使用本地 `git` 历史，**构建阶段不请求** GitHub API）。部署后页面直接读取 `path.json`，不依赖访问 `api.github.com`。
+2. **回退**：若当前文档在 `path.json` 中没有 `git`（例如未构建、或外部挂载文档），且已配置 `extensions.github.repo_url`，则前端再调用 GitHub API 拉取提交信息。
+3. **编辑链接**：由 `extensions.github`（`edit_link`、`repo_url`、分支等）生成「在 GitHub 上编辑」链接，与上述两条独立。
 
 ## 实例展示
 
@@ -182,10 +172,10 @@ GitHub与Git功能配置项之间存在一些交互关系：
 
 ## 注意事项
 
-1. 要显示 Git 信息，页面运行环境需要能访问 GitHub API
-2. GitHub 匿名请求存在频率限制，访问过多时可能暂时无法显示贡献者/更新时间
-3. 对于外部挂载文档，仅 `github_tree` 模式支持完整 Git 信息映射
-4. 不再支持通过手动编辑 `path.json.git` 来维护 Git 信息
+1. 使用 `path.json` 内嵌 `git` 时，静态部署**不要求**浏览器能访问 GitHub API。
+2. 若依赖 API 回退路径，匿名请求存在频率限制，访问过多时可能暂时无法显示贡献者/更新时间。
+3. 外部挂载文档中，`github_tree` 模式通常无构建期 `git`，多依赖 API 回退。
+4. 也可手动编辑 `path.json` 中的 `git` 字段作补充，但合并构建时可能被 `build.py --merge` 覆盖，以仓库内脚本结果为准。
 
 ## 相关文档
 

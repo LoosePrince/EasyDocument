@@ -26,7 +26,7 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # build.py 不再依赖 Git 历史
+          fetch-depth: 0  # build.py 需完整 Git 历史以生成 path.json 中的 git 信息
 
       - name: 设置Python环境
         uses: actions/setup-python@v4
@@ -45,8 +45,7 @@ jobs:
       - name: 运行build.py脚本
         run: |
           python build.py --merge
-          # 添加--merge参数保留现有结构
-          # Git 信息改由前端通过 GitHub API 动态获取
+          # --merge 保留现有 path.json 顺序与自定义字段；Git 信息由构建写入 path.json.git（前端优先使用）
           
       # 部署到GitHub Pages的步骤
       - name: 设置Pages

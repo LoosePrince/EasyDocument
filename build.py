@@ -12,6 +12,8 @@ import argparse
 import re
 import sys
 import datetime
+import urllib.request
+import urllib.error
 from pathlib import Path
 from html.parser import HTMLParser
 import io
@@ -19,6 +21,13 @@ import zipfile
 import shutil
 import tempfile
 import glob
+
+try:
+    import git
+    GIT_AVAILABLE = True
+except ImportError:
+    GIT_AVAILABLE = False
+    print("警告: GitPython 未安装，path.json 将无法写入 git 字段。请执行: pip install -r requirements.txt")
 
 # 默认配置
 DEFAULT_CONFIG = {
@@ -28,6 +37,16 @@ DEFAULT_CONFIG = {
     "index_pages": ["README.md", "README.html",         # 索引页文件名
                    "index.md", "index.html"], 
     "supported_extensions": [".md", ".html"],           # 支持的文档扩展名
+    "git": {
+        "enable": True,
+        "show_last_modified": True,
+        "show_contributors": True,
+    },
+    "github": {
+        "enable": True,
+        "edit_link": True,
+        "show_avatar": False,
+    },
     "site": {
         "title": "",
         "description": "",
@@ -40,6 +59,12 @@ DEFAULT_CONFIG = {
         "theme_color": ""
     }
 }
+
+# GitHub 用户信息缓存
+GITHUB_USERS_CACHE = {}
+# 邮箱到 GitHub 用户名的映射
+EMAIL_TO_USERNAME_MAP = {}
+
 
 # HTML解析器，用于从HTML文件中提取文本内容
 class HTMLTextExtractor(HTMLParser):
@@ -74,7 +99,161 @@ def is_index_file(filename, config):
     """检查文件是否为索引文件"""
     return filename in config["index_pages"]
 
-def scan_directory(directory, config, relative_path=""):
+
+def get_github_username_by_email(email, repo):
+    """根据邮箱从本地提交历史推断 GitHub 用户名。"""
+    if email in EMAIL_TO_USERNAME_MAP:
+        return EMAIL_TO_USERNAME_MAP[email]
+
+    noreply_match = re.match(r"(\d+)\+(.+)@users\.noreply\.github\.com", email)
+    if noreply_match:
+        username = noreply_match.group(2)
+        if "+" in username:
+            username = username.split("+")[-1]
+        EMAIL_TO_USERNAME_MAP[email] = username
+        return username
+
+    noreply_match2 = re.match(r"(.+)@users\.noreply\.github\.com", email)
+    if noreply_match2:
+        username = noreply_match2.group(1)
+        if "+" in username:
+            username = username.split("+")[-1]
+        EMAIL_TO_USERNAME_MAP[email] = username
+        return username
+
+    try:
+        all_commits = list(repo.iter_commits(max_count=500))
+        for commit in all_commits:
+            if commit.author.email == email:
+                for other_commit in all_commits:
+                    if (
+                        other_commit.author.name == commit.author.name
+                        and "@users.noreply.github.com" in other_commit.author.email
+                    ):
+                        om = re.match(
+                            r"(\d+)\+(.+)@users\.noreply\.github\.com",
+                            other_commit.author.email,
+                        )
+                        if om:
+                            username = om.group(2)
+                            if "+" in username:
+                                username = username.split("+")[-1]
+                            EMAIL_TO_USERNAME_MAP[email] = username
+                            return username
+
+                        om2 = re.match(
+                            r"(.+)@users\.noreply\.github\.com",
+                            other_commit.author.email,
+                        )
+                        if om2:
+                            username = om2.group(1)
+                            if "+" in username:
+                                username = username.split("+")[-1]
+                            EMAIL_TO_USERNAME_MAP[email] = username
+                            return username
+    except Exception as e:
+        print(f"查找 GitHub 用户名失败: {e}")
+
+    EMAIL_TO_USERNAME_MAP[email] = None
+    return None
+
+
+def get_github_avatar_url(username):
+    """通过 GitHub API 获取用户头像 URL。"""
+    if not username:
+        return None
+
+    if username in GITHUB_USERS_CACHE:
+        return GITHUB_USERS_CACHE[username].get("avatar_url")
+
+    try:
+        request = urllib.request.Request(f"https://api.github.com/users/{username}")
+        request.add_header("User-Agent", "EasyDocument-Build-Script")
+
+        with urllib.request.urlopen(request, timeout=5) as response:
+            if response.getcode() == 200:
+                data = json.loads(response.read().decode("utf-8"))
+                GITHUB_USERS_CACHE[username] = {
+                    "avatar_url": data.get("avatar_url"),
+                    "login": data.get("login"),
+                    "html_url": data.get("html_url"),
+                }
+                return data.get("avatar_url")
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError) as e:
+        print(f"获取 GitHub 用户 {username} 头像失败: {e}")
+
+    return None
+
+
+def get_git_info(repo, file_path, config, allow_github_api=True):
+    """获取文件的 Git 相关信息。"""
+    git_info = {
+        "last_modified": None,
+        "contributors": [],
+    }
+
+    if not GIT_AVAILABLE or not config.get("git", {}).get("enable", True):
+        return git_info
+
+    try:
+        if file_path.startswith(repo.working_dir):
+            file_rel_path = os.path.relpath(file_path, repo.working_dir)
+        else:
+            file_rel_path = file_path
+
+        if config.get("git", {}).get("show_last_modified", True):
+            commits = list(repo.iter_commits(paths=file_rel_path, max_count=1))
+            if commits:
+                last_commit = commits[0]
+                github_username = get_github_username_by_email(last_commit.author.email, repo)
+                github_avatar = None
+                if allow_github_api and github_username and config.get("github", {}).get("enable", True):
+                    github_avatar = get_github_avatar_url(github_username)
+                git_info["last_modified"] = {
+                    "timestamp": last_commit.committed_date,
+                    "author": last_commit.author.name,
+                    "email": last_commit.author.email,
+                    "message": last_commit.message.strip(),
+                    "github_username": github_username,
+                    "github_avatar": github_avatar,
+                }
+
+        if config.get("git", {}).get("show_contributors", True):
+            authors = {}
+            for commit in repo.iter_commits(paths=file_rel_path):
+                author_name = commit.author.name
+                author_email = commit.author.email
+
+                if author_name not in authors:
+                    github_username = get_github_username_by_email(author_email, repo)
+                    github_avatar = None
+                    if allow_github_api and github_username and config.get("github", {}).get("enable", True):
+                        github_avatar = get_github_avatar_url(github_username)
+                    authors[author_name] = {
+                        "name": author_name,
+                        "email": author_email,
+                        "commits": 0,
+                        "github_username": github_username,
+                        "github_avatar": github_avatar,
+                        "last_commit_timestamp": commit.committed_date,
+                    }
+                authors[author_name]["commits"] += 1
+                if commit.committed_date > authors[author_name]["last_commit_timestamp"]:
+                    authors[author_name]["last_commit_timestamp"] = commit.committed_date
+
+            git_info["contributors"] = sorted(
+                authors.values(),
+                key=lambda x: x["commits"],
+                reverse=True,
+            )
+
+    except Exception as e:
+        print(f"获取 Git 信息失败: {e}")
+
+    return git_info
+
+
+def scan_directory(directory, config, relative_path="", repo=None):
     """扫描目录并生成目录结构"""
     result = {
         "title": os.path.basename(directory) if relative_path else "首页",
@@ -111,7 +290,17 @@ def scan_directory(directory, config, relative_path=""):
                 "title": get_file_title(file_path, item) or "文档首页",
                 "path": item_path,
             }
-            
+
+            if repo:
+                git_info = get_git_info(
+                    repo,
+                    file_path,
+                    config,
+                    allow_github_api=config.get("github", {}).get("enable", True),
+                )
+                if git_info["last_modified"] or git_info["contributors"]:
+                    index_data["git"] = git_info
+
             result["index"] = index_data
             break
     
@@ -125,14 +314,24 @@ def scan_directory(directory, config, relative_path=""):
                 "path": item_path,
                 "children": []
             }
-            
+
+            if repo:
+                git_info = get_git_info(
+                    repo,
+                    file_path,
+                    config,
+                    allow_github_api=config.get("github", {}).get("enable", True),
+                )
+                if git_info["last_modified"] or git_info["contributors"]:
+                    file_data["git"] = git_info
+
             result["children"].append(file_data)
     
     # 处理子目录
     for item in sorted(dirs):
         sub_dir_path = os.path.join(directory, item)
         sub_rel_path = os.path.join(relative_path, item)
-        sub_result = scan_directory(sub_dir_path, config, sub_rel_path)
+        sub_result = scan_directory(sub_dir_path, config, sub_rel_path, repo)
         
         # 只添加非空的子目录
         if sub_result["children"] or sub_result["index"]:
@@ -203,8 +402,7 @@ def normalize_paths(structure):
 
 def strip_git_fields(structure):
     """
-    移除结构中的 git 字段。
-    Git 信息不再由 build.py 写入，改由前端基于 GitHub API 动态获取。
+    移除 path.json 结构中的 git 字段（在禁用 Git 元数据输出时使用）。
     """
     if isinstance(structure, dict):
         if "git" in structure:
@@ -245,8 +443,15 @@ def merge_structures(existing, new_structure, config):
             result["index"] = new_index
         else:
             result["index"] = new_structure["index"]
-    # 索引文件没有变化时：保持既有内容（不再维护 git 信息字段）
-    
+    elif new_structure.get("index") and existing.get("index"):
+        if "git" in new_structure["index"] and (
+            "git" not in existing["index"]
+            or existing["index"]["git"] != new_structure["index"]["git"]
+        ):
+            updated_index = existing["index"].copy()
+            updated_index["git"] = new_structure["index"]["git"]
+            result["index"] = updated_index
+
     # 创建现有路径的映射，用于快速查找
     existing_paths = {}
     if "children" in existing:
@@ -273,11 +478,14 @@ def merge_structures(existing, new_structure, config):
                 updated_child = merge_structures(child, new_paths[path], config)
                 updated_children.append(updated_child)
             else:
-                # 文件项，保留原有结构（例如可能包含order字段和手动设置的标题）
+                # 文件项，保留原有结构（例如可能包含 order 字段和手动设置的标题），并更新 git
                 child_copy = child.copy()
                 # 保留原有标题，不从文件内容重新提取覆盖
                 # child_copy["title"] = new_paths[path]["title"]  # 注释掉此行以保留手动设置的标题
-                
+
+                if "git" in new_paths[path]:
+                    child_copy["git"] = new_paths[path]["git"]
+
                 updated_children.append(child_copy)
             # 标记为已处理
             del new_paths[path]
@@ -412,6 +620,8 @@ def main():
     parser.add_argument('--search-index', default='search.json', help='搜索索引文件路径')
     parser.add_argument('--merge', action='store_true', help='合并已有的JSON文件，保留顺序和自定义字段')
     parser.add_argument('--config', default='config.js', help='配置文件路径')
+    parser.add_argument('--no-git', action='store_true', help='不向 path.json 写入 git 字段')
+    parser.add_argument('--no-github', action='store_true', help='禁用构建阶段 GitHub API 请求')
     parser.add_argument('--no-search', action='store_true', help='禁用搜索索引生成')
     parser.add_argument('-y', '--yes', action='store_true', help='自动确认所有提示，不询问')
     parser.add_argument('--package', action='store_true', help='创建更新包，打包指定文件为zip格式')
@@ -541,13 +751,52 @@ def main():
                     branch_support_match = re.search(r'branch_support:\s*(true|false)', doc_config, re.IGNORECASE)
                     if branch_support_match:
                         config["branch_support"] = branch_support_match.group(1).lower() == 'true'
-                
+
+                git_match = re.search(r'git:\s*{([^}]+)}', content_no_comments, re.DOTALL)
+                if git_match:
+                    git_config = git_match.group(1)
+                    enable_match = re.search(r'enable:\s*(true|false)', git_config, re.IGNORECASE)
+                    if enable_match:
+                        config["git"]["enable"] = enable_match.group(1).lower() == 'true'
+                    last_modified_match = re.search(
+                        r'show_last_modified:\s*(true|false)', git_config, re.IGNORECASE
+                    )
+                    if last_modified_match:
+                        config["git"]["show_last_modified"] = (
+                            last_modified_match.group(1).lower() == 'true'
+                        )
+                    contributors_match = re.search(
+                        r'show_contributors:\s*(true|false)', git_config, re.IGNORECASE
+                    )
+                    if contributors_match:
+                        config["git"]["show_contributors"] = (
+                            contributors_match.group(1).lower() == 'true'
+                        )
+
+                github_match = re.search(r'github:\s*{([^}]+)}', content_no_comments, re.DOTALL)
+                if github_match:
+                    github_config = github_match.group(1)
+                    enable_match = re.search(r'enable:\s*(true|false)', github_config, re.IGNORECASE)
+                    if enable_match:
+                        config["github"]["enable"] = enable_match.group(1).lower() == 'true'
+                    edit_link_match = re.search(r'edit_link:\s*(true|false)', github_config, re.IGNORECASE)
+                    if edit_link_match:
+                        config["github"]["edit_link"] = edit_link_match.group(1).lower() == 'true'
+                    avatar_match = re.search(r'show_avatar:\s*(true|false)', github_config, re.IGNORECASE)
+                    if avatar_match:
+                        config["github"]["show_avatar"] = avatar_match.group(1).lower() == 'true'
+
         except Exception as e:
             print(f"读取配置文件失败: {e}")
     
     # 命令行参数覆盖配置文件
     if args.root:
         config["root_dir"] = args.root
+
+    if args.no_git:
+        config["git"]["enable"] = False
+    if args.no_github:
+        config["github"]["enable"] = False
     
     root_dir = config["root_dir"]
     if not os.path.exists(root_dir):
@@ -564,7 +813,20 @@ def main():
                 branches_to_process.append(item)
         if not branches_to_process:
             print(f"警告: 分支支持已启用，但在 {root_dir} 下未找到任何子目录")
-    
+
+    repo = None
+    if GIT_AVAILABLE and config["git"]["enable"]:
+        try:
+            repo = git.Repo(os.path.abspath(os.curdir), search_parent_directories=True)
+            print(f"检测到 Git 仓库: {repo.working_dir}")
+        except git.InvalidGitRepositoryError:
+            print("未检测到 Git 仓库，path.json 将不包含 git 字段")
+        except Exception as e:
+            print(f"Git 初始化错误: {e}")
+
+    def should_write_git_metadata(cfg):
+        return GIT_AVAILABLE and cfg.get("git", {}).get("enable", True) and not args.no_git
+
     # 处理流程
     def process_dir(current_root, output_json, search_json):
         print(f"处理目录: {current_root}")
@@ -573,22 +835,23 @@ def main():
         local_config = config.copy()
         local_config["root_dir"] = current_root
         
-        structure = scan_directory(current_root, local_config)
-        
+        structure = scan_directory(current_root, local_config, repo=repo)
+
         # 规范化路径
         structure = normalize_paths(structure)
 
-        # 移除遗留的 git 字段（即使 --merge 保留了旧字段，也会在最终输出时去除）
-        structure = strip_git_fields(structure)
-        
+        if not should_write_git_metadata(local_config):
+            structure = strip_git_fields(structure)
+
         # 如果需要合并已有结构
         if args.merge and os.path.exists(output_json):
             print(f"合并已有的JSON文件: {output_json}")
             existing = load_existing_structure(output_json)
             if existing:
                 structure = merge_structures(existing, structure, local_config)
-                # 合并后再次移除遗留 git 字段
-                structure = strip_git_fields(structure)
+
+        if not should_write_git_metadata(local_config):
+            structure = strip_git_fields(structure)
         
         # 保存路径结构
         with open(output_json, 'w', encoding='utf-8') as f:

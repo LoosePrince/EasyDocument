@@ -39,8 +39,9 @@
 | `path` | 字符串 | 文档相对路径：单分支时为相对于文档根目录；启用 `document.branch_support` 时为相对于该分支目录（如 `data/main/`），即不含分支名前缀 |
 | `children` | 数组 | 子节点列表，每个子节点均为同结构对象 |
 | `index` | 对象 | （可选）目录的索引页信息，包含 `title` 和 `path` |
+| `git` | 对象 | （可选）由 `build.py` 在本地 Git 仓库中扫描写入：最后修改、贡献者等；页面**优先**使用该字段，无需访问 GitHub API |
 
-> 注意：`path.json` 中不再使用 `git` 字段。文档页底部 Git 信息改为前端运行时通过 GitHub API 获取。
+> 说明：在仓库根目录执行 `build.py` 且未使用 `--no-git` 时，会为各文档节点写入 `git` 字段。部署静态站后，浏览器优先读取 `path.json` 中的 `git` 展示页脚；仅当某节点没有 `git`（例如外部 `github_tree` 挂载）时，才会回退为前端请求 GitHub API。
 
 ## 节点类型
 

@@ -350,30 +350,169 @@ export function findDocInfoByPath(node, targetPath) {
     return null; // 未找到
 }
 
+function hideGitMetaElements() {
+    const lastModifiedContainer = document.getElementById('last-modified');
+    const contributorsContainer = document.getElementById('contributors-container');
+    if (lastModifiedContainer) lastModifiedContainer.style.display = 'none';
+    if (contributorsContainer) contributorsContainer.style.display = 'none';
+}
+
+/**
+ * 贡献者头像 URL：优先 path.json 中的 github_avatar；否则用 GitHub 公开重定向
+ *（https://github.com/{login}.png → avatars.githubusercontent.com，无需 API）
+ */
+function resolveContributorAvatarUrl(c) {
+    if (c?.github_avatar) return c.github_avatar;
+    const login = c?.github_username;
+    if (typeof login === 'string' && login.trim()) {
+        return `https://github.com/${encodeURIComponent(login.trim())}.png`;
+    }
+    return null;
+}
+
+/**
+ * 使用 path.json 中构建阶段写入的 git 字段渲染页脚信息（不请求 GitHub API）
+ */
+function renderGitFromEmbedded(embedded) {
+    const showLastModified = config.extensions?.git?.show_last_modified !== false;
+    const showContributors = config.extensions?.git?.show_contributors !== false;
+    const showAvatar = config.extensions?.github?.show_avatar === true;
+
+    const modifiedTime = document.getElementById('modified-time');
+    const modifiedAuthor = document.getElementById('modified-author');
+    const lastModifiedContainer = document.getElementById('last-modified');
+    const lm = embedded?.last_modified;
+
+    if (showLastModified && lm && typeof lm.timestamp === 'number' && modifiedTime && modifiedAuthor && lastModifiedContainer) {
+        const ts = lm.timestamp;
+        modifiedTime.textContent = formatTimestamp(ts, { relative: true });
+        modifiedTime.title = formatTimestamp(ts);
+        const displayAuthor = lm.github_username || lm.author || 'Unknown';
+        modifiedAuthor.textContent = displayAuthor;
+        lastModifiedContainer.style.display = 'flex';
+    } else if (lastModifiedContainer) {
+        lastModifiedContainer.style.display = 'none';
+    }
+
+    const contributorsList = document.getElementById('contributors-list');
+    const contributorsContainer = document.getElementById('contributors-container');
+    if (!contributorsList || !contributorsContainer) return;
+
+    const raw = Array.isArray(embedded?.contributors) ? embedded.contributors : [];
+    const contributors = showContributors
+        ? raw.slice(0, 12)
+        : [];
+
+    if (contributors.length === 0) {
+        contributorsContainer.style.display = 'none';
+        return;
+    }
+
+    contributorsList.innerHTML = '';
+    for (const c of contributors) {
+        const displayName = c.github_username || c.name || 'Unknown';
+        const ghUrl = c.github_username ? `https://github.com/${c.github_username}` : null;
+        const title = `${displayName} (${c.commits} commits) - 最后贡献: ${
+            c.last_commit_timestamp ? formatTimestamp(c.last_commit_timestamp) : 'Unknown'
+        }`;
+
+        const avatarUrl = resolveContributorAvatarUrl(c);
+        if (showAvatar && avatarUrl) {
+            const img = document.createElement('img');
+            img.src = avatarUrl;
+            img.alt = displayName;
+            img.title = title;
+            img.className = 'w-6 h-6 rounded-full';
+            if (ghUrl) {
+                const a = document.createElement('a');
+                a.href = ghUrl;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.title = title;
+                a.appendChild(img);
+                contributorsList.appendChild(a);
+            } else {
+                contributorsList.appendChild(img);
+            }
+        } else {
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = displayName;
+            nameSpan.title = title;
+            nameSpan.className = 'px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs';
+            if (ghUrl) {
+                const a = document.createElement('a');
+                a.href = ghUrl;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.appendChild(nameSpan);
+                contributorsList.appendChild(a);
+            } else {
+                contributorsList.appendChild(nameSpan);
+            }
+        }
+    }
+
+    contributorsContainer.style.display = 'flex';
+}
+
 /**
  * 更新Git和GitHub相关信息
  */
 export function updateGitInfo(relativePath) {
-    // 仅由前端 GitHub API 提供（不再依赖 path.json.git）
     const githubEnabled = config.extensions?.github?.enable !== false;
-    
-    if (!githubEnabled || !config.extensions?.github?.repo_url) {
-        hideGitInfoElements();
+    const gitEnabled = config.extensions?.git?.enable !== false;
+
+    const githubEditContainer = document.getElementById('github-edit-container');
+    const githubEditLink = document.getElementById('github-edit-link');
+
+    if (githubEnabled && config.extensions?.github?.edit_link !== false &&
+        config.extensions?.github?.repo_url && githubEditContainer && githubEditLink) {
+        const externalMeta = resolveExternalGitMeta(relativePath);
+        const repoUrl = externalMeta?.repoUrl || config.extensions.github.repo_url;
+        const branch = externalMeta?.branch || currentBranch || config.extensions.github.branch || 'main';
+        let editPath = externalMeta?.filePath || null;
+        if (!editPath) {
+            const rootDir = (config.document?.root_dir || 'data').replace(/^\/+/, '');
+            editPath = `${rootDir}/${relativePath}`;
+        }
+        githubEditLink.href = `${repoUrl}/edit/${branch}/${editPath}`;
+        githubEditContainer.style.display = 'flex';
+    } else if (githubEditContainer) {
+        githubEditContainer.style.display = 'none';
+    }
+
+    if (!gitEnabled) {
+        hideGitMetaElements();
         return;
     }
 
-    // 异步加载提交信息（不阻塞渲染）
+    const docInfo = findDocInfoByPath(pathData, relativePath);
+    const embedded = docInfo?.git;
+    const hasEmbedded = embedded && (
+        embedded.last_modified ||
+        (Array.isArray(embedded.contributors) && embedded.contributors.length > 0)
+    );
+
+    if (hasEmbedded) {
+        renderGitFromEmbedded(embedded);
+        return;
+    }
+
+    if (!githubEnabled || !config.extensions?.github?.repo_url) {
+        hideGitMetaElements();
+        return;
+    }
+
     void (async () => {
         const externalMeta = resolveExternalGitMeta(relativePath);
         const repoParsed = externalMeta
             ? { owner: externalMeta.owner, repo: externalMeta.repo }
             : parseRepoUrl(config.extensions.github.repo_url);
         if (!repoParsed) {
-            hideGitInfoElements();
+            hideGitMetaElements();
             return;
         }
 
-        // 外部 github_tree 挂载优先使用其自身仓库路径；本地文档仍使用主仓库规则
         const branch = externalMeta?.branch || config.extensions.github.branch || 'main';
         let repoFilePath = externalMeta?.filePath || null;
         if (!repoFilePath) {
@@ -388,20 +527,15 @@ export function updateGitInfo(relativePath) {
         try {
             commits = await fetchFileCommits(repoParsed, { branch, path: repoFilePath });
         } catch (e) {
-            hideGitInfoElements();
+            hideGitMetaElements();
             return;
         }
 
         if (!Array.isArray(commits) || commits.length === 0) {
-            // 没有提交记录时，不显示最后更新时间与贡献者
-            const lastModifiedContainer = document.getElementById('last-modified');
-            if (lastModifiedContainer) lastModifiedContainer.style.display = 'none';
-            const contributorsContainer = document.getElementById('contributors-container');
-            if (contributorsContainer) contributorsContainer.style.display = 'none';
+            hideGitMetaElements();
             return;
         }
 
-        // 最后更新时间（取第一个 commit）
         const latest = commits[0];
         const isoDate = latest?.commit?.author?.date || latest?.commit?.committer?.date;
         const authorName = latest?.author?.login || latest?.commit?.author?.name || 'Unknown';
@@ -420,7 +554,6 @@ export function updateGitInfo(relativePath) {
             lastModifiedContainer.style.display = 'none';
         }
 
-        // 贡献者（从最近 30 次提交聚合）
         const contributorsList = document.getElementById('contributors-list');
         const contributorsContainer = document.getElementById('contributors-container');
         if (!contributorsList || !contributorsContainer) return;
@@ -471,6 +604,7 @@ export function updateGitInfo(relativePath) {
                     const a = document.createElement('a');
                     a.href = c.url;
                     a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
                     a.title = title;
                     a.appendChild(img);
                     contributorsList.appendChild(a);
@@ -487,6 +621,7 @@ export function updateGitInfo(relativePath) {
                     const a = document.createElement('a');
                     a.href = c.url;
                     a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
                     a.appendChild(nameSpan);
                     contributorsList.appendChild(a);
                 } else {
@@ -497,42 +632,15 @@ export function updateGitInfo(relativePath) {
 
         contributorsContainer.style.display = 'flex';
     })();
-    
-    // 处理GitHub编辑链接
-    const githubEditContainer = document.getElementById('github-edit-container');
-    const githubEditLink = document.getElementById('github-edit-link');
-    
-    if (githubEnabled && config.extensions?.github?.edit_link !== false && 
-        config.extensions?.github?.repo_url && githubEditContainer && githubEditLink) {
-        const externalMeta = resolveExternalGitMeta(relativePath);
-        const repoUrl = externalMeta?.repoUrl || config.extensions.github.repo_url;
-        const branch = externalMeta?.branch || currentBranch || config.extensions.github.branch || 'main';
-        let editPath = externalMeta?.filePath || null;
-        if (!editPath) {
-            const rootDir = (config.document?.root_dir || 'data').replace(/^\/+/, '');
-            editPath = `${rootDir}/${relativePath}`;
-        }
-        const editUrl = `${repoUrl}/edit/${branch}/${editPath}`;
-        
-        githubEditLink.href = editUrl;
-        githubEditContainer.style.display = 'flex';
-    } else {
-        if (githubEditContainer) githubEditContainer.style.display = 'none';
-    }
 }
 
 /**
  * 隐藏Git信息元素
  */
 export function hideGitInfoElements() {
-    const elementsToHide = ['last-modified', 'contributors-container', 'github-edit-container'];
-    
-    elementsToHide.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.style.display = 'none';
-        }
-    });
+    hideGitMetaElements();
+    const edit = document.getElementById('github-edit-container');
+    if (edit) edit.style.display = 'none';
 }
 
 // ===== 面包屑导航模块 =====
