@@ -1,0 +1,509 @@
+@import "tailwindcss";
+@import "@fontsource-variable/outfit/index.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans:
+    "Outfit Variable", var(--ed-font-family, system-ui), -apple-system, "Segoe UI",
+    "Noto Sans SC", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, monospace;
+  --radius-card: 0.875rem;
+}
+
+/* ============ 主题变量 ============ */
+:root {
+  --ed-primary: #3b82f6;
+  --ed-primary-rgb: 59 130 246;
+  --ed-primary-soft: color-mix(in oklab, var(--ed-primary) 12%, transparent);
+
+  --ed-bg: #f8fafc;
+  --ed-bg-elevated: #ffffff;
+  --ed-bg-subtle: #f1f5f9;
+  --ed-border: #e2e8f0;
+  --ed-text: #0f172a;
+  --ed-text-muted: #64748b;
+  --ed-text-subtle: #94a3b8;
+
+  --ed-sidebar-width: 250px;
+  --ed-toc-width: 280px;
+  --ed-header-height: 4rem;
+
+  --callout-note: #3b82f6;
+  --callout-tip: #10b981;
+  --callout-important: #8b5cf6;
+  --callout-warning: #f59e0b;
+  --callout-caution: #f97316;
+  --callout-danger: #ef4444;
+
+  --ed-anim-duration: 200ms;
+  --ed-stagger-delay: 50ms;
+}
+
+.dark {
+  --ed-bg: #0b1120;
+  --ed-bg-elevated: #111a2e;
+  --ed-bg-subtle: #172033;
+  --ed-border: #1e293b;
+  --ed-text: #e2e8f0;
+  --ed-text-muted: #94a3b8;
+  --ed-text-subtle: #64748b;
+  --ed-primary-soft: color-mix(in oklab, var(--ed-primary) 20%, transparent);
+}
+
+/* 动画总开关：animation.enable=false 时移除所有过渡 */
+[data-animations="off"] *,
+[data-animations="off"] *::before,
+[data-animations="off"] *::after {
+  animation-duration: 1ms !important;
+  animation-delay: 0ms !important;
+  transition-duration: 1ms !important;
+  transition-delay: 0ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============ 全局基础 ============ */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--ed-header-height) + 1rem);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--ed-bg);
+  color: var(--ed-text);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--ed-primary-soft);
+}
+
+/* 滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ed-border) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--ed-border);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ============ 焦点可见性 ============ */
+:focus-visible {
+  outline: 2px solid var(--ed-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============ 骨架屏 ============ */
+@keyframes ed-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--ed-bg-subtle) 25%,
+    color-mix(in oklab, var(--ed-bg-subtle) 60%, var(--ed-border)) 50%,
+    var(--ed-bg-subtle) 75%
+  );
+  background-size: 200% 100%;
+  animation: ed-shimmer var(--skeleton-duration, 1500ms) ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* ============ 交错入场动画 ============ */
+@keyframes ed-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+[data-stagger] > * {
+  animation: ed-stagger-in var(--ed-anim-duration) ease-out both;
+  animation-delay: calc(var(--stagger-index, 0) * var(--ed-stagger-delay));
+}
+
+@keyframes ed-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ============ 文档正文排版 ============ */
+.doc-content {
+  color: var(--ed-text);
+  line-height: 1.75;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.doc-content > * + * {
+  margin-top: 1.1em;
+}
+
+.doc-content h1,
+.doc-content h2,
+.doc-content h3,
+.doc-content h4 {
+  position: relative;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  scroll-margin-top: calc(var(--ed-header-height) + 1.25rem);
+}
+
+.doc-content h1 {
+  font-size: 1.9rem;
+  margin-top: 0;
+  margin-bottom: 0.6em;
+  padding-bottom: 0.4em;
+  border-bottom: 1px solid var(--ed-border);
+}
+
+.doc-content h2 {
+  font-size: 1.45rem;
+  margin-top: 2em;
+  margin-bottom: 0.7em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid color-mix(in oklab, var(--ed-border) 60%, transparent);
+}
+
+.doc-content h3 {
+  font-size: 1.18rem;
+  margin-top: 1.7em;
+  margin-bottom: 0.6em;
+}
+
+.doc-content h4 {
+  font-size: 1.03rem;
+  margin-top: 1.4em;
+}
+
+.doc-content p {
+  margin: 0.9em 0;
+}
+
+.doc-content a {
+  color: var(--ed-primary);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in oklab, var(--ed-primary) 35%, transparent);
+  transition: border-color 150ms ease;
+}
+.doc-content a:hover {
+  border-bottom-color: var(--ed-primary);
+}
+
+.doc-content strong {
+  font-weight: 650;
+  color: var(--ed-text);
+}
+
+.doc-content ul,
+.doc-content ol {
+  padding-left: 1.5em;
+  margin: 0.9em 0;
+}
+.doc-content ul {
+  list-style: disc;
+}
+.doc-content ol {
+  list-style: decimal;
+}
+.doc-content li {
+  margin: 0.35em 0;
+}
+.doc-content li::marker {
+  color: var(--ed-text-subtle);
+}
+
+.doc-content blockquote {
+  border-left: 3px solid var(--ed-border);
+  padding: 0.2em 0 0.2em 1em;
+  color: var(--ed-text-muted);
+  margin: 1em 0;
+}
+
+.doc-content hr {
+  border: none;
+  border-top: 1px solid var(--ed-border);
+  margin: 2em 0;
+}
+
+.doc-content img.doc-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--ed-border);
+  cursor: zoom-in;
+  margin: 1.2em auto;
+  display: block;
+}
+
+/* 行内代码 */
+.doc-content :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  padding: 0.15em 0.4em;
+  border-radius: 5px;
+  background: var(--ed-bg-subtle);
+  border: 1px solid var(--ed-border);
+  white-space: break-spaces;
+}
+
+/* 表格 */
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.925rem;
+  display: table;
+  margin: 1.2em 0;
+}
+.doc-table th,
+.doc-table td {
+  border: 1px solid var(--ed-border);
+  padding: 0.55em 0.8em;
+  text-align: left;
+}
+.doc-table thead th {
+  background: var(--ed-bg-subtle);
+  font-weight: 600;
+}
+
+/* 标题锚点 */
+.heading-anchor-host {
+  scroll-margin-top: calc(var(--ed-header-height) + 1.25rem);
+}
+.heading-anchor {
+  margin-left: 0.4em;
+  color: var(--ed-text-subtle);
+  opacity: 0;
+  border: none !important;
+  font-weight: 400;
+  transition: opacity 150ms ease;
+}
+.heading-anchor-host:hover .heading-anchor {
+  opacity: 1;
+}
+
+/* ============ 代码块 ============ */
+.code-wrapper {
+  position: relative;
+  margin: 1.3em 0;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--ed-border);
+  background: var(--ed-bg-elevated);
+  overflow: hidden;
+}
+
+.code-wrapper .code-lang {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.85rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ed-text-subtle);
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+
+.code-wrapper .code-copy {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.5rem;
+  z-index: 2;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--ed-border);
+  background: var(--ed-bg-subtle);
+  color: var(--ed-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.code-wrapper:hover .code-copy,
+.code-wrapper .code-copy:focus-visible {
+  opacity: 1;
+}
+.code-wrapper .code-copy[data-copied="true"] {
+  color: var(--ed-primary);
+  border-color: var(--ed-primary);
+}
+
+.code-wrapper .code-scroll {
+  overflow-x: auto;
+  padding: 1.5rem 0 0.85rem;
+}
+
+.code-wrapper pre {
+  margin: 0;
+  padding: 0 0.95rem 0;
+  background: transparent !important;
+  font-family: var(--font-mono);
+  font-size: 0.855rem;
+  line-height: 1.65;
+}
+.code-wrapper pre code {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  font-size: inherit;
+}
+
+/* 行号 */
+.code-wrapper[data-line-numbers="true"] .code-scroll {
+  padding-top: 1.6rem;
+}
+.code-wrapper .code-lines {
+  display: none;
+}
+
+.code-wrapper .line {
+  display: inline-block;
+  width: 100%;
+}
+.code-wrapper .line::before {
+  content: attr(data-line);
+  display: inline-block;
+  width: 2.6em;
+  margin-right: 0.9em;
+  text-align: right;
+  color: var(--ed-text-subtle);
+  user-select: none;
+  opacity: 0.75;
+}
+.code-wrapper:not([data-line-numbers="true"]) .line::before {
+  content: none;
+}
+
+/* shiki 双主题 */
+.code-wrapper .shiki,
+.code-wrapper .shiki span {
+  color: var(--shiki-light);
+  background-color: transparent;
+}
+.dark .code-wrapper .shiki,
+.dark .code-wrapper .shiki span {
+  color: var(--shiki-dark);
+}
+
+/* Mermaid */
+.mermaid-block {
+  margin: 1.3em 0;
+  padding: 1rem;
+  border: 1px solid var(--ed-border);
+  border-radius: var(--radius-card);
+  background: var(--ed-bg-elevated);
+  overflow-x: auto;
+  text-align: center;
+}
+.mermaid-block[data-rendered="true"] .mermaid-source {
+  display: none;
+}
+
+/* KaTeX 溢出保护 */
+.doc-content .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.4em 0;
+}
+
+/* ============ Callout ============ */
+.callout {
+  margin: 1.2em 0;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-card);
+  border-left: 4px solid var(--callout-color, var(--ed-border));
+  background: color-mix(in oklab, var(--callout-color, var(--ed-border)) 8%, transparent);
+}
+.callout-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+  color: var(--callout-color);
+  font-size: 0.9rem;
+}
+.callout-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+.callout-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.callout-body > :last-child {
+  margin-bottom: 0;
+}
+.callout-note {
+  --callout-color: var(--callout-note);
+}
+.callout-tip {
+  --callout-color: var(--callout-tip);
+}
+.callout-important {
+  --callout-color: var(--callout-important);
+}
+.callout-warning {
+  --callout-color: var(--callout-warning);
+}
+.callout-caution {
+  --callout-color: var(--callout-caution);
+}
+.callout-danger {
+  --callout-color: var(--callout-danger);
+}
+
+/* ============ 阅读进度条 ============ */
+.reading-progress {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  z-index: 60;
+  background: transparent;
+  pointer-events: none;
+}
+.reading-progress > div {
+  height: 100%;
+  background: var(--ed-primary);
+  transition: width 100ms linear;
+}

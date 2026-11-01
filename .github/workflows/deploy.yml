@@ -1,0 +1,83 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "触发原因（网页端一键重建会写入 web-editor）"
+        required: false
+        type: string
+  repository_dispatch:
+    types: [rebuild]
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码（main）
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 读取内容指针
+        id: pointer
+        run: |
+          # easydocument.json 形如 { "data": "data:/config.js" }
+          DATA_REF=$(node -e "const c=require('./easydocument.json');process.stdout.write(c.data||'data:/config.js')")
+          DATA_BRANCH=${DATA_REF%%:*}
+          echo "branch=$DATA_BRANCH" >> $GITHUB_OUTPUT
+          echo "ref=$DATA_REF" >> $GITHUB_OUTPUT
+          echo "内容分支: $DATA_BRANCH ($DATA_REF)"
+
+      - name: 检出内容分支到 .data
+        run: |
+          git fetch --no-tags --depth=50 origin "${{ steps.pointer.outputs.branch }}"
+          git worktree add .data FETCH_HEAD
+
+      - name: 设置 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 类型检查
+        run: npm run typecheck
+
+      - name: 构建（SSG）
+        run: npm run build
+        env:
+          EASYDOCUMENT_DATA_DIR: .data
+          EASYDOCUMENT_REPO: ${{ github.repository }}
+
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+
+      - name: 上传构建产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/client
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

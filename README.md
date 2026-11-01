@@ -1,0 +1,188 @@
+# EasyDocument
+
+基于 **React 19 + TypeScript + Vite 7 + TailwindCSS 4** 的静态文档系统。文档内容存放在独立的 git 分支中，构建时预渲染为真实路径的静态页面，并支持在网页端直接编辑内容、修改站点配置、一键触发重新构建。
+
+- 真实路径（`/docs/main/使用指南/README`）+ 预渲染 HTML，无 `#` 路由，SEO 友好
+- 内容与代码分离：代码在 `main`，内容在 `data`（可配置）
+- 配置与原版 `config.js` **完全兼容**，可直接复用
+- 网页端编辑：填一次 GitHub PAT 即可新增/编辑/删除文档、改配置、触发重建
+
+> v1（免编译的 Alpine.js + hash 路由版本）完整保留在 `legacy` 分支。
+
+---
+
+## 快速开始
+
+```bash
+npm install
+
+# 把内容分支检出到 .data（构建读取它）
+git worktree add .data origin/data
+
+npm run dev      # http://localhost:5173
+npm run build    # 产物在 build/client
+npm run preview  # 以 GitHub Pages 语义本地预览产物
+```
+
+Windows 下若 `git worktree` 报路径冲突，可改用：
+
+```bash
+git clone -b data <repo-url> .data
+```
+
+或设置环境变量 `EASYDOCUMENT_DATA_DIR` 指向任意内容目录。
+
+## 内容分支结构
+
+```
+data 分支
+├── config.js          # 站点配置（与 v1 相同格式）
+└── main/              # 版本目录（名称即 URL 中的 {version}）
+    ├── README.md      # 版本首页（可省略）
+    ├── 使用指南/
+    │   ├── README.md
+    │   └── 基本使用流程.md
+    └── 示例.html
+```
+
+- 每个一级目录 = 一个版本；`document.available_branches` 控制展示顺序与标签，目录不存在时自动隐藏
+- `index_pages` 中的文件名（默认 `README.md` / `README.html` / `index.md` / `index.html`）作为目录索引页
+- 目录标题取自索引页的一级标题；没有索引页的目录只作分组
+
+## URL 规则
+
+| 内容路径 | URL |
+| --- | --- |
+| `main/README.md` | `/docs/main` |
+| `main/使用指南/README.md` | `/docs/main/使用指南` |
+| `main/使用指南/基本使用流程.md` | `/docs/main/使用指南/基本使用流程` |
+| `1.3.4/配置详解/README.md` | `/docs/1.3.4/配置详解` |
+
+锚点直接使用标题文本（中文会百分号编码）：`/docs/main/使用指南#常见问题`。
+
+旧版链接（`main/#/使用指南/`、`main/#使用指南/`）在导航与首页按钮中会自动升级为新路径。
+
+## 配置
+
+配置全部来自内容分支的 `config.js`，格式与 v1 一致：
+
+```js
+const config = {
+  site: { name, title, description, keywords, base_url },
+  appearance: { logo, favicon, theme_color, default_dark_mode, font_family },
+  layout: { show_header, show_footer, sidebar_width, toc_width, mobile_breakpoint },
+  animation: { enable, sidebar, toc, article, general },
+  navigation: { home_text, breadcrumb, auto_collapse, back_to_top, prev_next_buttons, folder_expand_mode, nav_links },
+  home: { use_file, file_path, hero, features, get_started },
+  document: { root_dir, branch_support, default_branch, available_branches, index_pages, supported_extensions, toc_*, code_*, external_docs },
+  search: { enable, min_chars, max_results, placeholder, search_on_type, match_distance },
+  extensions: { math, highlight, mermaid, github, git, progress_bar, cache_menu },
+  footer: { copyright, powered_by, links, beian, columns },
+};
+export default config;
+```
+
+行为要点：
+
+- 所有字段可选，缺失时使用默认值；类型不符会回退默认值并给出警告（可在编辑台看到）
+- `appearance.font_family` 留空时使用内置 **Outfit** 可变字体
+- `extensions.github.repo_url` 用于生成「在 GitHub 上编辑」链接
+- `admin.enable`（v2 新增）控制是否显示网页端编辑入口，默认 `true`
+
+## 网页端编辑
+
+访问 `/admin`，或在任意文档页点击「编辑此页」。
+
+1. 粘贴 **fine-grained PAT**，权限最小化为：仅本仓库，`Contents: Read and write` + `Actions: Read and write`
+2. 勾选「记住本设备」会写入 `localStorage`，不勾选则仅存 `sessionStorage`
+3. 支持：新建文档、编辑文档、删除文档、表单/源码两种方式修改 `config.js`、一键触发重建
+
+所有写入都提交到内容分支（默认 `data`），不会改动代码分支。提交时携带文件 `sha`，他人已修改过会提示刷新而不是静默覆盖。
+
+> Token 只存在于浏览器，绝不进入构建产物。请不要在公用设备上勾选「记住本设备」。
+
+## 一键重建
+
+网页端调用：
+
+```
+POST /repos/{owner}/{repo}/actions/workflows/deploy.yml/dispatches
+{ "ref": "main", "inputs": { "reason": "web-editor" } }
+```
+
+对应 `.github/workflows/deploy.yml` 的 `workflow_dispatch`（同时支持 `repository_dispatch: [rebuild]`）。
+
+## 内容指针 `easydocument.json`
+
+```json
+{ "data": "data:/config.js" }
+```
+
+`{分支}:{config.js 路径}`。文档根即该 `config.js` 所在目录，因此也可以写成 `content:docs/config.js` 把内容放在子目录。仓库归属自动推断（CI 的 `GITHUB_REPOSITORY` → 该文件可选 `repo` 字段 → GitHub Pages 域名），无需硬编码。
+
+## 部署
+
+`.github/workflows/deploy.yml` 会在 `main` 推送、手动触发、`repository_dispatch` 时：
+
+1. 读取 `easydocument.json` 得到内容分支
+2. 把内容分支检出到 `.data`
+3. `npm ci` → `npm run typecheck` → `npm run build`
+4. 上传 `build/client` 并部署到 GitHub Pages
+
+首次使用需在仓库 **Settings → Pages** 中把 Source 设为 **GitHub Actions**。
+
+## 开发
+
+```bash
+npm run dev         # 开发服务器（SSR-ish 路由 + 热更新）
+npm run typecheck   # 类型检查
+npm run lint        # ESLint
+npm run test        # Vitest 单元测试
+npm run test:e2e    # Playwright 端到端测试（需先 build）
+```
+
+### 目录
+
+```
+app/
+├── root.tsx                 # 全局 loader（配置注入）、主题与样式初始化
+├── routes.ts                # 路由表
+├── routes/
+│   ├── home.tsx             # 首页
+│   ├── docs-index.tsx       # /docs 版本列表
+│   ├── docs-page.tsx        # /docs/{version}/{path...}（文档页 / 版本首页）
+│   ├── admin.tsx            # /admin 编辑台
+│   └── not-found.tsx        # 404
+├── components/
+│   ├── layout/              # 顶栏、页脚、面包屑、翻页、进度条
+│   ├── sidebar/             # 文档树、版本切换、git 信息
+│   ├── toc/                 # 右侧目录
+│   ├── search/              # 搜索面板
+│   ├── markdown/            # 客户端增强（复制、Mermaid、灯箱）
+│   ├── editor/              # 编辑面板、配置编辑器、PAT 登录
+│   └── providers/           # 配置与主题上下文
+├── lib/
+│   ├── config/              # schema（Zod）、默认值、config.js 求值与序列化
+│   ├── content/             # 内容指针、本地/远程内容源、文档树、URL 规则
+│   ├── markdown/            # unified 渲染管线、TOC 提取
+│   ├── search/              # 搜索索引与分词
+│   ├── github/              # REST 客户端、凭据、触发重建
+│   └── site/                # 构建期站点装配、页面数据
+└── styles/app.css           # Tailwind 4 + 主题变量 + 文档排版
+```
+
+## 与 v1 的差异
+
+| 项目 | v1（legacy 分支） | v2（当前） |
+| --- | --- | --- |
+| 技术栈 | 原生 JS + Alpine.js + CDN Tailwind | React 19 + TS + Vite 7 + Tailwind 4 |
+| 路由 | hash：`main/#/路径` | 真实路径：`/docs/{版本}/{路径}` |
+| 渲染 | 浏览器内渲染（SPA） | 构建期预渲染（SSG） |
+| 内容位置 | 仓库 `data/` 目录 | 独立 git 分支（默认 `data`） |
+| 索引文件 | `build.py` 生成 `path.json` / `search.json` | 构建期扫描 + MiniSearch 索引，无需索引文件 |
+| 编辑 | 无 | 网页端直接编辑 |
+| 主题 | FontAwesome 图标类 | lucide-react 图标（`nav_links.icon` 的 FontAwesome 类名仍会渲染，需自行引入该字体） |
+
+## License
+
+MIT
