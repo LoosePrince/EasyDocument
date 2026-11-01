@@ -1,16 +1,18 @@
 /**
- * Markdown 渲染管线
+ * Markdown 渲染管线（同构）
  *
- * 对齐 legacy `content-renderer.js` 的能力：
+ * 同一套代码在三个地方运行：
+ *  - SSG 构建（Node）      → 预渲染 HTML
+ *  - 编辑台实时预览（浏览器）→ 与最终页面完全一致的渲染
+ *  - 单元测试
+ *
+ * 能力对齐 legacy `content-renderer.js`：
  *  - GFM（表格/任务列表/删除线/自动链接）
- *  - KaTeX 数学（$…$、$$…$$；跳过 code/pre 内部）
- *  - 代码高亮（shiki，双主题）+ 行号 + 起始行号 + 复制按钮
+ *  - KaTeX 数学（$…$、$$…$$；跳过 code/pre）
+ *  - 代码块：行号 + 起始行号 + 复制按钮 + shiki 高亮（高亮器由调用方注入）
  *  - 标题锚点 id（github-slugger，支持 CJK）
  *  - 警告框 `> [NOTE] 标题`
- *  - 内链改写为真实路径（/docs/...），外链加 target/rel
- *  - 图片灯箱包裹
- *
- * 输出 HTML 字符串；在 SSG 期生成，客户端直接渲染（可水合交互）
+ *  - 内链改写为 /docs/...，外链加 target/rel，图片懒加载
  */
 import GithubSlugger from "github-slugger";
 import { unified } from "unified";
@@ -22,8 +24,8 @@ import rehypeStringify from "rehype-stringify";
 import rehypeKatex from "rehype-katex";
 import { visit } from "unist-util-visit";
 import type { Root as MdRoot, Heading, Html, Text } from "mdast";
-import type { Root as HastRoot, Element, RootContent } from "hast";
-import { codeToHtml } from "shiki";
+import type { Root as HastRoot, Element } from "hast";
+import { normalizeLang, type HighlightFn } from "./highlight-types";
 
 export interface MarkdownOptions {
   /** 当前文档在分支内的路径，用于改写相对链接 */
@@ -40,7 +42,6 @@ export interface MarkdownOptions {
   supportedExtensions: string[];
   /** 站点 base_url */
   baseUrl: string;
-  /** 代码块设置 */
   codeBlock: {
     lineNumbers: boolean;
     startLine: number;
@@ -54,42 +55,55 @@ export interface MarkdownOptions {
 
 export interface MarkdownResult {
   html: string;
-  /** 提取出的标题（文档第一个 h1/h2），用于 SEO 与面包屑 */
   title?: string;
-  /** 标题中出现的第一个 h1（若存在） */
   firstH1?: string;
 }
 
-const CALLOUT_TYPES = [
-  "NOTE",
-  "TIP",
-  "IMPORTANT",
-  "WARNING",
-  "CAUTION",
-  "DANGER",
-] as const;
+const CALLOUT_TYPES = ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION", "DANGER"] as const;
 
 type CalloutType = (typeof CALLOUT_TYPES)[number];
 
-const CALLOUT_META: Record<CalloutType, { label: string }> = {
-  NOTE: { label: "注意" },
-  TIP: { label: "提示" },
-  IMPORTANT: { label: "重要" },
-  WARNING: { label: "警告" },
-  CAUTION: { label: "小心" },
-  DANGER: { label: "危险" },
+const CALLOUT_LABELS: Record<CalloutType, string> = {
+  NOTE: "注意",
+  TIP: "提示",
+  IMPORTANT: "重要",
+  WARNING: "警告",
+  CAUTION: "小心",
+  DANGER: "危险",
 };
+
+/** callout 图标（内联 SVG，不依赖图标字体） */
+const CALLOUT_ICONS: Record<CalloutType, string> = {
+  NOTE: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
+  TIP: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2Z"/></svg>',
+  IMPORTANT:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>',
+  WARNING:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  CAUTION:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.4-4.6 1.5-6-1.5 0-3 .5-4 1.5S6 7 6 8.5c0 1 .3 1.8.7 2.5C5.1 11.8 4 13.4 4 15a4 4 0 0 0 4 4h1"/><path d="M12 10c1.2 1.5 2 3 2 4.5a2.5 2.5 0 0 1-5 0c0-1 .3-2 1-3"/></svg>',
+  DANGER:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg>',
+};
+
+interface PendingCode {
+  raw: string;
+  lang: string;
+}
 
 /**
  * 主入口：Markdown → HTML
+ *
+ * @param highlight 可选高亮器。不传则代码块以纯文本输出（仍带行号与复制按钮）。
  */
 export async function renderMarkdown(
   markdown: string,
   options: MarkdownOptions,
+  highlight?: HighlightFn,
 ): Promise<MarkdownResult> {
   const slugger = new GithubSlugger();
   const extracted = extractDocTitle(markdown);
-  const codeBlocks: Array<{ raw: string; lang: string }> = [];
+  const codeBlocks: PendingCode[] = [];
 
   const processor = unified()
     .use(remarkParse)
@@ -110,11 +124,10 @@ export async function renderMarkdown(
     })
     .use(rehypeStringify, { allowDangerousHtml: true });
 
-  const file = await processor.process(markdown);
-  let html = String(file);
+  let html = String(await processor.process(markdown));
 
-  if (options.highlight && codeBlocks.length > 0) {
-    html = await highlightCodeBlocks(html, codeBlocks, options);
+  if (codeBlocks.length > 0) {
+    html = await replaceCodeBlocks(html, codeBlocks, options, highlight);
   }
 
   return { html, title: extracted.title, firstH1: extracted.firstH1 };
@@ -123,7 +136,7 @@ export async function renderMarkdown(
 /** 从原始 Markdown 提取标题 */
 export function extractDocTitle(markdown: string): { title?: string; firstH1?: string } {
   const h1 = markdown.match(/^\s{0,3}#\s+(.+?)\s*#*\s*$/m);
-  const h2 = markdown.match(/^\s{0,3}##\s+(.+?)\s*#*\s*$/m);
+  const h2 = markdown.match(/^\s{0,3}#{2}\s+(.+?)\s*#*\s*$/m);
   const firstH1 = h1?.[1]?.trim();
   const title = firstH1 ?? h2?.[1]?.trim();
   return { title, firstH1 };
@@ -150,7 +163,7 @@ function rewriteLinks(tree: MdRoot, options: MarkdownOptions) {
       return;
     }
 
-    if (href.startsWith("#")) return; // 页内锚点
+    if (href.startsWith("#")) return;
 
     const { pathname, hash } = splitHref(href);
     if (!pathname) {
@@ -164,10 +177,7 @@ function rewriteLinks(tree: MdRoot, options: MarkdownOptions) {
 }
 
 function isExternal(href: string): boolean {
-  return (
-    /^[a-z][a-z0-9+.-]*:/i.test(href) ||
-    href.startsWith("//")
-  );
+  return /^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith("//");
 }
 
 function splitHref(href: string): { pathname: string; hash: string } {
@@ -184,25 +194,18 @@ export function resolveDocLink(rawPath: string, options: MarkdownOptions): strin
   const base = options.baseUrl === "/" ? "" : options.baseUrl;
   const decoded = safeDecode(rawPath).replace(/\\/g, "/");
 
-  // 绝对站点路径：/main/使用指南/README.md 或 /docs/...
   let relative = decoded;
   if (decoded.startsWith("/")) {
     relative = decoded.replace(/^\/+/, "");
-    // 兼容 legacy 写法：/data/main/xxx 或 /main/xxx
-    const rootDir = "data";
-    if (relative.startsWith(`${rootDir}/`)) relative = relative.slice(rootDir.length + 1);
+    // 兼容 legacy 写法：/data/main/xxx
+    if (relative.startsWith("data/")) relative = relative.slice("data/".length);
   }
 
   const docDir = options.docPath.includes("/")
     ? options.docPath.slice(0, options.docPath.lastIndexOf("/"))
     : "";
 
-  // 解析 . 与 ..
-  const segments: string[] = decoded.startsWith("/")
-    ? []
-    : docDir
-      ? docDir.split("/")
-      : [];
+  const segments: string[] = decoded.startsWith("/") ? [] : docDir ? docDir.split("/") : [];
   for (const part of relative.split("/")) {
     if (!part || part === ".") continue;
     if (part === "..") segments.pop();
@@ -211,13 +214,14 @@ export function resolveDocLink(rawPath: string, options: MarkdownOptions): strin
 
   let resolved = segments.join("/");
 
-  // 已带 /docs/ 前缀 → 视为最终站点路径，直接返回
+  // 已带 /docs/ 前缀 → 视为最终站点路径
   if (resolved === "docs" || resolved.startsWith("docs/")) {
     const rest = resolved.slice("docs".length).replace(/^\/+/, "");
     const [version, ...tail] = rest.split("/").filter(Boolean);
     if (version) {
-      const folded = foldIndexAndExtension(tail.join("/"), options.indexPages);
-      const target = ["docs", version, folded].filter(Boolean).join("/");
+      const target = ["docs", version, foldIndexAndExtension(tail.join("/"), options.indexPages)]
+        .filter(Boolean)
+        .join("/");
       return `${base}/${target}`.replace(/\/{2,}/g, "/");
     }
   }
@@ -258,14 +262,14 @@ function safeDecode(value: string): string {
   }
 }
 
-/** 收集代码块，供 shiki 统一高亮 */
-function collectCodeBlocks(tree: MdRoot, out: Array<{ raw: string; lang: string }>) {
+/** 收集代码块（渲染后按顺序替换为高亮结果） */
+function collectCodeBlocks(tree: MdRoot, out: PendingCode[]) {
   visit(tree, "code", (node) => {
     out.push({ raw: node.value, lang: node.lang ?? "text" });
   });
 }
 
-/** `> [NOTE] 标题` → callout card */
+/** `> [NOTE] 标题` → callout 卡片 */
 function transformCallouts(tree: MdRoot) {
   visit(tree, "blockquote", (node, index, parent) => {
     if (index === undefined || !parent) return;
@@ -279,19 +283,14 @@ function transformCallouts(tree: MdRoot) {
     const type = match[1] as CalloutType;
     if (!CALLOUT_TYPES.includes(type)) return;
 
-    const meta = CALLOUT_META[type];
-
-    // 只有当「首个段落仅由一个文本节点构成」时，才把 marker 后的文字当作自定义标题；
-    // 否则（段落里还有 `code`、**粗体** 等内联节点）整体视为正文，避免标题与正文重复。
+    // 仅当首段只有一个文本节点且后面还有内容时，marker 后文字才作为自定义标题
     const isSimpleTitle = first.children.length === 1 && node.children.length > 1;
     const customTitle = match[2]?.trim();
-    const title = isSimpleTitle && customTitle ? customTitle : meta.label;
+    const title = isSimpleTitle && customTitle ? customTitle : CALLOUT_LABELS[type];
 
     if (isSimpleTitle) {
-      // 整个首段就是标题行，移除它
       node.children.shift();
     } else {
-      // 仅剥离 `[TYPE]` 标记，保留段落其余内容作为正文
       const prefixLength = (firstChild as Text).value.length - match[2].length;
       (firstChild as Text).value = (firstChild as Text).value
         .slice(prefixLength)
@@ -312,20 +311,6 @@ function transformCallouts(tree: MdRoot) {
   });
 }
 
-/** callout 图标（lucide 路径内联，避免运行时依赖） */
-const CALLOUT_ICONS: Record<CalloutType, string> = {
-  NOTE: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
-  TIP: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2Z"/></svg>',
-  IMPORTANT:
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>',
-  WARNING:
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/></svg>',
-  CAUTION:
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.4-4.6 1.5-6-1.5 0-3 .5-4 1.5S6 7 6 8.5c0 1 .3 1.8.7 2.5C5.1 11.8 4 13.3 4 15a4 4 0 0 0 4 4h1"/><path d="M12 10c1.2 1.5 2 3 2 4.5a2.5 2.5 0 0 1-5 0c0-1 .3-2 1-3"/></svg>',
-  DANGER:
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg>',
-};
-
 /** 标题 id（github-slugger，CJK 友好） */
 function assignHeadingIds(tree: MdRoot, slugger: GithubSlugger) {
   visit(tree, "heading", (node: Heading) => {
@@ -336,7 +321,6 @@ function assignHeadingIds(tree: MdRoot, slugger: GithubSlugger) {
       ...(node.data.hProperties as Record<string, unknown>),
       id,
     };
-    node.data.hName = node.data.hName ?? `h${node.depth}`;
   });
 }
 
@@ -344,13 +328,14 @@ function toPlainText(node: import("mdast").Node): string {
   if ("value" in node && typeof (node as { value: unknown }).value === "string") {
     return (node as { value: string }).value;
   }
-  if ("children" in node && Array.isArray((node as { children: unknown }).children)) {
-    return ((node as { children: import("mdast").Node[] }).children).map(toPlainText).join("");
+  if ("children" in node) {
+    const children = (node as { children: import("mdast").Node[] }).children;
+    if (Array.isArray(children)) return children.map(toPlainText).join("");
   }
   return "";
 }
 
-/** 标题增强：包一层锚点链接 */
+/** 标题追加锚点链接 */
 function enhanceHeadings(tree: HastRoot) {
   visit(tree, "element", (node: Element) => {
     if (!/^h[1-6]$/.test(node.tagName)) return;
@@ -361,17 +346,13 @@ function enhanceHeadings(tree: HastRoot) {
     node.children.push({
       type: "element",
       tagName: "a",
-      properties: {
-        href: `#${id}`,
-        className: ["heading-anchor"],
-        ariaLabel: "链接到此标题",
-      },
+      properties: { href: `#${id}`, className: ["heading-anchor"], ariaLabel: "链接到此标题" },
       children: [{ type: "text", value: "#" }],
     });
   });
 }
 
-/** 图片包裹（灯箱） */
+/** 图片懒加载 + 灯箱标记 */
 function wrapImages(tree: HastRoot) {
   visit(tree, "element", (node: Element) => {
     if (node.tagName !== "img") return;
@@ -383,7 +364,7 @@ function wrapImages(tree: HastRoot) {
   });
 }
 
-/** 表格包裹，便于横向滚动 */
+/** 表格标记 */
 function markTables(tree: HastRoot) {
   visit(tree, "element", (node: Element) => {
     if (node.tagName !== "table") return;
@@ -392,7 +373,7 @@ function markTables(tree: HastRoot) {
   });
 }
 
-function escapeHtml(input: string): string {
+export function escapeHtml(input: string): string {
   return input
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -400,77 +381,56 @@ function escapeHtml(input: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/**
- * 代码高亮
- *
- * mdast 阶段已把代码块收集到 codeBlocks，这里把 `<pre><code>` 依次替换为
- * shiki 输出（双主题 CSS 变量），并附加行号与复制按钮。
- */
-async function highlightCodeBlocks(
+/** 按顺序把 `<pre><code>` 替换为高亮结果 */
+async function replaceCodeBlocks(
   html: string,
-  codeBlocks: Array<{ raw: string; lang: string }>,
+  codeBlocks: PendingCode[],
   options: MarkdownOptions,
+  highlight?: HighlightFn,
 ): Promise<string> {
   const rendered = await Promise.all(
     codeBlocks.map(async ({ raw, lang }) => {
       const normalizedLang = normalizeLang(lang);
+
       if (options.mermaid && normalizedLang === "mermaid") {
-        const encoded = encodeURIComponent(raw);
-        return `<div class="mermaid-block" data-mermaid="${encoded}"><pre class="mermaid-source"><code>${escapeHtml(raw)}</code></pre></div>`;
+        return `<div class="mermaid-block" data-mermaid="${encodeURIComponent(raw)}"><pre class="mermaid-source"><code>${escapeHtml(
+          raw,
+        )}</code></pre></div>`;
       }
-      try {
-        return await codeToHtml(raw, {
-          lang: normalizedLang,
-          themes: {
-            light: normalizeTheme(options.codeBlock.theme.light, FALLBACK_LIGHT_THEME),
-            dark: normalizeTheme(options.codeBlock.theme.dark, FALLBACK_DARK_THEME),
-          },
-          defaultColor: false,
-          transformers: [
-            {
-              pre(node) {
-                node.properties = node.properties ?? {};
-                node.properties["data-lang"] = normalizedLang;
-                node.properties.className = [
-                  ...((node.properties.className as string[]) ?? []),
-                  "code-block",
-                ];
-              },
-              line(node, line) {
-                node.properties = node.properties ?? {};
-                node.properties["data-line"] = String(line + options.codeBlock.startLine - 1);
-              },
-            },
-          ],
-        });
-      } catch (error) {
-        console.error("[easydocument] shiki 高亮失败:", normalizedLang, error);
-        return `<pre class="code-block fallback"><code>${escapeHtml(raw)}</code></pre>`;
+
+      let body: string | null = null;
+      if (highlight && options.highlight) {
+        try {
+          body = await highlight({
+            code: raw,
+            lang: normalizedLang,
+            theme: options.codeBlock.theme,
+            startLine: options.codeBlock.startLine,
+          });
+        } catch {
+          body = null;
+        }
       }
+
+      return decorateCodeBlock(body ?? fallbackCode(raw), normalizeLang(lang), options);
     }),
   );
 
   let index = 0;
-  return html.replace(/<pre><code(?:\s+class="[^"]*")?>[\s\S]*?<\/code><\/pre>/g, () => {
-    const block = rendered[index++] ?? "";
-    return decorateCodeBlock(block, options);
-  });
+  return html.replace(/<pre><code(?:\s+class="[^"]*")?>[\s\S]*?<\/code><\/pre>/g, () =>
+    rendered[index++] ?? "",
+  );
 }
 
-function decorateCodeBlock(html: string, options: MarkdownOptions): string {
-  const langMatch = html.match(/data-lang="([^"]*)"/);
-  const lang = langMatch?.[1] ?? "";
-  const lineCount = (html.match(/class="line"/g) ?? []).length;
+function fallbackCode(raw: string): string {
+  return `<pre class="shiki-fallback"><code>${escapeHtml(raw)}</code></pre>`;
+}
+
+/** 包装代码块：语言标签 + 复制按钮 + 行号 + 滚动容器 */
+function decorateCodeBlock(body: string, lang: string, options: MarkdownOptions): string {
+  const lineCount = (body.match(/class="line"/g) ?? []).length;
   const startLine = options.codeBlock.startLine;
   const lastLine = startLine + Math.max(lineCount - 1, 0);
-
-  const lineNumbers =
-    options.codeBlock.lineNumbers && lineCount > 0
-      ? `<span class="code-lines" aria-hidden="true">${Array.from(
-          { length: lineCount },
-          (_, i) => `<span>${startLine + i}</span>`,
-        ).join("")}</span>`
-      : "";
 
   const copyButton = options.codeCopyButton
     ? `<button type="button" class="code-copy" data-code-copy aria-label="复制代码">复制</button>`
@@ -480,57 +440,9 @@ function decorateCodeBlock(html: string, options: MarkdownOptions): string {
     options.codeBlock.lineNumbers ? ' data-line-numbers="true"' : ""
   } data-start-line="${startLine}" data-end-line="${lastLine}">
 <span class="code-lang">${escapeHtml(lang || "text")}</span>${copyButton}
-${lineNumbers}
-<div class="code-scroll">${html}</div>
+<div class="code-scroll">${body}</div>
 </div>`;
 }
 
-const LANG_ALIASES: Record<string, string> = {
-  js: "javascript",
-  ts: "typescript",
-  sh: "bash",
-  shell: "bash",
-  zsh: "bash",
-  yml: "yaml",
-  md: "markdown",
-  py: "python",
-  rb: "ruby",
-  rs: "rust",
-  "c++": "cpp",
-  "c#": "csharp",
-  cs: "csharp",
-  html: "html",
-  text: "text",
-  plaintext: "text",
-  txt: "text",
-};
-
-/**
- * 主题别名：legacy config 使用 `github` / `github-dark`，
- * 而 shiki 内置主题名为 `github-light` / `github-dark`。
- */
-const THEME_ALIASES: Record<string, string> = {
-  github: "github-light",
-  "github-default": "github-light",
-  default: "github-light",
-  dark: "github-dark",
-  light: "github-light",
-  oneDark: "one-dark-pro",
-  "one-dark": "one-dark-pro",
-};
-
-const FALLBACK_LIGHT_THEME = "github-light";
-const FALLBACK_DARK_THEME = "github-dark";
-
-function normalizeLang(lang: string): string {
-  const lower = (lang || "text").toLowerCase().trim();
-  return LANG_ALIASES[lower] ?? lower;
-}
-
-function normalizeTheme(theme: string | undefined, fallback: string): string {
-  if (!theme) return fallback;
-  return THEME_ALIASES[theme] ?? theme;
-}
-
-/** 供类型检查使用的占位（保持 RootContent 引用不丢失） */
-export type { RootContent };
+export { normalizeLang, normalizeTheme, FALLBACK_LIGHT_THEME, FALLBACK_DARK_THEME } from "./highlight-types";
+export type { HighlightFn } from "./highlight-types";

@@ -20,9 +20,12 @@ export default {
     // 运行期产物（搜索索引 / 内容清单）写入客户端产物目录
     await writeRuntimeArtifacts(process.cwd(), "build/client");
 
-    const staticPaths = getStaticPaths().filter((path) => !path.startsWith("/admin"));
+    // 预渲染：静态页面 + 全部文档页
+    // /admin 也一并预渲染——GitHub Pages 无法做 SPA 回退，
+    // 若只在客户端渲染，深链访问会落到 404.html。
+    const staticPaths = getStaticPaths();
     const docPaths = await enumerateDocPaths();
 
-    return [...new Set([...staticPaths, "/docs", "/404", ...docPaths])].sort();
+    return [...new Set([...staticPaths, "/docs", "/404", "/admin", ...docPaths])].sort();
   },
 } satisfies Config;

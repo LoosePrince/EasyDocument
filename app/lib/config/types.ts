@@ -95,6 +95,13 @@ export interface HomeConfig {
     logo?: string;
     button_text?: string;
     button_link?: string;
+    /** v2 新增：主按钮下方的次要链接 */
+    secondary_text?: string;
+    secondary_link?: string;
+    /** v2 新增：Hero 上方的胶囊标签，如「v2.0 · SSG」 */
+    badge?: string;
+    /** v2 新增：Hero 搜索框占位文案；设为空字符串可隐藏 */
+    search_placeholder?: string;
   };
   features?: HomeFeature[];
   get_started?: {
@@ -103,6 +110,23 @@ export interface HomeConfig {
     steps?: GetStartedStep[];
     button_text?: string;
     button_link?: string;
+  };
+  /** v2 新增：首页各区块的开关与标题 */
+  sections?: {
+    features?: { enable?: boolean; title?: string; description?: string };
+    docs?: { enable?: boolean; title?: string; description?: string };
+    get_started?: { enable?: boolean; title?: string; description?: string };
+    /** 代码演示区块 */
+    code_demo?: { enable?: boolean; title?: string; description?: string };
+  };
+  /** v2 新增：首页统计/亮点数字 */
+  stats?: Array<{ value?: string; label?: string }>;
+  /** v2 新增：快捷入口卡片 */
+  quick_links?: Array<{ title?: string; description?: string; url?: string; icon?: string }>;
+  /** v2 新增：首页展示的代码片段（Markdown 语法示例） */
+  code_demo?: {
+    filename?: string;
+    content?: string;
   };
 }
 
@@ -249,9 +273,35 @@ export interface ResolvedConfig {
   home: {
     use_file: boolean;
     file_path: string;
-    hero: NonNullable<HomeConfig["hero"]>;
+    hero: {
+      title: string;
+      subtitle: string;
+      description: string;
+      logo: string;
+      button_text: string;
+      button_link: string;
+      secondary_text: string;
+      secondary_link: string;
+      badge: string;
+      search_placeholder: string;
+    };
     features: HomeFeature[];
-    get_started: NonNullable<HomeConfig["get_started"]>;
+    get_started: {
+      enable: boolean;
+      title: string;
+      steps: GetStartedStep[];
+      button_text: string;
+      button_link: string;
+    };
+    sections: {
+      features: { enable: boolean; title: string; description: string };
+      docs: { enable: boolean; title: string; description: string };
+      get_started: { enable: boolean; title: string; description: string };
+      code_demo: { enable: boolean; title: string; description: string };
+    };
+    stats: Array<{ value: string; label: string }>;
+    quick_links: Array<{ title: string; description: string; url: string; icon: string }>;
+    code_demo: { filename: string; content: string };
   };
   document: {
     root_dir: string;

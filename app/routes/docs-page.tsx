@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLoaderData, type LoaderFunctionArgs } from "react-router";
-import { FileText, Pencil } from "lucide-react";
+import { Link, useLoaderData, useNavigate, type LoaderFunctionArgs } from "react-router";
+import { FileText, Pencil, Plus } from "lucide-react";
 import type { Route } from "./+types/docs-page";
 import { loadDocRoute, type BranchLandingData, type DocPageData } from "~/lib/site/page.server";
 import { useSite } from "~/components/providers/config-provider";
+import { useEditorContext } from "~/lib/editor/editor-store";
 import { SiteHeader } from "~/components/layout/site-header";
 import { SiteFooter } from "~/components/layout/site-footer";
 import { Breadcrumbs } from "~/components/layout/breadcrumbs";
@@ -18,8 +19,11 @@ import {
   useDocEnhancements,
   useMermaid,
 } from "~/components/markdown/doc-enhancements";
-import { EditorPanel } from "~/components/editor/editor-panel";
+import { InlineDocEditor } from "~/components/editor/inline-doc-editor";
+import { EditToolbar } from "~/components/editor/edit-toolbar";
+import { DocContextMenu } from "~/components/markdown/doc-context-menu";
 import { docUrlPath, siteHref } from "~/lib/content/routes";
+import { useGlobalShortcuts } from "~/lib/editor/shortcuts";
 
 export async function loader({ params }: LoaderFunctionArgs) {
   const branch = params.branch ?? "";
@@ -53,15 +57,18 @@ export default function DocsPage() {
 function DocView({ page }: { page: DocPageData }) {
   const data = page;
   const { config } = useSite();
+  const editor = useEditorContext();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [editorOpen, setEditorOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  useGlobalShortcuts();
 
   const { lightboxSrc, closeLightbox } = useDocEnhancements(contentRef, data.docPath);
   useMermaid(contentRef, config.extensions.mermaid && data.kind === "markdown", data.docPath);
 
-  // 切换文档时滚回顶部（保留锚点）
   useEffect(() => {
+    if (editor.editing) return;
     if (window.location.hash) {
       const target = document.getElementById(window.location.hash.slice(1));
       if (target) {
@@ -70,22 +77,24 @@ function DocView({ page }: { page: DocPageData }) {
       }
     }
     window.scrollTo({ top: 0 });
-  }, [data.docPath]);
+  }, [data.docPath, editor.editing]);
 
-  const canEdit = config.admin.enable;
+  const canEdit = editor.canEdit;
+  const draft = editor.getDraft(data.docPath);
+  const editingThis = editor.editing && draft?.kind !== "delete";
 
   return (
     <div className="min-h-screen">
-      <ReadingProgress enabled={config.extensions.progress_bar.enable} />
+      <ReadingProgress enabled={config.extensions.progress_bar.enable && !editor.editing} />
 
       {config.layout.show_header ? (
         <SiteHeader onOpenSidebar={() => setSidebarOpen(true)} />
       ) : null}
+      <EditToolbar />
 
       <div
         className="mx-auto flex max-w-[1600px] gap-6 px-0 lg:px-4"
         style={{
-          // 由配置驱动的三栏宽度
           ["--ed-sidebar-width" as string]: config.layout.sidebar_width,
           ["--ed-toc-width" as string]: config.layout.toc_width,
         }}
@@ -115,6 +124,12 @@ function DocView({ page }: { page: DocPageData }) {
             branch={data.branch}
             activePath={data.docPath}
             onNavigate={() => setSidebarOpen(false)}
+            onOpenDoc={(path) => {
+              navigate(
+                docUrlPath({ branch: data.branch, path: path.replace(/\.(md|markdown|html?)$/i, "") }),
+              );
+              editor.setEditing(true);
+            }}
           />
         </aside>
 
@@ -126,44 +141,83 @@ function DocView({ page }: { page: DocPageData }) {
           />
         ) : null}
 
-        {/* 中间：正文 */}
+        {/* 中间：正文 / 编辑区 */}
         <main className="min-w-0 flex-1 px-4 py-6 lg:px-2">
           <Breadcrumbs
             branch={data.branch}
             branchLabel={data.branchLabel}
             crumbs={data.breadcrumbs}
-            currentTitle={data.title}
+            currentTitle={editingThis ? draft?.title ?? data.title : data.title}
           />
 
-          <article className="min-w-0">
-            {canEdit ? (
-              <div className="mb-3 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setEditorOpen(true)}
-                  className="flex items-center gap-1.5 rounded-lg border border-[var(--ed-border)] px-2.5 py-1.5 text-xs text-[var(--ed-text-muted)] transition-colors hover:border-[var(--ed-primary)] hover:text-[var(--ed-primary)]"
-                >
-                  <Pencil className="size-3.5" />
-                  编辑此页
-                </button>
-              </div>
-            ) : null}
+          {canEdit && !editor.editing ? (
+            <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => editor.setEditing(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-[var(--ed-border)] px-2.5 py-1.5 text-xs text-[var(--ed-text-muted)] transition-colors hover:border-[var(--ed-primary)] hover:text-[var(--ed-primary)]"
+              >
+                <Pencil className="size-3.5" />
+                编辑此页
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  editor.setEditing(true);
+                  navigate("/admin");
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-[var(--ed-border)] px-2.5 py-1.5 text-xs text-[var(--ed-text-muted)] transition-colors hover:border-[var(--ed-primary)] hover:text-[var(--ed-primary)]"
+              >
+                <Plus className="size-3.5" />
+                新建 / 管理
+              </button>
+            </div>
+          ) : null}
 
-            {data.kind === "markdown" ? (
-              <div
-                ref={contentRef}
-                className="doc-content"
-                dangerouslySetInnerHTML={{ __html: data.html }}
-              />
-            ) : (
-              <HtmlDocument srcDoc={data.rawHtml ?? ""} title={data.title} />
-            )}
+          {editingThis ? (
+            <InlineDocEditor
+              branch={data.branch}
+              docPath={data.docPath}
+              initialContent={data.source}
+              kind={data.kind}
+              title={data.title}
+              onExit={() => editor.setEditing(false)}
+            />
+          ) : (
+            <DocContextMenu
+              title={data.title}
+              url={typeof window !== "undefined" ? window.location.href : data.canonicalPath}
+              headings={data.toc}
+              onEdit={canEdit ? () => editor.setEditing(true) : undefined}
+              className="min-w-0"
+            >
+              {draft?.kind === "delete" ? (
+                <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-500">
+                  此文档已标记为「待删除」，提交后将移除。
+                  <button
+                    type="button"
+                    onClick={() => editor.removeDraft(draft.path)}
+                    className="ml-auto underline"
+                  >
+                    撤销删除
+                  </button>
+                </div>
+              ) : null}
 
-            <DocGitInfo git={undefined} editUrl={data.editUrl} />
+              {data.kind === "markdown" ? (
+                <div
+                  ref={contentRef}
+                  className="doc-content"
+                  dangerouslySetInnerHTML={{ __html: data.html }}
+                />
+              ) : (
+                <HtmlDocument srcDoc={data.rawHtml ?? ""} title={data.title} />
+              )}
 
-            <PrevNext branch={data.branch} prev={data.prev} next={data.next} />
+              <DocGitInfo git={data.git} editUrl={data.editUrl} />
 
-            {data.branch !== undefined ? (
+              <PrevNext branch={data.branch} prev={data.prev} next={data.next} />
+
               <p className="mt-8 text-xs text-[var(--ed-text-subtle)]">
                 当前版本：
                 <Link
@@ -173,31 +227,24 @@ function DocView({ page }: { page: DocPageData }) {
                   {data.branchLabel}
                 </Link>
               </p>
-            ) : null}
-          </article>
+            </DocContextMenu>
+          )}
         </main>
 
-        {/* 右侧：目录 */}
-        <TableOfContents
-          headings={data.toc}
-          tocDepth={config.document.toc_depth}
-          dynamicExpand={config.document.toc_dynamic_expand}
-          className="sticky top-[calc(var(--ed-header-height)+1.5rem)] hidden h-[calc(100vh-var(--ed-header-height)-3rem)] w-[var(--ed-toc-width)] shrink-0 overflow-y-auto py-6 xl:block"
-        />
+        {/* 右侧：目录（编辑时隐藏，避免干扰） */}
+        {!editor.editing ? (
+          <TableOfContents
+            headings={data.toc}
+            tocDepth={config.document.toc_depth}
+            dynamicExpand={config.document.toc_dynamic_expand}
+            className="sticky top-[calc(var(--ed-header-height)+1.5rem)] hidden h-[calc(100vh-var(--ed-header-height)-3rem)] w-[var(--ed-toc-width)] shrink-0 overflow-y-auto py-6 xl:block"
+          />
+        ) : null}
       </div>
 
       {config.layout.show_footer ? <SiteFooter /> : null}
-      <BackToTop enabled={config.navigation.back_to_top} />
+      <BackToTop enabled={config.navigation.back_to_top && !editor.editing} />
       <ImageLightbox src={lightboxSrc} onClose={closeLightbox} />
-
-      {editorOpen ? (
-        <EditorPanel
-          branch={data.branch}
-          docPath={data.docPath}
-          initialContent={data.kind === "markdown" ? data.html : (data.rawHtml ?? "")}
-          onClose={() => setEditorOpen(false)}
-        />
-      ) : null}
     </div>
   );
 }
@@ -236,10 +283,12 @@ function HtmlDocument({ srcDoc, title }: { srcDoc: string; title: string }) {
 /** 版本首页：该版本没有索引页时，列出全部文档 */
 function BranchLanding({ landing }: { landing: BranchLandingData }) {
   const { config } = useSite();
+  const editor = useEditorContext();
 
   return (
     <div className="min-h-screen">
       {config.layout.show_header ? <SiteHeader /> : null}
+      <EditToolbar />
 
       <div className="mx-auto flex max-w-[1600px] gap-6 px-0 lg:px-4">
         <aside className="sticky top-[var(--ed-header-height)] hidden h-[calc(100vh-var(--ed-header-height))] w-[var(--ed-sidebar-width)] shrink-0 overflow-y-auto py-6 lg:block">
@@ -258,7 +307,10 @@ function BranchLanding({ landing }: { landing: BranchLandingData }) {
               {landing.docs.map((doc) => (
                 <li key={doc.path}>
                   <Link
-                    to={docUrlPath({ branch: landing.branch, path: doc.path.replace(/\.(md|markdown|html?)$/i, "") })}
+                    to={docUrlPath({
+                      branch: landing.branch,
+                      path: doc.path.replace(/\.(md|markdown|html?)$/i, ""),
+                    })}
                     className="flex items-center gap-2 rounded-xl border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)] px-3.5 py-2.5 text-sm transition-colors hover:border-[var(--ed-primary)]"
                   >
                     <FileText className="size-4 shrink-0 text-[var(--ed-text-subtle)]" />
@@ -270,14 +322,22 @@ function BranchLanding({ landing }: { landing: BranchLandingData }) {
           ) : (
             <div className="mt-6 rounded-xl border border-dashed border-[var(--ed-border)] p-10 text-center">
               <p className="text-sm text-[var(--ed-text-muted)]">该版本还没有文档。</p>
-              {config.admin.enable ? (
+              {editor.canEdit ? (
+                <button
+                  type="button"
+                  onClick={() => editor.setEditing(true)}
+                  className="mt-3 inline-block text-sm text-[var(--ed-primary)] hover:underline"
+                >
+                  在侧栏新建第一篇文档
+                </button>
+              ) : (
                 <Link
                   to={siteHref("/admin", config.site.base_url)}
                   className="mt-3 inline-block text-sm text-[var(--ed-primary)] hover:underline"
                 >
-                  前往编辑台新建文档
+                  前往编辑台
                 </Link>
-              ) : null}
+              )}
             </div>
           )}
         </main>

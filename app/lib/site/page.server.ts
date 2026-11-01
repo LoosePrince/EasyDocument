@@ -3,10 +3,11 @@
  */
 import { loadSiteData, type SiteData } from "../site/load.server";
 import { normalizeSlashes } from "../content/pointer";
-import { docKind, stripExtension, type DocsNode } from "../content/types";
+import { docKind, stripExtension, type DocsNode, type GitInfo } from "../content/types";
 import { collectDocPaths } from "../content/types";
 import { normalizeDocPath } from "../content/routes";
 import { renderMarkdown } from "../markdown/render";
+import { getServerHighlighter } from "../markdown/highlight.server";
 import { extractTocFromHtml, type ExtractTocOptions } from "../markdown/toc";
 import type { TocHeading } from "~/components/toc/table-of-contents";
 
@@ -19,6 +20,10 @@ export interface DocPageData {
   kind: "markdown" | "html";
   /** Markdown 渲染结果；HTML 文档为空（走 iframe） */
   html: string;
+  /** 原文（Markdown 或 HTML），供就地编辑器使用 */
+  source: string;
+  /** 构建期 git 信息（无则隐藏） */
+  git?: import("~/lib/content/types").GitInfo;
   /** HTML 文档的原始内容（放入 iframe srcdoc） */
   rawHtml?: string;
   toc: TocHeading[];
@@ -143,6 +148,8 @@ export async function buildDocPage(
     title: doc.title,
     kind,
     html,
+    source: doc.raw,
+    git: findGitInfo(branchData.tree, docPath),
     rawHtml: kind === "html" ? doc.raw : undefined,
     toc,
     tree: branchData.tree,
@@ -181,7 +188,7 @@ async function renderMarkdownInto(
     math: config.extensions.math,
     highlight: config.extensions.highlight,
     mermaid: config.extensions.mermaid,
-  });
+  }, getServerHighlighter());
 
   const toc = extractTocFromHtml(result.html, {
     tocNumbering: config.document.toc_numbering,
@@ -240,6 +247,25 @@ function buildBreadcrumbs(tree: DocsNode, docPath: string): Array<{ title: strin
 
   visit(tree, []);
   return crumbs;
+}
+
+/** 在树中查找文档的 git 信息（构建期由 path.json / _meta.json 注入） */
+function findGitInfo(tree: DocsNode, docPath: string): GitInfo | undefined {
+  let found: GitInfo | undefined;
+  const visit = (node: DocsNode) => {
+    if (found) return;
+    if (node.index?.path === docPath) {
+      found = node.index.git;
+      return;
+    }
+    if (node.path === docPath && node.children.length === 0) {
+      found = node.git;
+      return;
+    }
+    for (const child of node.children) visit(child);
+  };
+  visit(tree);
+  return found;
 }
 
 function buildEditUrl(site: SiteData, branch: string, docPath: string): string | undefined {

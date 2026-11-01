@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { extractDocTitle, renderMarkdown, resolveDocLink, type MarkdownOptions } from "./render";
+import { getServerHighlighter } from "./highlight.server";
+
+/** 测试统一注入真实高亮器（与构建期、浏览器端同一实现路径） */
+const highlight = getServerHighlighter();
 import { extractTocFromHtml } from "./toc";
 
 const baseOptions: MarkdownOptions = {
@@ -58,7 +62,7 @@ describe("renderMarkdown", () => {
   });
 
   it("代码块套用 wrapper、行号与复制按钮", async () => {
-    const { html } = await renderMarkdown("```ts\nconst a = 1;\n```", baseOptions);
+    const { html } = await renderMarkdown("```ts\nconst a = 1;\n```", baseOptions, highlight);
     expect(html).toContain("code-wrapper");
     expect(html).toContain("data-line-numbers");
     expect(html).toContain("data-code-copy");
@@ -66,25 +70,27 @@ describe("renderMarkdown", () => {
   });
 
   it("legacy 主题名 github 归一为 github-light", async () => {
-    const { html } = await renderMarkdown("```js\nlet a = 1;\n```", baseOptions);
+    const { html } = await renderMarkdown("```js\nlet a = 1;\n```", baseOptions, highlight);
     expect(html).not.toContain("fallback");
   });
 
   it("代码块起始行号生效", async () => {
-    const { html } = await renderMarkdown("```js\na\nb\n```", {
-      ...baseOptions,
-      codeBlock: { ...baseOptions.codeBlock, startLine: 10 },
-    });
+    const { html } = await renderMarkdown(
+      "```js\na\nb\n```",
+      { ...baseOptions, codeBlock: { ...baseOptions.codeBlock, startLine: 10 } },
+      highlight,
+    );
     expect(html).toContain('data-start-line="10"');
     expect(html).toContain('data-line="10"');
     expect(html).toContain('data-line="11"');
   });
 
   it("关闭行号时不输出 line-numbers 标记", async () => {
-    const { html } = await renderMarkdown("```js\nlet a = 1;\n```", {
-      ...baseOptions,
-      codeBlock: { ...baseOptions.codeBlock, lineNumbers: false },
-    });
+    const { html } = await renderMarkdown(
+      "```js\nlet a = 1;\n```",
+      { ...baseOptions, codeBlock: { ...baseOptions.codeBlock, lineNumbers: false } },
+      highlight,
+    );
     expect(html).not.toContain('data-line-numbers="true"');
   });
 

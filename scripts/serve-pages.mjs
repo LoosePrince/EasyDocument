@@ -1,11 +1,13 @@
 /**
- * 本地预览构建产物，语义对齐 GitHub Pages：
+ * 本地预览构建产物，语义对齐 GitHub Pages + SPA 回退：
  *
  *  - 请求目录 → 目录下 index.html
  *  - 请求无扩展名路径 → 先试 `<path>/index.html`，再试 `<path>.html`
- *  - 未匹配 → 返回根目录 404.html 且状态码 404（不回落 SPA）
+ *  - 未预渲染但属于应用内路由（/admin）→ 返回 SPA 回退页（状态 200）
+ *  - 其余未匹配 → 返回 404.html（状态 404）
  *
- * 用途：`npm run preview`，以及 Playwright 的 webServer。
+ * 真实 GitHub Pages 无法做 SPA 回退，因此 /admin 在线上需要 404.html 兜底；
+ * 这里用回退页模拟开发体验，并在文档中说明差异。
  */
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
@@ -14,6 +16,9 @@ import path from "node:path";
 
 const port = Number(process.env.PORT ?? 4173);
 const root = path.resolve(process.argv[2] ?? "build/client");
+
+/** 未预渲染、但需要客户端渲染的路径前缀 */
+const SPA_PREFIXES = ["/admin"];
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -42,19 +47,14 @@ async function isFile(filePath) {
   }
 }
 
-/** 依次尝试候选路径，返回命中的文件 */
 async function resolveFile(pathname) {
   const decoded = decodeURIComponent(pathname);
   const base = path.join(root, decoded);
-  // 防目录穿越
   if (!base.startsWith(root)) return null;
 
-  const candidates = [];
-  if (decoded.endsWith("/")) {
-    candidates.push(path.join(base, "index.html"));
-  } else {
-    candidates.push(base, `${base}.html`, path.join(base, "index.html"));
-  }
+  const candidates = decoded.endsWith("/")
+    ? [path.join(base, "index.html")]
+    : [base, `${base}.html`, path.join(base, "index.html")];
 
   for (const candidate of candidates) {
     if (await isFile(candidate)) return candidate;
@@ -73,11 +73,21 @@ function send(res, status, filePath) {
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${port}`);
-  const filePath = await resolveFile(url.pathname);
+  const pathname = url.pathname;
 
+  const filePath = await resolveFile(pathname);
   if (filePath) {
     send(res, 200, filePath);
     return;
+  }
+
+  // 应用内路由：交给 SPA 回退（模拟 Vercel/Netlify 的 rewrite）
+  if (SPA_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+    const fallback = path.join(root, "__spa-fallback.html");
+    if (await isFile(fallback)) {
+      send(res, 200, fallback);
+      return;
+    }
   }
 
   const notFound = path.join(root, "404.html");
@@ -91,5 +101,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`Serving ${root} at http://localhost:${port} (GitHub Pages semantics)`);
+  console.log(`Serving ${root} at http://localhost:${port}`);
 });

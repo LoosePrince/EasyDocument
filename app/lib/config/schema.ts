@@ -18,6 +18,12 @@ const navLinkSchema: z.ZodType<import("./types").NavLinkConfig> = z.lazy(() =>
   }),
 );
 
+const sectionSchema = z.object({
+  enable: z.boolean().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+});
+
 export const siteConfigSchema = z
   .object({
     site: z
@@ -103,6 +109,10 @@ export const siteConfigSchema = z
             logo: z.string().optional(),
             button_text: z.string().optional(),
             button_link: z.string().optional(),
+            secondary_text: z.string().optional(),
+            secondary_link: z.string().optional(),
+            badge: z.string().optional(),
+            search_placeholder: z.string().optional(),
           })
           .optional(),
         features: z
@@ -125,6 +135,30 @@ export const siteConfigSchema = z
             button_text: z.string().optional(),
             button_link: z.string().optional(),
           })
+          .optional(),
+        sections: z
+          .object({
+            features: sectionSchema.optional(),
+            docs: sectionSchema.optional(),
+            get_started: sectionSchema.optional(),
+            code_demo: sectionSchema.optional(),
+          })
+          .optional(),
+        stats: z
+          .array(z.object({ value: z.string().optional(), label: z.string().optional() }))
+          .optional(),
+        quick_links: z
+          .array(
+            z.object({
+              title: z.string().optional(),
+              description: z.string().optional(),
+              url: z.string().optional(),
+              icon: z.string().optional(),
+            }),
+          )
+          .optional(),
+        code_demo: z
+          .object({ filename: z.string().optional(), content: z.string().optional() })
           .optional(),
       })
       .optional(),
@@ -307,11 +341,41 @@ const DEFAULT_CONFIG: ResolvedConfig = {
       subtitle: "",
       description: "",
       logo: "",
-      button_text: "查看文档",
+      button_text: "开始阅读",
       button_link: "/docs",
+      secondary_text: "",
+      secondary_link: "",
+      badge: "",
+      search_placeholder: "搜索文档…",
     },
     features: [],
     get_started: { enable: false, title: "快速开始", steps: [], button_text: "", button_link: "" },
+    sections: {
+      features: { enable: true, title: "核心特性", description: "" },
+      docs: { enable: true, title: "文档", description: "" },
+      get_started: { enable: true, title: "快速开始", description: "" },
+      code_demo: { enable: true, title: "Markdown 驱动", description: "" },
+    },
+    stats: [],
+    quick_links: [],
+    code_demo: {
+      filename: "README.md",
+      content: [
+        "# 我的文档",
+        "",
+        "> [TIP] 支持提示框、数学公式与 Mermaid 图表。",
+        "",
+        "- 真实路径 + 预渲染，SEO 友好",
+        "- 内容与代码分离，独立 git 分支托管",
+        "- 网页端直接编辑并一键重建",
+        "",
+        "行内公式 $E = mc^2$，代码高亮：",
+        "",
+        "```ts",
+        'export const hello = (name: string) => `Hello, ${name}`;',
+        "```",
+      ].join("\n"),
+    },
   },
   document: {
     root_dir: "/",

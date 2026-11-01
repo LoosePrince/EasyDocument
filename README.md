@@ -73,7 +73,8 @@ const config = {
   layout: { show_header, show_footer, sidebar_width, toc_width, mobile_breakpoint },
   animation: { enable, sidebar, toc, article, general },
   navigation: { home_text, breadcrumb, auto_collapse, back_to_top, prev_next_buttons, folder_expand_mode, nav_links },
-  home: { use_file, file_path, hero, features, get_started },
+  home: { use_file, file_path, hero, features, get_started,
+          sections, stats, quick_links, code_demo },
   document: { root_dir, branch_support, default_branch, available_branches, index_pages, supported_extensions, toc_*, code_*, external_docs },
   search: { enable, min_chars, max_results, placeholder, search_on_type, match_distance },
   extensions: { math, highlight, mermaid, github, git, progress_bar, cache_menu },
@@ -88,18 +89,72 @@ export default config;
 - `appearance.font_family` 留空时使用内置 **Outfit** 可变字体
 - `extensions.github.repo_url` 用于生成「在 GitHub 上编辑」链接
 - `admin.enable`（v2 新增）控制是否显示网页端编辑入口，默认 `true`
+- `home.sections` 控制首页各区块开关/标题；`home.stats`、`home.quick_links`、`home.code_demo` 为 v2 新增（缺失时用默认值）
+
+### 首页区块
+
+| 字段 | 说明 |
+| --- | --- |
+| `home.hero.badge` | Hero 上方胶囊标签（留空隐藏） |
+| `home.hero.search_placeholder` | Hero 搜索框占位文案（留空隐藏搜索框） |
+| `home.hero.secondary_text` / `secondary_link` | 次要按钮 |
+| `home.stats[]` | `{ value, label }` 亮点数字，留空数组则不显示 |
+| `home.sections.*` | `features` / `docs` / `code_demo` / `get_started` 各自的 `{ enable, title, description }` |
+| `home.code_demo` | `{ filename, content }`：左侧源码、右侧用同一渲染管线预览 |
 
 ## 网页端编辑
 
-访问 `/admin`，或在任意文档页点击「编辑此页」。
+编辑就在文档页里完成，不弹窗、不跳页：
+
+1. 在任意文档页点「编辑此页」（或在控制台点「进入编辑模式」，或按 <kbd>E</kbd>）
+2. 正文区域就地变成编辑器：
+   - **预览**：占满宽度，显示的就是最终发布效果
+   - **分栏**：左侧 Markdown 源码（工具栏 + Tab 缩进 + <kbd>Ctrl</kbd>+<kbd>S</kbd>），右侧实时预览
+3. 预览使用与构建期**完全相同**的渲染管线（同一份 `renderMarkdown`），因此不会出现「编辑时好看、发布后变形」
+
+顶部编辑工具条统一收口所有待提交修改（新增 / 修改 / 删除），提交到内容分支后再点「重建站点」上线。
+
+### 侧栏管理
+
+编辑模式下侧栏提供：
+
+- 筛选框（快速定位目录）、全部展开 / 全部折叠、新建文档
+- **右键菜单**：打开、复制链接、复制为 Markdown 链接、在此新建文档 / 文件夹、重命名、删除
+- **双击**目录或文档就地重命名
+- 待提交的条目带「新增 / 修改 / 删除」标记
+
+### 正文右键菜单
+
+在文档正文右键：复制本页链接、复制为 Markdown 链接、复制本文大纲、编辑此页；
+在链接上右键：新标签打开、复制链接、复制为 Markdown 链接；
+在标题上右键：复制该标题的锚点链接。
+选中文字或位于输入框时保留浏览器原生菜单。
+
+### 控制台 `/admin`
+
+| 标签 | 内容 |
+| --- | --- |
+| 总览 | 文档总数 / 版本数 / 待提交修改、快捷操作、内容来源（仓库、分支、配置路径） |
+| 文档管理 | 按版本列出全部文档、新建、删除、跳转编辑 |
+| 站点配置 | 表单 + 源码两种方式编辑 `config.js`，保存前用同一套 schema 校验 |
+| 构建部署 | 触发重建、轮询运行状态、跳转 Actions |
+
+### 凭据
 
 1. 粘贴 **fine-grained PAT**，权限最小化为：仅本仓库，`Contents: Read and write` + `Actions: Read and write`
-2. 勾选「记住本设备」会写入 `localStorage`，不勾选则仅存 `sessionStorage`
-3. 支持：新建文档、编辑文档、删除文档、表单/源码两种方式修改 `config.js`、一键触发重建
+2. 勾选「记住本设备」写入 `localStorage`，不勾选则仅存 `sessionStorage`
+3. 提交时携带文件 `sha`，他人已修改过会提示冲突而非静默覆盖
 
-所有写入都提交到内容分支（默认 `data`），不会改动代码分支。提交时携带文件 `sha`，他人已修改过会提示刷新而不是静默覆盖。
+> Token 只存在于浏览器，绝不进入构建产物。公用设备上请勿勾选「记住本设备」。
 
-> Token 只存在于浏览器，绝不进入构建产物。请不要在公用设备上勾选「记住本设备」。
+### 快捷键
+
+| 快捷键 | 作用 |
+| --- | --- |
+| <kbd>E</kbd> | 进入 / 退出编辑模式 |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>S</kbd> | 提交待提交修改 |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>K</kbd> | 打开搜索 |
+| <kbd>Esc</kbd> | 关闭菜单 / 搜索 |
 
 ## 一键重建
 

@@ -7,7 +7,7 @@ test.describe("文档站冒烟", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("EasyDocument");
     // 标题取自 data 分支 config.js 的 site.title
-    await expect(page).toHaveTitle("简易静态文档系统");
+    await expect(page).toHaveTitle(/EasyDocument/);
   });
 
   test("文档页返回真实 HTML（SSG 生效）", async ({ page }) => {

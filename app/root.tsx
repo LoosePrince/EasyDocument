@@ -16,6 +16,7 @@ import { applyTheme, buildThemeInitScript, resolveTheme } from "~/lib/theme";
 import { hexToRgbTriplet } from "~/lib/utils";
 import { ConfigProvider } from "~/components/providers/config-provider";
 import { ThemeProvider } from "~/components/providers/theme-provider";
+import { EditorProvider } from "~/lib/editor/editor-store";
 import stylesheet from "~/styles/app.css?url";
 
 export const links: Route.LinksFunction = () => [
@@ -120,7 +121,13 @@ export default function App() {
   return (
     <ConfigProvider value={data}>
       <ThemeProvider defaultMode={data.config.appearance.default_dark_mode}>
-        <Outlet />
+        <EditorProvider
+          repo={{ owner: data.pointer.owner, repo: data.pointer.repo }}
+          dataBranch={data.pointer.branch}
+          canEdit={data.config.admin.enable}
+        >
+          <Outlet />
+        </EditorProvider>
       </ThemeProvider>
     </ConfigProvider>
   );
