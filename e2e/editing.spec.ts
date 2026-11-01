@@ -67,7 +67,7 @@ test.describe("就地编辑与控制台", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("EasyDocument");
     await expect(page.getByRole("heading", { name: "文档", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Markdown 驱动" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "同一套渲染管线" })).toBeVisible();
   });
 
   test("首页代码演示区渲染出 KaTeX 与提示框", async ({ page }) => {

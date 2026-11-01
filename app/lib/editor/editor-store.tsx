@@ -1,12 +1,13 @@
 /**
  * 站点编辑状态（浏览器端）
  *
- * 统一管理：
- *  - PAT 凭据
- *  - 草稿（正文 / 新增 / 删除 / 重命名 / 排序）
- *  - 与 GitHub 的读取、提交、重建
+ * 语义分成两层，界限清晰：
  *
- * 侧栏、文档页、控制台共享同一份状态，因此「侧栏里改标题」会立即反映到正文区与待提交列表。
+ *  SAVE（保存）   → 只在本地记录草稿，可在页面间切换继续查看/编辑；不联网、不需要登录
+ *  COMMIT（提交） → 把全部草稿一次性推送到内容分支的 GitHub（需要 PAT）
+ *  REBUILD（构建）→ 到控制台手动触发 Actions，让线上生效
+ *
+ * 草稿持久化在 localStorage，刷新/切页不丢失；显式「放弃」才清除。
  */
 import {
   createContext,
@@ -32,12 +33,12 @@ export interface DraftEntry {
   kind: DraftKind;
   /** update/create 的正文（Markdown 或配置源码） */
   content?: string;
-  /** 基线 sha：用于乐观并发控制；新建为 undefined */
-  baseSha?: string;
   /** 展示用标题 */
   title: string;
   /** 本次新建时的模板类型 */
   format?: "md" | "html";
+  /** 保存时间戳 */
+  savedAt: number;
 }
 
 export interface CommitResult {
@@ -61,20 +62,23 @@ export interface EditorContextValue {
   setEditing: (value: boolean) => void;
   canEdit: boolean;
 
-  // 草稿
+  // 本地草稿（保存）
   drafts: DraftEntry[];
   dirty: boolean;
   getDraft: (path: string) => DraftEntry | undefined;
-  setDraft: (draft: DraftEntry) => void;
+  saveDraft: (draft: Omit<DraftEntry, "savedAt">) => void;
   removeDraft: (path: string) => void;
   discardAll: () => void;
 
-  // 提交
+  // 推送到 GitHub（提交）
   submitting: boolean;
   submitError: string | null;
   commit: (message: string) => Promise<CommitResult>;
+
+  // 触发重建
   rebuild: () => Promise<void>;
   rebuilding: boolean;
+  lastCommit?: { at: number; count: number };
 
   // 草稿预览（供侧栏即时反映改名/新增/删除）
   previewTree: (tree: DocsNode) => DocsNode;
@@ -86,6 +90,30 @@ export function useEditorContext(): EditorContextValue {
   const value = useContext(EditorContext);
   if (!value) throw new Error("useEditorContext 必须在 EditorProvider 内使用");
   return value;
+}
+
+const DRAFTS_KEY = "easydocument:drafts";
+
+function readDrafts(): DraftEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(DRAFTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as DraftEntry[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeDrafts(drafts: DraftEntry[]) {
+  if (typeof window === "undefined") return;
+  try {
+    if (drafts.length === 0) window.localStorage.removeItem(DRAFTS_KEY);
+    else window.localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+  } catch {
+    // 配额不足时静默失败：草稿仍在内存中
+  }
 }
 
 export interface EditorProviderProps {
@@ -106,10 +134,34 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
   const [authLoading, setAuthLoading] = useState(false);
 
   const [editing, setEditingRaw] = useState(false);
-  const [drafts, setDrafts] = useState<DraftEntry[]>([]);
+  const [drafts, setDraftsState] = useState<DraftEntry[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [rebuilding, setRebuilding] = useState(false);
+  const [lastCommit, setLastCommit] = useState<{ at: number; count: number } | undefined>();
+
+  // 首次挂载后读取本地草稿（避免 SSR 期间访问 localStorage）
+  useEffect(() => {
+    setDraftsState(readDrafts());
+  }, []);
+
+  const setDrafts = useCallback((next: DraftEntry[] | ((current: DraftEntry[]) => DraftEntry[])) => {
+    setDraftsState((current) => {
+      const resolved = typeof next === "function" ? next(current) : next;
+      writeDrafts(resolved);
+      return resolved;
+    });
+  }, []);
+
+  // 多标签页同步
+  useEffect(() => {
+    const handler = (event: StorageEvent) => {
+      if (event.key !== DRAFTS_KEY) return;
+      setDraftsState(readDrafts());
+    };
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }, []);
 
   const signIn = useCallback(async (nextToken: string, remember: boolean) => {
     setAuthLoading(true);
@@ -134,8 +186,7 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
     setToken(null);
     setClient(null);
     setUser(null);
-    setEditingRaw(false);
-    setDrafts([]);
+    // 退出登录不清草稿：草稿属于本地内容，不应因断开账号而丢失
   }, []);
 
   const setEditing = useCallback((value: boolean) => {
@@ -148,35 +199,39 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
     [drafts],
   );
 
-  const upsertDraft = useCallback(
-    (draft: DraftEntry) => {
+  /** 保存到本地草稿（不联网） */
+  const saveDraft = useCallback(
+    (draft: Omit<DraftEntry, "savedAt">) => {
       setDrafts((current) => {
         const existingIndex = current.findIndex((item) => item.path === draft.path);
-        // 新建后又删除 → 直接移除草稿
-        if (existingIndex === -1) return [...current, draft];
+        const entry: DraftEntry = { ...draft, savedAt: Date.now() };
+
+        if (existingIndex === -1) return [...current, entry];
+
         const existing = current[existingIndex];
+        // 新建后删除 → 直接移除草稿
         if (draft.kind === "delete" && existing.kind === "create") {
           return current.filter((item) => item.path !== draft.path);
         }
-        if (draft.kind === "create" && existing.kind === "delete") {
-          // 删除后重建同一路径：保留原 baseSha 语义（这里简化为覆盖）
-          const next = [...current];
-          next[existingIndex] = { ...draft, baseSha: existing.baseSha };
-          return next;
-        }
         const next = [...current];
-        next[existingIndex] = { ...existing, ...draft, baseSha: existing.baseSha ?? draft.baseSha };
+        next[existingIndex] =
+          draft.kind === "create" && existing.kind === "update"
+            ? entry // 原有文件被改写内容：仍视为修改
+            : { ...existing, ...entry };
         return next;
       });
     },
-    [],
+    [setDrafts],
   );
 
-  const removeDraft = useCallback((path: string) => {
-    setDrafts((current) => current.filter((draft) => draft.path !== path));
-  }, []);
+  const removeDraft = useCallback(
+    (path: string) => {
+      setDrafts((current) => current.filter((draft) => draft.path !== path));
+    },
+    [setDrafts],
+  );
 
-  const discardAll = useCallback(() => setDrafts([]), []);
+  const discardAll = useCallback(() => setDrafts([]), [setDrafts]);
 
   /** 草稿应用到树：改名 / 删除 / 新增预览 */
   const previewTree = useCallback(
@@ -223,7 +278,9 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
         segments.pop();
         let cursor = clone;
         for (const segment of segments) {
-          let next = cursor.children.find((child) => child.path.endsWith(`/${segment}`) || child.path === segment);
+          let next = cursor.children.find(
+            (child) => child.path.endsWith(`/${segment}`) || child.path === segment,
+          );
           if (!next) {
             next = {
               title: segment,
@@ -242,10 +299,10 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
     [drafts],
   );
 
-  /** 提交全部草稿：逐个文件写/删，最后可选触发重建 */
+  /** 把本地草稿推送到 GitHub（需要 PAT） */
   const commit = useCallback(
     async (message: string): Promise<CommitResult> => {
-      if (!client) throw new Error("请先登录 GitHub");
+      if (!client) throw new Error("请先连接 GitHub");
       if (drafts.length === 0) throw new Error("没有待提交的修改");
 
       setSubmitting(true);
@@ -255,48 +312,32 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
       try {
         for (const draft of drafts) {
           if (draft.kind === "delete") {
-            if (!draft.baseSha) {
-              const file = await client.getFile(repo, draft.path, dataBranch);
-              if (!file) continue;
-              await client.deleteFile(repo, {
-                path: draft.path,
-                branch: dataBranch,
-                sha: file.sha,
-                message: `${message}\n\n删除 ${draft.path}`,
-              });
-            } else {
-              await client.deleteFile(repo, {
-                path: draft.path,
-                branch: dataBranch,
-                sha: draft.baseSha,
-                message: `${message}\n\n删除 ${draft.path}`,
-              });
-            }
+            const file = await client.getFile(repo, draft.path, dataBranch);
+            if (!file) continue;
+            await client.deleteFile(repo, {
+              path: draft.path,
+              branch: dataBranch,
+              sha: file.sha,
+              message: `${message}\n\n删除 ${draft.path}`,
+            });
             committed += 1;
             continue;
           }
 
-          let sha = draft.baseSha;
-          if (draft.kind === "update" && !sha) {
-            const file = await client.getFile(repo, draft.path, dataBranch);
-            sha = file?.sha;
-          }
-
+          // update 需要远端 sha；create 若远端已存在（他人新建）则覆盖
+          const remote = await client.getFile(repo, draft.path, dataBranch);
           await client.putFile(repo, {
             path: draft.path,
             branch: dataBranch,
             content: draft.content ?? "",
-            sha,
-            message: `${message}\n\n${draft.kind === "create" ? "新增" : "更新"} ${draft.path}`,
+            sha: remote?.sha,
+            message: `${message}\n\n${remote ? "更新" : "新增"} ${draft.path}`,
           });
           committed += 1;
         }
 
-        setDrafts((current) =>
-          current
-            .filter((draft) => draft.kind !== "delete")
-            .map((draft) => ({ ...draft, kind: "update" as const, baseSha: undefined })),
-        );
+        setDrafts([]);
+        setLastCommit({ at: Date.now(), count: committed });
         return { committed };
       } catch (error) {
         const text = error instanceof Error ? error.message : "提交失败";
@@ -306,11 +347,11 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
         setSubmitting(false);
       }
     },
-    [client, dataBranch, drafts, repo],
+    [client, dataBranch, drafts, repo, setDrafts],
   );
 
   const rebuild = useCallback(async () => {
-    if (!client) throw new Error("请先登录 GitHub");
+    if (!client) throw new Error("请先连接 GitHub");
     setRebuilding(true);
     try {
       await client.dispatchWorkflow(repo, "deploy.yml", "main", { reason: "web-editor" });
@@ -319,7 +360,7 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
     }
   }, [client, repo]);
 
-  // 页面关闭前提醒未提交的修改
+  // 关闭标签页前提醒未提交的修改
   const dirty = drafts.length > 0;
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
@@ -349,7 +390,7 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
       drafts,
       dirty,
       getDraft,
-      setDraft: upsertDraft,
+      saveDraft,
       removeDraft,
       discardAll,
       submitting,
@@ -357,6 +398,7 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
       commit,
       rebuild,
       rebuilding,
+      lastCommit,
       previewTree,
     }),
     [
@@ -374,7 +416,7 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
       drafts,
       dirty,
       getDraft,
-      upsertDraft,
+      saveDraft,
       removeDraft,
       discardAll,
       submitting,
@@ -382,6 +424,7 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
       commit,
       rebuild,
       rebuilding,
+      lastCommit,
       previewTree,
     ],
   );

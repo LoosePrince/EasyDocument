@@ -59,9 +59,19 @@ export function normalizeDocPath(
   return { branch, path: segments.join("/") };
 }
 
-/** 文档 URL 的路径部分（不含 base_url） */
+/** 默认索引页名（与 config 默认值一致） */
+export const DEFAULT_INDEX_NAMES = ["readme", "index"];
+
+/**
+ * 文档 URL 的路径部分（不含 base_url）
+ *
+ * 这里再做一次「索引页折叠」兜底：即使调用方传入了未折叠的
+ * `参考/README`（只去了扩展名），也会得到 `/docs/main/参考`，
+ * 避免侧栏/面包屑生成指向不存在页面的链接。
+ */
 export function docUrlPath(route: DocRoute, anchor?: string): string {
-  const segments = ["docs", route.branch, route.path].filter(
+  const normalizedRoutePath = foldIndexSegment(route.path);
+  const segments = ["docs", route.branch, normalizedRoutePath].filter(
     (segment) => segment !== undefined && segment !== null && segment !== "",
   );
   const path = `/${segments
@@ -69,6 +79,14 @@ export function docUrlPath(route: DocRoute, anchor?: string): string {
     .join("/")}`;
   const normalized = path.replace(/\/{2,}/g, "/");
   return anchor ? `${normalized}#${anchor}` : normalized;
+}
+
+/** 把结尾的 `README` / `index` 段去掉 */
+export function foldIndexSegment(path: string): string {
+  const parts = (path || "").split("/").filter(Boolean);
+  const last = parts[parts.length - 1] ?? "";
+  if (DEFAULT_INDEX_NAMES.includes(last.toLowerCase())) parts.pop();
+  return parts.join("/");
 }
 
 /** 完整 URL（含 base_url 前缀），用于 <a href> */

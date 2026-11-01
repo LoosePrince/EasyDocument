@@ -69,12 +69,11 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
     const title = nextTitle.trim();
     if (!title || title === node.title) return;
     const target = node.index?.path ?? node.path;
-    editor.setDraft({
+    editor.saveDraft({
       path: target,
       branch,
       kind: "update",
       title,
-      content: undefined,
       format: target.endsWith(".html") ? "html" : "md",
     });
     toast.show(`已重命名为「${title}」（提交后生效）`);
@@ -95,7 +94,7 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
       return;
     }
 
-    editor.setDraft({
+    editor.saveDraft({
       path: fullPath,
       branch,
       kind: "create",
@@ -123,12 +122,11 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
       toast.show("已从待提交列表移除");
       return;
     }
-    editor.setDraft({
+    editor.saveDraft({
       path: target,
       branch,
       kind: "delete",
       title: node.title,
-      baseSha: draft?.baseSha,
     });
     toast.show(`已标记删除「${node.title}」（提交后生效）`);
   };
@@ -455,12 +453,14 @@ function TreeItem({
             <DraftBadge kind={draft?.kind} />
           </Link>
         ) : (
+          // 没有索引页的目录只作分组：点击只展开/折叠，不跳转（避免 404）
           <button
             type="button"
             onClick={() => onToggle(node.path)}
             onContextMenu={(event) => onContextMenu(event, node)}
             onDoubleClick={() => editor.canEdit && onRenameStart(node.path)}
-            className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 py-1.5 text-left text-[var(--ed-text-muted)] transition-colors hover:bg-[var(--ed-bg-subtle)] hover:text-[var(--ed-text)]"
+            className="flex min-w-0 flex-1 cursor-default items-center gap-1.5 rounded-md px-1.5 py-1.5 text-left text-[var(--ed-text-subtle)] transition-colors hover:bg-[var(--ed-bg-subtle)]"
+            title="分组目录（无索引页）"
           >
             {open ? (
               <FolderOpen className="size-3.5 shrink-0 opacity-60" />

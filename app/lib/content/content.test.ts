@@ -122,6 +122,13 @@ describe("URL 生成", () => {
     });
   });
 
+  it("docUrlPath 兜底折叠未去索引名的路径", () => {
+    expect(docUrlPath({ branch: "main", path: "参考/README" })).toBe("/docs/main/参考");
+    expect(docUrlPath({ branch: "main", path: "README" })).toBe("/docs/main");
+    expect(docUrlPath({ branch: "main", path: "参考/index" })).toBe("/docs/main/参考");
+    expect(docUrlPath({ branch: "main", path: "参考/常见问题" })).toBe("/docs/main/参考/常见问题");
+  });
+
   it("生成 /docs/{branch}/{path} 真实路径", () => {
     expect(docUrlPath({ branch: "main", path: "" })).toBe("/docs/main");
     expect(docUrlPath({ branch: "main", path: "指南/安装" })).toBe("/docs/main/指南/安装");

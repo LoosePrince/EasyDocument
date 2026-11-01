@@ -30,8 +30,8 @@ export interface DocPageData {
   tree: DocsNode;
   prev: { path: string; title: string } | null;
   next: { path: string; title: string } | null;
-  /** 面包屑（从版本根到当前目录） */
-  breadcrumbs: Array<{ title: string; path: string }>;
+  /** 面包屑（从版本根到当前目录）；linkable=false 表示该目录没有索引页 */
+  breadcrumbs: Array<{ title: string; path: string; linkable?: boolean }>;
   editUrl?: string;
   canonicalPath: string;
 }
@@ -118,6 +118,12 @@ export async function buildDocPage(
 
   const kind = doc.kind;
 
+  /** 目录是否存在可点击的索引页（面包屑据此决定是否可点） */
+  const hasIndexFor = (dirPath: string): boolean => {
+    const prefix = dirPath ? `${dirPath}/` : "";
+    return config.document.index_pages.some((name) => branchData.docs.has(`${prefix}${name}`));
+  };
+
   // 3. Markdown 渲染 / HTML 直出
   let html = "";
   let toc: TocHeading[] = [];
@@ -155,7 +161,7 @@ export async function buildDocPage(
     tree: branchData.tree,
     prev: currentIndex > 0 ? flat[currentIndex - 1] : null,
     next: currentIndex >= 0 && currentIndex < flat.length - 1 ? flat[currentIndex + 1] : null,
-    breadcrumbs: buildBreadcrumbs(branchData.tree, docPath),
+    breadcrumbs: buildBreadcrumbs(branchData.tree, docPath, hasIndexFor),
     editUrl: buildEditUrl(site, request.branch, docPath),
     canonicalPath: `/${canonicalSegments.join("/")}`,
   };
@@ -223,10 +229,17 @@ function resolveDocFile(
 }
 
 /** 面包屑：版本根 → 各级目录 → 当前文档 */
-function buildBreadcrumbs(tree: DocsNode, docPath: string): Array<{ title: string; path: string }> {
-  const crumbs: Array<{ title: string; path: string }> = [];
+function buildBreadcrumbs(
+  tree: DocsNode,
+  docPath: string,
+  hasIndexFor: (dirPath: string) => boolean,
+): Array<{ title: string; path: string; linkable?: boolean }> {
+  const crumbs: Array<{ title: string; path: string; linkable?: boolean }> = [];
 
-  const visit = (node: DocsNode, trail: Array<{ title: string; path: string }>): boolean => {
+  const visit = (
+    node: DocsNode,
+    trail: Array<{ title: string; path: string; linkable?: boolean }>,
+  ): boolean => {
     if (node.index?.path === docPath) {
       crumbs.push(...trail);
       return true;
@@ -238,7 +251,10 @@ function buildBreadcrumbs(tree: DocsNode, docPath: string): Array<{ title: strin
         return true;
       }
       if (!isFile) {
-        const nextTrail = [...trail, { title: child.title, path: child.path }];
+        const nextTrail = [
+          ...trail,
+          { title: child.title, path: child.path, linkable: hasIndexFor(child.path) },
+        ];
         if (visit(child, nextTrail)) return true;
       }
     }

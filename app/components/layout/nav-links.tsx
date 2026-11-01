@@ -6,7 +6,7 @@ import { cn } from "~/lib/utils";
 import { FontAwesomeCompat } from "~/components/markdown/doc-enhancements";
 
 export function NavLinkItem({ link, className }: { link: NavLinkConfig; className?: string }) {
-  const { resolveHref } = useSite();
+  const { resolveHref, hasRoute } = useSite();
   const isExternal = link.external || (typeof link.url === "string" && /^https?:/i.test(link.url));
 
   if (Array.isArray(link.url)) {
@@ -34,6 +34,23 @@ export function NavLinkItem({ link, className }: { link: NavLinkConfig; classNam
   }
 
   const href = isExternal ? link.url : resolveHref(link.url);
+  // 站内链接指向不存在的页面 → 不可点击
+  const missing = !isExternal && !hasRoute(link.url);
+
+  if (missing) {
+    return (
+      <span
+        className={cn(
+          "flex cursor-not-allowed items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-[var(--ed-text-subtle)] opacity-60",
+          className,
+        )}
+        title="目标页面尚不存在"
+        aria-disabled="true"
+      >
+        {link.text}
+      </span>
+    );
+  }
 
   return (
     <Link
@@ -52,10 +69,22 @@ export function NavLinkItem({ link, className }: { link: NavLinkConfig; classNam
 }
 
 function NavDropdownItem({ link }: { link: NavLinkConfig }) {
-  const { resolveHref } = useSite();
+  const { resolveHref, hasRoute } = useSite();
   const url = Array.isArray(link.url) ? (link.url[0]?.url ?? "/") : link.url;
   const isExternal = link.external || /^https?:/i.test(String(url));
   const href = isExternal ? String(url) : resolveHref(String(url));
+
+  if (!isExternal && !hasRoute(String(url))) {
+    return (
+      <span
+        className="flex cursor-not-allowed items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--ed-text-subtle)] opacity-60"
+        title="目标页面尚不存在"
+        aria-disabled="true"
+      >
+        {link.text}
+      </span>
+    );
+  }
 
   return (
     <Link

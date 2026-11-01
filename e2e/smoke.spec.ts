@@ -15,7 +15,7 @@ test.describe("文档站冒烟", () => {
     expect(response?.status()).toBe(200);
     // 正文在首屏 HTML 中即存在，不依赖 JS 渲染
     await expect(page.getByRole("heading", { name: "快速入门", level: 1 })).toBeVisible();
-    await expect(page.getByText("三分钟跑起来")).toBeVisible();
+    await expect(page.getByText("十分钟内完成")).toBeVisible();
   });
 
   test("代码块有高亮、行号与复制按钮", async ({ page }) => {
@@ -26,8 +26,12 @@ test.describe("文档站冒烟", () => {
     await expect(block.locator("[data-line]").first()).toBeVisible();
   });
 
-  test("数学公式渲染为 KaTeX", async ({ page }) => {
-    await page.goto(DOC);
+  test("Markdown 增强语法渲染（提示框 / 表格 / 代码高亮）", async ({ page }) => {
+    await page.goto("/docs/main/参考/Markdown语法/");
+    await expect(page.locator(".callout").first()).toBeVisible();
+    await expect(page.locator(".doc-table").first()).toBeVisible();
+    await expect(page.locator(".code-wrapper .shiki").first()).toBeVisible();
+    // 数学公式（本页含 KaTeX）
     await expect(page.locator(".katex").first()).toBeVisible();
   });
 
@@ -52,8 +56,10 @@ test.describe("文档站冒烟", () => {
   test("搜索可命中文档", async ({ page }) => {
     await page.goto(DOC);
     await page.getByRole("button", { name: "搜索文档" }).click();
-    await page.getByRole("textbox", { name: "搜索关键词" }).fill("安装");
-    await expect(page.getByRole("link", { name: /安装/ }).first()).toBeVisible({ timeout: 10_000 });
+    await page.getByRole("textbox", { name: "搜索关键词" }).fill("草稿");
+    await expect(
+      page.locator("div[role='dialog'] a").filter({ hasText: /编辑与发布/ }).first(),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test("暗色模式切换生效", async ({ page }) => {
@@ -76,9 +82,9 @@ test.describe("文档站冒烟", () => {
   });
 
   test("直接访问深路径刷新仍可用（无 hash 路由）", async ({ page }) => {
-    const response = await page.goto("/docs/main/使用指南/基本使用流程/");
+    const response = await page.goto("/docs/main/使用指南/目录结构/");
     expect(response?.status()).toBe(200);
-    await expect(page.getByRole("heading", { name: "基本使用流程", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "目录与文件规则", level: 1 })).toBeVisible();
     expect(page.url()).not.toContain("#");
   });
 });

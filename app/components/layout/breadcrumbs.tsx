@@ -7,11 +7,19 @@ import { stripExtension } from "~/lib/content/types";
 export interface BreadcrumbsProps {
   branch: string;
   branchLabel: string;
-  crumbs: Array<{ title: string; path: string }>;
+  crumbs: Array<{ title: string; path: string; linkable?: boolean }>;
   currentTitle: string;
+  /** 版本根是否有索引页；false 时版本名不可点 */
+  branchLinkable?: boolean;
 }
 
-export function Breadcrumbs({ branch, branchLabel, crumbs, currentTitle }: BreadcrumbsProps) {
+export function Breadcrumbs({
+  branch,
+  branchLabel,
+  crumbs,
+  currentTitle,
+  branchLinkable = true,
+}: BreadcrumbsProps) {
   const { config, branches } = useSite();
   if (!config.navigation.breadcrumb) return null;
 
@@ -28,22 +36,32 @@ export function Breadcrumbs({ branch, branchLabel, crumbs, currentTitle }: Bread
       </Link>
 
       <Separator />
-      <Link
-        to={docUrlPath({ branch, path: "" })}
-        className="transition-colors hover:text-[var(--ed-primary)]"
-      >
-        {showVersion ? branchLabel : config.site.name}
-      </Link>
+      {branchLinkable ? (
+        <Link
+          to={docUrlPath({ branch, path: "" })}
+          className="transition-colors hover:text-[var(--ed-primary)]"
+        >
+          {showVersion ? branchLabel : config.site.name}
+        </Link>
+      ) : (
+        <span className="text-[var(--ed-text-subtle)]">
+          {showVersion ? branchLabel : config.site.name}
+        </span>
+      )}
 
       {crumbs.map((crumb) => (
         <span key={crumb.path} className="flex items-center gap-1">
           <Separator />
-          <Link
-            to={docUrlPath({ branch, path: stripExtension(crumb.path) })}
-            className="transition-colors hover:text-[var(--ed-primary)]"
-          >
-            {crumb.title}
-          </Link>
+          {crumb.linkable === false ? (
+            <span className="cursor-default text-[var(--ed-text-subtle)]">{crumb.title}</span>
+          ) : (
+            <Link
+              to={docUrlPath({ branch, path: stripExtension(crumb.path) })}
+              className="transition-colors hover:text-[var(--ed-primary)]"
+            >
+              {crumb.title}
+            </Link>
+          )}
         </span>
       ))}
 

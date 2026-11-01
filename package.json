@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "react-router dev",
-    "build": "react-router build && node scripts/postbuild.mjs",
+    "build": "react-router build && node scripts/postbuild.mjs && node scripts/check-links.mjs",
     "start": "react-router-serve ./build/server/index.js",
     "preview": "node scripts/serve-pages.mjs build/client",
     "typecheck": "react-router typegen && tsc --noEmit",
@@ -15,7 +15,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check:links": "node scripts/check-links.mjs"
   },
   "dependencies": {
     "@fontsource-variable/outfit": "^5.3.0",

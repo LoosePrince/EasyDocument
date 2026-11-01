@@ -39,7 +39,7 @@ export function meta({ data }: Route.MetaArgs) {
 
 export default function HomePage() {
   const data = useLoaderData<typeof loader>();
-  const { config } = useSite();
+  const { config, resolveHref } = useSite();
   const { home } = config;
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -102,7 +102,7 @@ export default function HomePage() {
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               {home.hero.button_text ? (
                 <Link
-                  to={home.hero.button_link || docsHref}
+                  to={resolveHref(home.hero.button_link || docsHref)}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--ed-primary)] px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-[var(--ed-primary)]/20 transition-transform hover:-translate-y-0.5"
                 >
                   {home.hero.button_text}
@@ -112,7 +112,7 @@ export default function HomePage() {
 
               {home.hero.secondary_text ? (
                 <Link
-                  to={home.hero.secondary_link || docsHref}
+                  to={resolveHref(home.hero.secondary_link || docsHref)}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--ed-border)] px-5 py-2.5 text-sm font-medium transition-colors hover:border-[var(--ed-primary)] hover:text-[var(--ed-primary)]"
                 >
                   {home.hero.secondary_text}
@@ -317,7 +317,7 @@ export default function HomePage() {
               {home.get_started.button_text ? (
                 <div className="mt-6 pl-6">
                   <Link
-                    to={home.get_started.button_link || docsHref}
+                    to={resolveHref(home.get_started.button_link || docsHref)}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--ed-primary)] px-4 py-2 text-sm font-medium text-[var(--ed-primary)] transition-colors hover:bg-[var(--ed-primary-soft)]"
                   >
                     {home.get_started.button_text}
@@ -336,7 +336,7 @@ export default function HomePage() {
               {home.quick_links.map((link) => (
                 <Link
                   key={link.title}
-                  to={link.url}
+                  to={resolveHref(link.url)}
                   className="group rounded-xl border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)] p-4 transition-colors hover:border-[var(--ed-primary)]"
                 >
                   <FontAwesomeCompat className={link.icon} />

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Columns2, Eye, FileCode2, Loader2, RotateCcw, Save, Undo2 } from "lucide-react";
+import { Check, Columns2, Eye, FileCode2, RotateCcw, Save, Undo2 } from "lucide-react";
 import { MarkdownWorkspace, type EditorMode } from "./markdown-workspace";
 import { MarkdownTextarea } from "./markdown-textarea";
 import { useEditorContext } from "~/lib/editor/editor-store";
@@ -32,49 +32,43 @@ export function InlineDocEditor({
   title,
   onExit,
 }: InlineDocEditorProps) {
-  const { setDraft, getDraft, removeDraft, commit, submitting, submitError, dirty } =
-    useEditorContext();
+  const { saveDraft, getDraft, removeDraft, drafts } = useEditorContext();
 
-  const draft = getDraft(docPath);
-  const [content, setContent] = useState(draft?.content ?? initialContent);
-  const [docTitle, setDocTitle] = useState(draft?.title ?? title);
+  const saved = getDraft(docPath);
+  const [content, setContent] = useState(saved?.content ?? initialContent);
+  const [docTitle, setDocTitle] = useState(saved?.title ?? title);
   const [mode, setMode] = useState<EditorMode>(kind === "html" ? "split" : "rich");
   const [htmlMode, setHtmlMode] = useState<"preview" | "split">("split");
-  const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
   const initialRef = useRef(initialContent);
 
-  const changed = content !== initialRef.current || docTitle !== title;
+  /** 与「已保存草稿」或「线上原文」不同即为未保存 */
+  const unsaved = content !== (saved?.content ?? initialRef.current) || docTitle !== (saved?.title ?? title);
 
-  // 同步到草稿（防抖，避免每次敲键都触发全局重渲染）
-  useEffect(() => {
-    if (!changed) {
+  /** 本地保存：写入草稿（持久化到 localStorage），不联网 */
+  const save = useCallback(() => {
+    if (content === initialRef.current && docTitle === title) {
+      // 与线上原文相同：清除草稿
       removeDraft(docPath);
+      setJustSaved(true);
       return;
     }
-    const timer = window.setTimeout(() => {
-      setDraft({
-        path: docPath,
-        branch,
-        kind: "update",
-        content,
-        title: docTitle,
-        format: kind === "markdown" ? "md" : "html",
-      });
-    }, 400);
-    return () => window.clearTimeout(timer);
-  }, [content, docTitle, changed, docPath, branch, kind, setDraft, removeDraft]);
+    saveDraft({
+      path: docPath,
+      branch,
+      kind: saved?.kind === "create" ? "create" : "update",
+      content,
+      title: docTitle,
+      format: kind === "markdown" ? "md" : "html",
+    });
+    setJustSaved(true);
+  }, [content, docTitle, docPath, branch, kind, initialRef, title, saved, saveDraft, removeDraft]);
 
-  const save = useCallback(async () => {
-    setError(null);
-    try {
-      const result = await commit(`docs(${branch}): 更新 ${docPath}`);
-      initialRef.current = content;
-      setSavedAt(`${result.committed} 个文件`);
-    } catch (commitError) {
-      setError(commitError instanceof Error ? commitError.message : "提交失败");
-    }
-  }, [commit, content, branch, docPath]);
+  useEffect(() => {
+    if (!justSaved) return;
+    const timer = window.setTimeout(() => setJustSaved(false), 1800);
+    return () => window.clearTimeout(timer);
+  }, [justSaved]);
 
   return (
     <div className="flex min-h-[70vh] flex-col gap-3">
@@ -132,21 +126,24 @@ export function InlineDocEditor({
 
         <button
           type="button"
-          onClick={() => void save()}
-          disabled={submitting || !changed}
+          onClick={save}
+          disabled={!unsaved && !saved}
+          title="保存到本地草稿（不联网）；切换页面后仍可继续查看"
           className="flex items-center gap-1.5 rounded-lg bg-[var(--ed-primary)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
         >
-          {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-          提交
+          {justSaved ? <Check className="size-3.5" /> : <Save className="size-3.5" />}
+          {justSaved ? "已保存" : unsaved ? "保存修改" : "已保存"}
         </button>
       </div>
 
-      {savedAt ? (
-        <p className="text-xs text-emerald-500">已提交 {savedAt}；如需上线请到编辑台触发重建。</p>
-      ) : null}
-      {error ?? submitError ? (
-        <p className="text-xs text-red-500">{error ?? submitError}</p>
-      ) : null}
+      <p className="text-[11px] text-[var(--ed-text-subtle)]">
+        {saved
+          ? `已保存到本地草稿（${new Date(saved.savedAt).toLocaleTimeString("zh-CN")}）· 共 ${drafts.length} 项待提交`
+          : unsaved
+            ? "有未保存的修改 · 点「保存修改」写入本地草稿"
+            : "与线上内容一致"}
+        {" · "}保存后可自由切换页面预览，确认无误再在顶部工具条「一键提交」。
+      </p>
 
       {kind === "markdown" ? (
         <MarkdownWorkspace
@@ -156,7 +153,7 @@ export function InlineDocEditor({
           branch={branch}
           mode={mode}
           onModeChange={setMode}
-          onSave={() => void save()}
+          onSave={save}
         />
       ) : (
         <HtmlWorkspace
@@ -169,7 +166,6 @@ export function InlineDocEditor({
 
       <p className="text-[11px] text-[var(--ed-text-subtle)]">
         预览与正式页面使用同一渲染管线。
-        {dirty ? " 当前有多处未提交修改。" : ""}
       </p>
     </div>
   );

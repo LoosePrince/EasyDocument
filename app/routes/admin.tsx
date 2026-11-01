@@ -307,7 +307,7 @@ function DocManager({
         return;
       }
       const title = safe.split("/").pop()?.replace(/\.(md|html)$/i, "") ?? "新文档";
-      editor.setDraft({
+      editor.saveDraft({
         path: fullPath,
         branch: branch.name,
         kind: "create",
@@ -412,7 +412,7 @@ function DocManager({
                             editor.removeDraft(doc.path);
                             return;
                           }
-                          editor.setDraft({
+                          editor.saveDraft({
                             path: doc.path,
                             branch: activeBranch,
                             kind: "delete",

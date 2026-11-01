@@ -17,6 +17,7 @@ import { hexToRgbTriplet } from "~/lib/utils";
 import { ConfigProvider } from "~/components/providers/config-provider";
 import { ThemeProvider } from "~/components/providers/theme-provider";
 import { EditorProvider } from "~/lib/editor/editor-store";
+import { DraftIndicator } from "~/components/editor/edit-toolbar";
 import stylesheet from "~/styles/app.css?url";
 
 export const links: Route.LinksFunction = () => [
@@ -127,6 +128,8 @@ export default function App() {
           canEdit={data.config.admin.enable}
         >
           <Outlet />
+          {/* 未进入编辑模式时，若有本地草稿，用悬浮按钮提示 */}
+          <DraftIndicator />
         </EditorProvider>
       </ThemeProvider>
     </ConfigProvider>
