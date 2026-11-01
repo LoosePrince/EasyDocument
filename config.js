@@ -6,9 +6,9 @@ const config = {
   // 网站基本信息
   site: {
     name: "EasyDocument", // 网站名称
-    title: "简易静态文档系统", // 网站标题，显示在浏览器标签页
-    description: "一个轻量级、免编译的纯静态前端文档系统", // 网站描述，用于SEO
-    keywords: "文档,静态网站,Markdown,Alpine.js", // 网站关键词，用于SEO
+    title: "EasyDocument · 静态文档系统", // 网站标题，显示在浏览器标签页
+    description: "内容与代码分离的静态文档系统：预渲染真实路径，网页端就地编辑并一键重建。", // 网站描述，用于SEO
+    keywords: "文档,静态网站,Markdown,SSG", // 网站关键词，用于SEO
     base_url: "/" // 网站基础URL，如果部署在子目录则需要修改
   },
 
@@ -98,8 +98,8 @@ const config = {
             icon: "fas fa-book"
           },
           {
-            text: "详细配置",
-            url: "main/#配置详解/",
+            text: "编辑与发布",
+            url: "main/#使用指南/基本使用流程",
             icon: "fas fa-cog"
           }
         ],
@@ -120,46 +120,78 @@ const config = {
     file_path: "/home.html", // 首页内容文件路径
     // 如果 use_file 为 false，则使用以下配置动态生成内容
     hero: {
+      badge: "v2 · React + Vite · 静态预渲染", // Hero 上方胶囊标签，留空则不显示
       title: "EasyDocument",
-      subtitle: "简易静态文档系统",
-      description: "一个轻量级、免编译的纯静态前端文档系统。简单添加 Markdown 或 HTML 文件，即可生成美观、结构化的文档网站。",
+      subtitle: "内容与代码分离的静态文档系统",
+      description:
+        "文档存在独立的 git 分支里，构建时预渲染成真实路径的静态页面。网页端即可编写、调整配置，一键重建上线。",
       logo: "/assets/img/logo.svg",
-      button_text: "查看文档",
-      button_link: "/main/"
+      search_placeholder: "搜索文档…", // 留空则不显示 Hero 搜索框
+      button_text: "开始阅读",
+      button_link: "/docs/main",
+      secondary_text: "编辑指南",
+      secondary_link: "/docs/main/使用指南"
     },
+
+    // 首页各区块开关与标题
+    sections: {
+      features: { enable: true, title: "核心特性", description: "开箱即用，专注于内容本身" },
+      docs: { enable: true, title: "文档", description: "按版本浏览，链接可分享、可被检索" },
+      code_demo: {
+        enable: true,
+        title: "Markdown 驱动",
+        description: "同一套渲染管线：所见即最终发布效果"
+      },
+      get_started: { enable: true, title: "快速开始", description: "三步开始写第一篇文档" }
+    },
+
+    // 首页亮点数字（可留空数组）
+    stats: [
+      { value: "SSG", label: "预渲染输出" },
+      { value: "真实路径", label: "无 hash 路由" },
+      { value: "就地编辑", label: "实时预览" },
+      { value: "一键", label: "触发重建" }
+    ],
+
     features: [
       {
         icon: "fas fa-feather",
-        title: "轻量高效",
-        description: "无需编译构建，纯前端实现，简单易用且响应迅速",
+        title: "内容与代码分离",
+        description: "文档存放在独立分支，改内容不必碰代码仓库",
         color: "blue"
       },
       {
         icon: "fas fa-paint-brush",
-        title: "美观现代",
-        description: "精致排版，现代设计，丰富交互效果，呈现极致文档体验",
+        title: "真实路径预渲染",
+        description: "每个文档都有独立 HTML，直链刷新与 SEO 都友好",
         color: "orange"
       },
       {
         icon: "fas fa-cog",
-        title: "灵活可配置",
-        description: "丰富的配置选项，自定义网站外观、布局和功能特性",
+        title: "网页端编辑",
+        description: "就地编辑、实时预览，提交后一键触发重建",
         color: "green"
       }
     ],
+
+    // 首页代码演示区：左侧源码，右侧为同管线渲染结果
+    code_demo: {
+      filename: "README.md",
+      content:
+        "# 我的文档\n\n> [TIP] 支持提示框、数学公式与 Mermaid 图表。\n\n- 真实路径 + 预渲染，SEO 友好\n- 内容与代码分离，独立 git 分支托管\n- 网页端直接编辑并一键重建\n\n行内公式 $E = mc^2$，下面是代码高亮：\n\n```ts\nexport const hello = (name: string) => `Hello, ${name}`;\n```\n"
+    },
+
     // 快速开始指南
     get_started: {
       enable: true,
       title: "快速开始使用",
       steps: [
-        { title: "添加文档文件", description: "将 Markdown (.md) 或 HTML (.html) 文件放入 /data 目录" },
-        { title: "组织目录结构", description: "按照需要创建分类目录，添加 README.md 作为分类介绍" },
-        { title: "自定义配置", description: "根据需要修改 config.js 文件调整网站外观和功能" },
-        { title: "运行 build.py 脚本", description: "创建 path.json 目录文件" },
-        { title: "打开浏览器访问", description: "直接在浏览器中打开 index.html 即可使用文档系统" }
+        { title: "编写文档", description: "在内容分支对应版本目录下新建 .md 或 .html 文件" },
+        { title: "在网页端编辑", description: "点击「编辑此页」就地书写，右侧实时预览最终效果" },
+        { title: "提交并重建", description: "顶部工具条提交到内容分支，再点「重建站点」发布" }
       ],
       button_text: "立即开始",
-      button_link: "/main/"
+      button_link: "/docs/main"
     }
   },
 
@@ -260,18 +292,18 @@ const config = {
       text: "使用以下技术栈构建：",
       links: [
         {
+          text: "React",
+          url: "https://react.dev",
+          external: true
+        },
+        {
+          text: "Vite",
+          url: "https://vite.dev",
+          external: true
+        },
+        {
           text: "TailwindCSS",
           url: "https://tailwindcss.com",
-          external: true
-        },
-        {
-          text: "Alpine.js",
-          url: "https://alpinejs.dev",
-          external: true
-        },
-        {
-          text: "FontAwesome",
-          url: "https://fontawesome.com",
           external: true
         }
       ]
