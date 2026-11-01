@@ -52,15 +52,42 @@ function candidatesFor(urlPath) {
     : [path.join(base, "index.html"), path.join(base, ".html"), base];
 }
 
+/**
+ * 旧版路径归一：`/main`、`/main/`、`/main/#路径/` → `/docs/main[/路径]`
+ * （与前端 upgradeLegacyPath 语义一致，用于校验仍使用 v1 写法的配置）
+ */
+function upgradeLegacy(pathname, versions) {
+  const clean = pathname.replace(/^\/+/, "").replace(/\/+$/, "");
+  if (!clean || clean.startsWith("docs")) return pathname;
+
+  const hashMatch = clean.match(/^([^/#?]+)\/?#\/?(.*)$/);
+  const versionSegment = hashMatch ? hashMatch[1] : clean.split("/")[0];
+  const rest = hashMatch
+    ? (hashMatch[2] ?? "")
+    : clean.slice(versionSegment.length).replace(/^\/+/, "");
+  if (!versions.has(versionSegment)) return pathname;
+
+  const tail = rest.replace(/[?#].*$/, "").replace(/\.(md|markdown|html?)$/i, "").replace(/^\/+|\/+$/g, "");
+  return `/docs/${versionSegment}${tail ? `/${tail}` : ""}`;
+}
+
 /** 判断站内链接是否可达 */
-async function resolvable(href, baseUrl) {
+async function resolvable(href, baseUrl, versions) {
   if (!href.startsWith("/")) return true; // 相对链接与外链跳过
   const withoutBase = baseUrl !== "/" && href.startsWith(baseUrl) ? href.slice(baseUrl.length) : href;
-  const normalized = withoutBase.startsWith("/") ? withoutBase : `/${withoutBase}`;
+  let normalized = withoutBase.startsWith("/") ? withoutBase : `/${withoutBase}`;
   if (normalized === "/") return true;
 
   for (const candidate of candidatesFor(normalized)) {
     if (await exists(candidate)) return true;
+  }
+
+  // 仍使用 v1 写法（/main、/main/#路径）的配置：前端会自动升级，这里按升级后的路径判定
+  const upgraded = upgradeLegacy(normalized, versions);
+  if (upgraded !== normalized) {
+    for (const candidate of candidatesFor(upgraded)) {
+      if (await exists(candidate)) return true;
+    }
   }
   return false;
 }
@@ -83,6 +110,7 @@ async function main() {
 
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const baseUrl = "/";
+  const versions = new Set(manifest.branches.map((branch) => branch.name));
 
   // 1. 每篇文档都应有产物
   const missingDocs = [];
@@ -94,7 +122,7 @@ async function main() {
       const isIndex = ["readme", "index"].includes(last.toLowerCase());
       if (isIndex) parts.pop();
       const url = `/docs/${branch.name}${parts.length ? `/${parts.join("/")}` : ""}`;
-      const found = await resolvable(url, baseUrl);
+      const found = await resolvable(url, baseUrl, versions);
       if (!found) missingDocs.push(`${branch.name}/${doc.path} → ${url}`);
     }
   }
@@ -110,7 +138,7 @@ async function main() {
     for (const href of extractHrefs(html)) {
       if (!href.startsWith("/")) continue;
       if (href.startsWith("/assets/")) continue;
-      if (await resolvable(href, baseUrl)) continue;
+      if (await resolvable(href, baseUrl, versions)) continue;
       broken.push({ page: path.relative(clientDir, file), href });
     }
   }
