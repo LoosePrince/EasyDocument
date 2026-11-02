@@ -1,0 +1,11 @@
+{
+  "title": "首页",
+  "children": [
+    { "path": "README.md", "title": "概览" },
+    { "path": "快速入门", "title": "快速开始" },
+    { "path": "使用指南", "title": "使用指南" },
+    { "path": "编辑与发布", "title": "编辑与发布" },
+    { "path": "配置详解", "title": "配置详解" },
+    { "path": "参考", "title": "参考手册" }
+  ]
+}

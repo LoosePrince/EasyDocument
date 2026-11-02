@@ -1,6 +1,6 @@
 # EasyDocument 文档中心
 
-**EasyDocument 2.0.0** —— 把文档放在独立 git 分支、构建时预渲染成真实路径的静态文档系统。
+**EasyDocument 2.0.1** —— 把文档放在独立 git 分支、构建时预渲染成真实路径的静态文档系统。
 
 ## 它解决什么
 
@@ -28,7 +28,7 @@ EasyDocument 把这三件事拆开：
 
 | 项目 | 值 |
 | --- | --- |
-| 版本 | 2.0.0 |
+| 版本 | 2.0.1 |
 | 技术栈 | React 19 · TypeScript · Vite 7 · TailwindCSS 4 · React Router 7 |
 | 渲染 | SSG（`ssr: false` + `prerender`） |
 | 内容来源 | git 分支 `data`（由 `easydocument.json` 指定） |

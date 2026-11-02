@@ -1,5 +1,5 @@
 /**
- * EasyDocument 2.0.0 配置文件
+ * EasyDocument 2.0.1 配置文件
  *
  * 本文件位于内容分支（默认 `data`）的根目录，由 `main` 分支的
  * `easydocument.json`（{ "data": "data:/config.js" }）指向。
@@ -85,12 +85,12 @@ const config = {
       {
         text: "教程",
         url: [
-          { text: "快速入门", url: "/docs/main/快速入门", icon: "fas fa-rocket" },
-          { text: "使用指南", url: "/docs/main/使用指南", icon: "fas fa-book" },
-          { text: "编辑与发布", url: "/docs/main/编辑与发布", icon: "fas fa-pen-to-square" },
-          { text: "配置详解", url: "/docs/main/配置详解", icon: "fas fa-cog" }
+          { text: "快速入门", url: "/docs/main/快速入门", icon: "rocket" },
+          { text: "使用指南", url: "/docs/main/使用指南", icon: "book" },
+          { text: "编辑与发布", url: "/docs/main/编辑与发布", icon: "edit" },
+          { text: "配置详解", url: "/docs/main/配置详解", icon: "settings" }
         ],
-        icon: "fas fa-graduation-cap"
+        icon: "graduation"
       },
       {
         text: "参考",
@@ -99,7 +99,7 @@ const config = {
       {
         text: "GitHub",
         url: "https://github.com/LoosePrince/EasyDocument",
-        icon: "fab fa-github",
+        icon: "github",
         external: true
       }
     ]
@@ -112,7 +112,7 @@ const config = {
 
     // 首屏
     hero: {
-      badge: "v2.0.0 · React + Vite · 预渲染",
+      badge: "v2.0.1 · 所见即所得 · 目录配置",
       title: "EasyDocument",
       subtitle: "内容与代码分离的静态文档系统",
       description:
@@ -142,43 +142,43 @@ const config = {
       { value: "SSG", label: "预渲染输出" },
       { value: "真实路径", label: "无 hash 路由" },
       { value: "就地编辑", label: "实时预览" },
-      { value: "双模式", label: "预览 / 分栏" }
+      { value: "三模式", label: "所见即所得 / 分栏 / 预览" }
     ],
 
     // 特性卡片
     features: [
       {
-        icon: "fas fa-feather",
+        icon: "feather",
         title: "内容与代码分离",
         description: "文档放在独立 git 分支，改内容不碰代码仓库，版本历史互不干扰",
         color: "blue"
       },
       {
-        icon: "fas fa-paint-brush",
+        icon: "palette",
         title: "真实路径预渲染",
         description: "每个文档都有独立 HTML，直链刷新可用、可被搜索引擎收录",
         color: "orange"
       },
       {
-        icon: "fas fa-cog",
+        icon: "settings",
         title: "配置即站点",
         description: "一份 config.js 控制导航、首页、布局、搜索与页脚，旧配置原样兼容",
         color: "green"
       },
       {
-        icon: "fas fa-pen-to-square",
+        icon: "edit",
         title: "网页端编辑",
         description: "就地编辑、实时预览，保存为本地草稿，确认后一键提交",
         color: "purple"
       },
       {
-        icon: "fas fa-layer-group",
+        icon: "layers",
         title: "多版本文档",
         description: "内容分支下每个目录是一个版本，切换版本保留文档结构",
         color: "cyan"
       },
       {
-        icon: "fas fa-magnifying-glass",
+        icon: "search",
         title: "全文搜索",
         description: "构建期生成索引，中文二元组分词，支持前缀与模糊匹配",
         color: "rose"
@@ -220,25 +220,25 @@ const config = {
         title: "快速入门",
         description: "安装、第一篇文档、部署",
         url: "/docs/main/快速入门",
-        icon: "fas fa-rocket"
+        icon: "rocket"
       },
       {
         title: "编辑与发布",
         description: "就地编辑、草稿、提交与重建",
         url: "/docs/main/编辑与发布",
-        icon: "fas fa-pen-to-square"
+        icon: "edit"
       },
       {
         title: "配置详解",
         description: "站点、布局、首页、搜索、页脚",
         url: "/docs/main/配置详解",
-        icon: "fas fa-cog"
+        icon: "settings"
       },
       {
         title: "参考",
         description: "Markdown 语法与故障排查",
         url: "/docs/main/参考",
-        icon: "fas fa-book-open"
+        icon: "help"
       }
     ]
   },
@@ -250,7 +250,7 @@ const config = {
     default_branch: "main", // 默认版本目录名
     available_branches: [
       // 目录不存在时自动隐藏；顺序即展示顺序
-      { name: "main", label: "v2.0.0" }
+      { name: "main", label: "v2.0.1" }
     ],
     default_page: "README.md",
     index_pages: ["README.md", "README.html", "index.md", "index.html"],
@@ -268,9 +268,10 @@ const config = {
         dark: "github-dark"
       }
     },
-    // 外部文档挂载（仅在默认版本下生效）
-    // mode: "path_json" 填外部 path.json 链接；"github_tree" 填 GitHub 目录链接
-    external_docs: []
+    // 目录配置（显示名 / 排序 / 隐藏 / 外部挂载），放在内容根或版本目录下
+    path_config: "path.json",
+    // 前端实时拉取外部文档（关闭后只用构建期结果）
+    runtime_fetch: true
   },
 
   // ============ 搜索 ============
@@ -279,7 +280,7 @@ const config = {
     min_chars: 2, // 触发搜索的最小字符数
     max_results: 20,
     placeholder: "搜索文档…",
-    search_cached: true, // 同时搜索浏览器内缓存的正文
+    search_drafts: true, // 同时搜索浏览器内的本地草稿
     search_on_type: true, // 输入即搜
     match_distance: 50 // 结果片段中多次命中的最小间隔
   },
@@ -289,6 +290,7 @@ const config = {
     math: true, // KaTeX（$…$、$$…$$）
     highlight: true, // 代码高亮（shiki，双主题）
     mermaid: true, // Mermaid 图表
+    html_scripts: true, // HTML 文档允许执行脚本（不再为「安全」限制）
     github: {
       enable: true,
       repo_url: "https://github.com/LoosePrince/EasyDocument", // 仓库地址（也可省略，自动推断）
@@ -303,9 +305,6 @@ const config = {
     },
     progress_bar: {
       enable: true // 顶部阅读进度条
-    },
-    cache_menu: {
-      enable: true // 预留：缓存菜单入口
     }
   },
 
