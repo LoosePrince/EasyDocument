@@ -2,12 +2,12 @@
  * 首页数据
  *
  * 除配置外还带上版本文档树，供首页的「文档入口 / 最新内容」区块使用。
- * 默认走配置驱动渲染；仅当 `home.use_file=true` 时读取 file_path 的 HTML 并消毒。
+ * 默认走配置驱动渲染；仅当 `home.use_file=true` 时读取 file_path 的 HTML 并原样注入
+ * （v2.0.1 起不再为「安全」做限制）。
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { loadSiteData } from "./load.server";
-import { sanitizeHtml, extractBody } from "../html/sanitize";
 import { collectDocPaths } from "../content/types";
 import type { DocsNode } from "../content/types";
 
@@ -35,6 +35,12 @@ export interface HomeContentData {
 }
 
 const FEATURED_LIMIT = 8;
+
+/** 取出 <body> 内部内容（自定义文件通常带完整文档结构） */
+function extractBodyHtml(html: string): string {
+  const match = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  return match ? match[1] : html;
+}
 
 export async function loadHomeContent(): Promise<HomeContentData> {
   const site = await loadSiteData();
@@ -79,7 +85,8 @@ export async function loadHomeContent(): Promise<HomeContentData> {
       defaultBranch: site.defaultBranch,
       branches,
       featuredDocs,
-      customHtml: sanitizeHtml(extractBody(raw)),
+      // v2.0.1：不再为「安全」做限制，自定义首页 HTML 原样注入
+      customHtml: extractBodyHtml(raw),
     };
   } catch {
     return { config: site.config, defaultBranch: site.defaultBranch, branches, featuredDocs };

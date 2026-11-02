@@ -135,11 +135,14 @@ export interface AvailableBranch {
   label?: string;
 }
 
-export interface ExternalDocMount {
-  mount_path: string;
+/** 目录配置（path.json）中的外部文档挂载 */
+export interface ExternalMountConfig {
+  /**
+   * - `path_json`：url 指向 path.json，或指向一个包含 path.json 的公开目录
+   * - `github_tree`：url 形如 https://github.com/{owner}/{repo}/tree/{branch}/{dir}
+   */
   mode: "path_json" | "github_tree";
   url: string;
-  title?: string;
 }
 
 export interface CodeBlockConfig {
@@ -147,6 +150,9 @@ export interface CodeBlockConfig {
   start_line?: number;
   theme?: { light?: string; dark?: string };
 }
+
+/** 图标：v2.0.1 起使用设计图标 id（见 app/lib/icons.ts），不再依赖 FontAwesome 类名 */
+export type IconId = string;
 
 export interface DocumentConfig {
   root_dir?: string;
@@ -162,7 +168,10 @@ export interface DocumentConfig {
   toc_dynamic_expand?: boolean;
   code_copy_button?: boolean;
   code_block?: CodeBlockConfig;
-  external_docs?: ExternalDocMount[];
+  /** 目录配置文件名（默认 path.json），放在内容根或版本目录下 */
+  path_config?: string;
+  /** SSG 之外的前端实时拉取（外部挂载 / 草稿预览） */
+  runtime_fetch?: boolean;
 }
 
 export interface SearchConfig {
@@ -170,7 +179,8 @@ export interface SearchConfig {
   min_chars?: number;
   max_results?: number;
   placeholder?: string;
-  search_cached?: boolean;
+  /** 同时搜索浏览器内的本地草稿正文 */
+  search_drafts?: boolean;
   search_on_type?: boolean;
   match_distance?: number;
 }
@@ -179,6 +189,8 @@ export interface ExtensionsConfig {
   math?: boolean;
   highlight?: boolean;
   mermaid?: boolean;
+  /** HTML 文档是否允许执行脚本（v2.0.1 起默认允许，不再为「安全」限制） */
+  html_scripts?: boolean;
   github?: {
     enable?: boolean;
     repo_url?: string;
@@ -192,7 +204,6 @@ export interface ExtensionsConfig {
     show_contributors?: boolean;
   };
   progress_bar?: { enable?: boolean };
-  cache_menu?: { enable?: boolean };
 }
 
 export interface FooterLink {
@@ -317,14 +328,15 @@ export interface ResolvedConfig {
     toc_dynamic_expand: boolean;
     code_copy_button: boolean;
     code_block: Required<CodeBlockConfig>;
-    external_docs: ExternalDocMount[];
+    path_config: string;
+    runtime_fetch: boolean;
   };
   search: {
     enable: boolean;
     min_chars: number;
     max_results: number;
     placeholder: string;
-    search_cached: boolean;
+    search_drafts: boolean;
     search_on_type: boolean;
     match_distance: number;
   };
@@ -332,6 +344,7 @@ export interface ResolvedConfig {
     math: boolean;
     highlight: boolean;
     mermaid: boolean;
+    html_scripts: boolean;
     github: {
       enable: boolean;
       repo_url: string;
@@ -345,7 +358,6 @@ export interface ResolvedConfig {
       show_contributors: boolean;
     };
     progress_bar: { enable: boolean };
-    cache_menu: { enable: boolean };
   };
   footer: {
     copyright: string;

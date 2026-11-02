@@ -2,60 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { X, ZoomIn, ZoomOut, RotateCw, Download } from "lucide-react";
 
 /**
- * FontAwesome 类名兼容层
- *
- * 旧版 config 的 `nav_links[].icon` / `home.features[].icon` 用 FontAwesome 类名
- * （如 "fas fa-rocket"）。v2 不引入 FontAwesome 字体，因此这里把常见类名映射到
- * 内联 SVG，避免旧配置下图标空白。
- */
-const FA_ICON_PATHS: Record<string, string> = {
-  "fa-rocket":
-    '<path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.1 2.1 0 0 0-2.9-.1Z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.9A12.9 12.9 0 0 1 22 2a12.9 12.9 0 0 1-6.1 11 22 22 0 0 1-3.9 2Z"/><path d="M9 12H4s.5-3 2-4c1.6-1.1 5 0 5 0"/><path d="M12 15v5s3-.5 4-2c1.1-1.6 0-5 0-5"/>',
-  "fa-book":
-    '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>',
-  "fa-cog":
-    '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
-  "fa-graduation-cap":
-    '<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/>',
-  "fa-github":
-    '<path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.1-1.3-.3-2.5-1-3.5.3-1 .3-2 0-3 0 0-1 0-3 1.5-2.6-.5-5.4-.5-8 0C6 3 5 3 5 3c-.3 1-.3 2 0 3-.7 1-1.1 2.2-1 3.5 0 3.5 3 5.5 6 5.5a4.8 4.8 0 0 0-1 3.5v4"/><path d="M9 18c-4.5 2-5-2-7-2"/>',
-  "fa-feather":
-    '<path d="M20.2 3.8a6 6 0 0 0-8.5 0L4 11.5V20h8.5l7.7-7.7a6 6 0 0 0 0-8.5Z"/><path d="M16 8 2 22M17.5 15H9"/>',
-  "fa-paint-brush":
-    '<path d="M18.4 2.6a2 2 0 0 1 3 3L14 13l-3-3 7.4-7.4Z"/><path d="M9 12a3 3 0 0 0-3 3c0 1.6-1 3-3 3 1.5 2 3.5 2 5 2a4 4 0 0 0 4-4 3 3 0 0 0-3-3Z"/>',
-  "fa-home":
-    '<path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 22V12h6v10"/>',
-};
-
-/** 把 FontAwesome 类名渲染为内联 SVG（非 FA 类名原样返回 null） */
-export function FontAwesomeCompat({ className, label }: { className?: string; label?: string }) {
-  if (!className) return null;
-  const match = Object.keys(FA_ICON_PATHS).find((key) =>
-    className.split(/\s+/).includes(key),
-  );
-  if (!match) return null;
-
-  return (
-    <span
-      className={`fa-compat inline-grid size-4 shrink-0 place-items-center ${className}`}
-      aria-hidden="true"
-      title={label}
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="size-full"
-        dangerouslySetInnerHTML={{ __html: FA_ICON_PATHS[match] }}
-      />
-    </span>
-  );
-}
-
-/**
  * 文档增强（客户端水合后执行）
  *
  * - 代码复制按钮

@@ -23,6 +23,8 @@ import { createClient, type GitHubClient, type RepoRef } from "~/lib/github/clie
 import { clearToken, loadToken, saveToken } from "~/lib/github/credentials";
 import type { BranchLandingData, DocPageData } from "~/lib/site/page.server";
 import type { DocsNode } from "~/lib/content/types";
+import { applyPathConfigToTree } from "~/lib/content/tree";
+import { parsePathConfig } from "~/lib/content/path-config";
 
 export type DraftKind = "update" | "create" | "delete";
 
@@ -45,6 +47,17 @@ export interface CommitResult {
   committed: number;
   commitUrl?: string;
 }
+
+/** 目录配置草稿：每个版本一条，内容是 path.json 全文 */
+export interface PathConfigDraftEntry {
+  /** 内容分支内的 path.json 路径，如 "main/path.json" */
+  path: string;
+  branch: string;
+  content: string;
+  savedAt: number;
+}
+
+export type PathConfigDraft = Record<string, PathConfigDraftEntry>;
 
 export interface EditorContextValue {
   // 凭据
@@ -70,6 +83,17 @@ export interface EditorContextValue {
   removeDraft: (path: string) => void;
   discardAll: () => void;
 
+  /**
+   * 目录配��草稿（path.json）
+   *
+   * 显示名 / 排序 / 隐藏 / 外部挂载都落在这里，与文档正文草稿一起提交，
+   * 因此一次「一键提交」就能把目录结构调整一起推到内容分支。
+   */
+  pathConfig: PathConfigDraft;
+  getPathConfig: (branch: string) => PathConfigDraftEntry | undefined;
+  savePathConfig: (entry: Omit<PathConfigDraftEntry, "savedAt">) => void;
+  removePathConfig: (branch: string) => void;
+
   // 推送到 GitHub（提交）
   submitting: boolean;
   submitError: string | null;
@@ -80,8 +104,8 @@ export interface EditorContextValue {
   rebuilding: boolean;
   lastCommit?: { at: number; count: number };
 
-  // 草稿预览（供侧栏即时反映改名/新增/删除）
-  previewTree: (tree: DocsNode) => DocsNode;
+  // 草稿预览（供侧栏即时反映改名/排序/新增/删除）
+  previewTree: (tree: DocsNode, branch?: string) => DocsNode;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -93,6 +117,7 @@ export function useEditorContext(): EditorContextValue {
 }
 
 const DRAFTS_KEY = "easydocument:drafts";
+const PATH_CONFIG_KEY = "easydocument:path-config";
 
 function readDrafts(): DraftEntry[] {
   if (typeof window === "undefined") return [];
@@ -116,6 +141,28 @@ function writeDrafts(drafts: DraftEntry[]) {
   }
 }
 
+function readPathConfigDrafts(): PathConfigDraft {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(PATH_CONFIG_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as PathConfigDraft;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writePathConfigDrafts(value: PathConfigDraft) {
+  if (typeof window === "undefined") return;
+  try {
+    if (Object.keys(value).length === 0) window.localStorage.removeItem(PATH_CONFIG_KEY);
+    else window.localStorage.setItem(PATH_CONFIG_KEY, JSON.stringify(value));
+  } catch {
+    // 忽略配额错误
+  }
+}
+
 export interface EditorProviderProps {
   repo: RepoRef;
   dataBranch: string;
@@ -135,6 +182,7 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
 
   const [editing, setEditingRaw] = useState(false);
   const [drafts, setDraftsState] = useState<DraftEntry[]>([]);
+  const [pathConfig, setPathConfigState] = useState<PathConfigDraft>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [rebuilding, setRebuilding] = useState(false);
@@ -143,6 +191,7 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
   // 首次挂载后读取本地草稿（避免 SSR 期间访问 localStorage）
   useEffect(() => {
     setDraftsState(readDrafts());
+    setPathConfigState(readPathConfigDrafts());
   }, []);
 
   const setDrafts = useCallback((next: DraftEntry[] | ((current: DraftEntry[]) => DraftEntry[])) => {
@@ -153,11 +202,22 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
     });
   }, []);
 
+  const setPathConfig = useCallback(
+    (next: PathConfigDraft | ((current: PathConfigDraft) => PathConfigDraft)) => {
+      setPathConfigState((current) => {
+        const resolved = typeof next === "function" ? next(current) : next;
+        writePathConfigDrafts(resolved);
+        return resolved;
+      });
+    },
+    [],
+  );
+
   // 多标签页同步
   useEffect(() => {
     const handler = (event: StorageEvent) => {
-      if (event.key !== DRAFTS_KEY) return;
-      setDraftsState(readDrafts());
+      if (event.key === DRAFTS_KEY) setDraftsState(readDrafts());
+      if (event.key === PATH_CONFIG_KEY) setPathConfigState(readPathConfigDrafts());
     };
     window.addEventListener("storage", handler);
     return () => window.removeEventListener("storage", handler);
@@ -231,12 +291,43 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
     [setDrafts],
   );
 
-  const discardAll = useCallback(() => setDrafts([]), [setDrafts]);
+  const discardAll = useCallback(() => {
+    setDrafts([]);
+    setPathConfig({});
+  }, [setDrafts, setPathConfig]);
+
+  const getPathConfig = useCallback(
+    (branch: string) => pathConfig[branch],
+    [pathConfig],
+  );
+
+  const savePathConfig = useCallback(
+    (entry: Omit<PathConfigDraftEntry, "savedAt">) => {
+      setPathConfig((current) => ({
+        ...current,
+        [entry.branch]: { ...entry, savedAt: Date.now() },
+      }));
+    },
+    [setPathConfig],
+  );
+
+  const removePathConfig = useCallback(
+    (branch: string) => {
+      setPathConfig((current) => {
+        const next = { ...current };
+        delete next[branch];
+        return next;
+      });
+    },
+    [setPathConfig],
+  );
 
   /** 草稿应用到树：改名 / 删除 / 新增预览 */
   const previewTree = useCallback(
-    (tree: DocsNode): DocsNode => {
+    (tree: DocsNode, forBranch?: string): DocsNode => {
       if (drafts.length === 0) return tree;
+      // 目录配置草稿（显示名/排序/隐藏）同样即时反映在侧栏
+      const configDraft = forBranch ? pathConfig[forBranch] : undefined;
 
       const titleByPath = new Map<string, string>();
       const deleted = new Set<string>();
@@ -294,22 +385,47 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
         cursor.children.push({ title: draft.title, path: draft.path, children: [] });
       }
 
+      if (configDraft) {
+        try {
+          const parsed = parsePathConfig(JSON.parse(configDraft.content));
+          applyPathConfigToTree(clone, parsed);
+        } catch {
+          // ���稿里的 JSON 语法错误：跳过预览，提交前会再校验
+        }
+      }
+
       return clone;
     },
-    [drafts],
+    [drafts, pathConfig],
   );
 
   /** 把本地草稿推送到 GitHub（需要 PAT） */
   const commit = useCallback(
     async (message: string): Promise<CommitResult> => {
       if (!client) throw new Error("请先连接 GitHub");
-      if (drafts.length === 0) throw new Error("没有待提交的修改");
+      const configDrafts = Object.values(pathConfig);
+      if (drafts.length === 0 && configDrafts.length === 0) {
+        throw new Error("没有待提交的修改");
+      }
 
       setSubmitting(true);
       setSubmitError(null);
       let committed = 0;
 
       try {
+        // 1. 目录配置（path.json）先写，正文引用它
+        for (const entry of configDrafts) {
+          const remote = await client.getFile(repo, entry.path, dataBranch);
+          await client.putFile(repo, {
+            path: entry.path,
+            branch: dataBranch,
+            content: entry.content,
+            sha: remote?.sha,
+            message: `${message}\n\n更新目录配置 ${entry.path}`,
+          });
+          committed += 1;
+        }
+
         for (const draft of drafts) {
           if (draft.kind === "delete") {
             const file = await client.getFile(repo, draft.path, dataBranch);
@@ -337,6 +453,7 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
         }
 
         setDrafts([]);
+        setPathConfig({});
         setLastCommit({ at: Date.now(), count: committed });
         return { committed };
       } catch (error) {
@@ -347,7 +464,7 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
         setSubmitting(false);
       }
     },
-    [client, dataBranch, drafts, repo, setDrafts],
+    [client, dataBranch, drafts, pathConfig, repo, setDrafts, setPathConfig],
   );
 
   const rebuild = useCallback(async () => {
@@ -360,8 +477,8 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
     }
   }, [client, repo]);
 
-  // 关闭标签页前提醒未提交的修改
-  const dirty = drafts.length > 0;
+  // 关闭标签页前提醒未提交的修改（正文草稿 + 目录配置草稿）
+  const dirty = drafts.length > 0 || Object.keys(pathConfig).length > 0;
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
   useEffect(() => {
@@ -393,6 +510,10 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
       saveDraft,
       removeDraft,
       discardAll,
+      pathConfig,
+      getPathConfig,
+      savePathConfig,
+      removePathConfig,
       submitting,
       submitError,
       commit,
@@ -419,6 +540,10 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
       saveDraft,
       removeDraft,
       discardAll,
+      pathConfig,
+      getPathConfig,
+      savePathConfig,
+      removePathConfig,
       submitting,
       submitError,
       commit,

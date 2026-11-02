@@ -42,6 +42,8 @@ export function EditToolbar() {
   if (!editor.editing) return null;
 
   const expanded = pinned || hovered;
+  const configDrafts = Object.values(editor.pathConfig);
+  const total = drafts.length + configDrafts.length;
   const counts = {
     create: drafts.filter((draft) => draft.kind === "create").length,
     update: drafts.filter((draft) => draft.kind === "update").length,
@@ -95,18 +97,19 @@ export function EditToolbar() {
           )}
         >
           <GitCommitHorizontal className="size-3.5" />
-          {drafts.length === 0 ? "本地无草稿" : `${drafts.length} 项本地草稿`}
+          {total === 0 ? "本地无草稿" : `${total} 项本地草稿`}
           {counts.create ? <Count label="新增" value={counts.create} tone="emerald" /> : null}
           {counts.update ? <Count label="修改" value={counts.update} tone="amber" /> : null}
           {counts.delete ? <Count label="删除" value={counts.delete} tone="red" /> : null}
+          {configDrafts.length ? <Count label="目录" value={configDrafts.length} tone="blue" /> : null}
           <ChevronDown className={cn("size-3 transition-transform", expanded && "rotate-180")} />
         </button>
 
-        {drafts.length > 0 ? (
+        {total > 0 ? (
           <button
             type="button"
             onClick={() => {
-              if (!window.confirm(`确认放弃全部 ${drafts.length} 项本地草稿？此操作不可撤销。`)) return;
+              if (!window.confirm(`确认放弃全部 ${total} 项本地草稿？此操作不可撤销。`)) return;
               editor.discardAll();
               setFeedback({ type: "ok", text: "已放弃全部本地草稿" });
             }}
@@ -149,7 +152,7 @@ export function EditToolbar() {
           <button
             type="button"
             onClick={() => void submit()}
-            disabled={editor.submitting || drafts.length === 0}
+            disabled={editor.submitting || total === 0}
             title={!editor.token ? "提交需要先连接 GitHub" : "把所有本地草稿推送到内容分支"}
             className="flex items-center gap-1.5 rounded-lg bg-[var(--ed-primary)] px-3 py-1 text-xs font-medium text-white disabled:opacity-40"
           >
@@ -158,7 +161,7 @@ export function EditToolbar() {
             ) : (
               <Cloud className="size-3.5" />
             )}
-            一键提交{drafts.length > 0 ? `（${drafts.length}）` : ""}
+            一键提交{total > 0 ? `（${total}）` : ""}
           </button>
 
           <button
@@ -186,7 +189,7 @@ export function EditToolbar() {
             <button
               type="button"
               onClick={() => void submit()}
-              disabled={editor.submitting || drafts.length === 0}
+              disabled={editor.submitting || total === 0}
               className="flex items-center gap-1.5 rounded-lg bg-[var(--ed-primary)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
             >
               {editor.submitting ? (
@@ -198,9 +201,30 @@ export function EditToolbar() {
             </button>
           </div>
 
-          {drafts.length > 0 ? (
+          {total > 0 ? (
             <>
               <ul className="max-h-48 space-y-1 overflow-y-auto">
+                {configDrafts.map((entry) => (
+                  <li
+                    key={entry.path}
+                    className="flex items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-[var(--ed-bg-subtle)]"
+                  >
+                    <span className="shrink-0 rounded bg-blue-500/15 px-1 py-0.5 text-[10px] text-blue-600 dark:text-blue-400">
+                      目录
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[var(--ed-text-muted)]">
+                      {entry.path}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => editor.removePathConfig(entry.branch)}
+                      className="text-[var(--ed-text-subtle)] hover:text-red-500"
+                      aria-label={`放弃 ${entry.path}`}
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </li>
+                ))}
                 {drafts.map((draft) => (
                   <li
                     key={draft.path}
@@ -331,12 +355,13 @@ function Count({
 }: {
   label: string;
   value: number;
-  tone: "emerald" | "amber" | "red";
+  tone: "emerald" | "amber" | "red" | "blue";
 }) {
   const toneClass = {
     emerald: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
     amber: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
     red: "bg-red-500/15 text-red-500",
+    blue: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
   }[tone];
 
   return (
@@ -354,7 +379,8 @@ function Count({
  */
 export function DraftIndicator() {
   const editor = useEditorContext();
-  if (editor.editing || editor.drafts.length === 0) return null;
+  const total = editor.drafts.length + Object.keys(editor.pathConfig).length;
+  if (editor.editing || total === 0) return null;
 
   return (
     <button
@@ -364,7 +390,7 @@ export function DraftIndicator() {
       title="点击进入编辑模式查看与提交"
     >
       <GitCommitHorizontal className="size-3.5" />
-      {editor.drafts.length} 项本地草稿未提交
+      {total} 项本地草稿未提交
     </button>
   );
 }

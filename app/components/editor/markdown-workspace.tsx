@@ -20,7 +20,7 @@ import { useSite } from "~/components/providers/config-provider";
 import { warmPreviewRenderer } from "~/lib/markdown/preview";
 import { cn } from "~/lib/utils";
 
-export type EditorMode = "rich" | "split";
+export type EditorMode = "wysiwyg" | "rich" | "split";
 
 export interface MarkdownWorkspaceProps {
   value: string;

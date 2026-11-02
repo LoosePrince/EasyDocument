@@ -3,7 +3,7 @@ import { ChevronDown, ExternalLink } from "lucide-react";
 import type { NavLinkConfig } from "~/lib/config/types";
 import { useSite } from "~/components/providers/config-provider";
 import { cn } from "~/lib/utils";
-import { FontAwesomeCompat } from "~/components/markdown/doc-enhancements";
+import { Icon } from "~/components/ui/icon";
 
 export function NavLinkItem({ link, className }: { link: NavLinkConfig; className?: string }) {
   const { resolveHref, hasRoute } = useSite();
@@ -17,7 +17,7 @@ export function NavLinkItem({ link, className }: { link: NavLinkConfig; classNam
           className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-[var(--ed-text-muted)] transition-colors hover:bg-[var(--ed-bg-subtle)] hover:text-[var(--ed-text)]"
           aria-haspopup="menu"
         >
-          <FontAwesomeCompat className={link.icon} />
+          <Icon name={link.icon} />
           {link.text}
           <ChevronDown className="size-3.5 transition-transform group-hover:rotate-180" />
         </button>
@@ -61,7 +61,7 @@ export function NavLinkItem({ link, className }: { link: NavLinkConfig; classNam
       )}
       {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
     >
-      <FontAwesomeCompat className={link.icon} />
+      <Icon name={link.icon} />
       {link.text}
       {isExternal ? <ExternalLink className="size-3 opacity-60" /> : null}
     </Link>
@@ -93,7 +93,7 @@ function NavDropdownItem({ link }: { link: NavLinkConfig }) {
       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--ed-text-muted)] transition-colors hover:bg-[var(--ed-bg-subtle)] hover:text-[var(--ed-text)]"
       {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
     >
-      <FontAwesomeCompat className={link.icon} />
+      <Icon name={link.icon} />
       {link.text}
     </Link>
   );

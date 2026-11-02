@@ -9,6 +9,7 @@ import {
   ExternalLink,
   FilePlus2,
   FolderTree,
+  ListTree,
   GitCommitHorizontal,
   LayoutDashboard,
   Loader2,
@@ -27,17 +28,19 @@ import { EditToolbar } from "~/components/editor/edit-toolbar";
 import { assertSafeDocPath } from "~/lib/editor/operations";
 import { docUrlPath } from "~/lib/content/routes";
 import { stripExtension, type DocsNode } from "~/lib/content/types";
+import { serializePathConfig } from "~/lib/content/path-config";
 import { cn } from "~/lib/utils";
 
 export function meta() {
   return [{ title: "控制台" }, { name: "robots", content: "noindex" }];
 }
 
-type Tab = "overview" | "docs" | "config" | "deploy";
+type Tab = "overview" | "docs" | "catalog" | "config" | "deploy";
 
 const TABS: Array<{ id: Tab; label: string; icon: React.ReactNode }> = [
   { id: "overview", label: "总览", icon: <LayoutDashboard className="size-4" /> },
   { id: "docs", label: "文档管理", icon: <FolderTree className="size-4" /> },
+  { id: "catalog", label: "目录与排序", icon: <ListTree className="size-4" /> },
   { id: "config", label: "站点配置", icon: <Settings2 className="size-4" /> },
   { id: "deploy", label: "构建部署", icon: <Activity className="size-4" /> },
 ];
@@ -124,6 +127,8 @@ export default function AdminPage() {
                 <Overview onNavigate={setTab} />
               ) : tab === "docs" ? (
                 <DocManager branches={branches} defaultBranch={defaultBranch} />
+              ) : tab === "catalog" ? (
+                <CatalogEditor branches={branches} defaultBranch={defaultBranch} />
               ) : tab === "config" ? (
                 <ConfigEditor client={editor.client} repo={editor.repo} dataBranch={pointer.branch} />
               ) : (
@@ -294,7 +299,10 @@ function DocManager({
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const branch = branches.find((item) => item.name === activeBranch) ?? branches[0];
-  const tree = useMemo(() => (branch ? editor.previewTree(branch.tree) : null), [branch, editor]);
+  const tree = useMemo(
+    () => (branch ? editor.previewTree(branch.tree, branch.name) : null),
+    [branch, editor],
+  );
   const docs = useMemo(() => (tree ? collectDocs(tree) : []), [tree]);
 
   const handleCreate = () => {
@@ -457,6 +465,341 @@ function DraftTag({ kind }: { kind: "create" | "update" | "delete" }) {
   return (
     <span className={cn("rounded px-1 py-0.5 text-[10px]", meta.className)}>{meta.text}</span>
   );
+}
+
+/* ---------------- 目录与排序 ---------------- */
+
+/**
+ * 目录配置编辑（path.json）
+ *
+ * 侧栏的拖拽排序、双击改名、右键隐藏都在文档页完成；
+ * 这里提供「整棵树」视图：直接改显示名、调整顺序、增删外部挂载。
+ */
+function CatalogEditor({
+  branches,
+  defaultBranch,
+}: {
+  branches: Array<{ name: string; label: string; tree: DocsNode; docCount: number }>;
+  defaultBranch: string;
+}) {
+  const { config } = useSite();
+  const editor = useEditorContext();
+  const [activeBranch, setActiveBranch] = useState(defaultBranch);
+  const [json, setJson] = useState("");
+  const [feedback, setFeedback] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+  const [mount, setMount] = useState({ path: "", mode: "github_tree" as "github_tree" | "path_json", url: "" });
+
+  const branch = branches.find((item) => item.name === activeBranch) ?? branches[0];
+  const configName = config.document.path_config || "path.json";
+  const draft = editor.getPathConfig(activeBranch);
+  const configPath = `${activeBranch}/${configName}`;
+
+  const tree = useMemo(
+    () => (branch ? editor.previewTree(branch.tree, activeBranch) : null),
+    [branch, editor, activeBranch],
+  );
+
+  // 未编辑时展示「当前树推导出来的配置」
+  useEffect(() => {
+    if (draft) {
+      setJson(draft.content);
+      return;
+    }
+    if (!tree) return;
+    setJson(`${JSON.stringify(serializePathConfig(tree), null, 2)}\n`);
+  }, [draft, tree]);
+
+  const save = (text: string) => {
+    try {
+      const parsed = JSON.parse(text) as unknown;
+      if (!parsed || typeof parsed !== "object") throw new Error("必须是 JSON 对象");
+      editor.savePathConfig({ path: configPath, branch: activeBranch, content: text });
+      setFeedback({ type: "ok", text: "已保存到本地草稿，提交后生效" });
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        text: `JSON 语法错误：${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+  };
+
+  if (!branch || !tree) {
+    return <p className="text-sm text-[var(--ed-text-muted)]">该版本不存在。</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        {branches.map((item) => (
+          <button
+            key={item.name}
+            type="button"
+            onClick={() => setActiveBranch(item.name)}
+            className={cn(
+              "rounded-lg px-3 py-1.5 text-xs transition-colors",
+              item.name === activeBranch
+                ? "bg-[var(--ed-primary)] text-white"
+                : "border border-[var(--ed-border)] text-[var(--ed-text-muted)] hover:border-[var(--ed-primary)]",
+            )}
+          >
+            {item.label}
+          </button>
+        ))}
+        <code className="ml-auto text-[11px] text-[var(--ed-text-subtle)]">{configPath}</code>
+      </div>
+
+      <section className="rounded-xl border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)] p-4">
+        <h2 className="mb-1 text-sm font-semibold">目录树</h2>
+        <p className="mb-3 text-xs text-[var(--ed-text-muted)]">
+          显示名、顺序与隐藏都写进 <code>{configName}</code>，不改变物理文件名。
+          也可以直接在文档页侧栏拖拽排序、双击改名。
+        </p>
+        <CatalogList nodes={tree.children} depth={0} onRename={(node, title) => {
+          const next = upsertTitle(JSON.parse(json) as Record<string, unknown>, node, title);
+          const text = `${JSON.stringify(next, null, 2)}\n`;
+          setJson(text);
+          save(text);
+        }} onHide={(node) => {
+          const next = upsertHidden(JSON.parse(json) as Record<string, unknown>, node);
+          const text = `${JSON.stringify(next, null, 2)}\n`;
+          setJson(text);
+          save(text);
+        }} />
+      </section>
+
+      <section className="rounded-xl border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)] p-4">
+        <h2 className="mb-2 text-sm font-semibold">外部文档挂载</h2>
+        <p className="mb-3 text-xs text-[var(--ed-text-muted)]">
+          支持 GitHub 目录链接或任意公开目录；构建期拉取一次并预渲染，前端也会实时刷新。
+        </p>
+        <div className="grid gap-2 sm:grid-cols-[1fr_150px_2fr_auto]">
+          <input
+            value={mount.path}
+            onChange={(event) => setMount({ ...mount, path: event.target.value })}
+            placeholder="挂载目录，如 外部文档"
+            aria-label="挂载目录"
+            className="rounded-lg border border-[var(--ed-border)] bg-[var(--ed-bg)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--ed-primary)]"
+          />
+          <select
+            value={mount.mode}
+            onChange={(event) => setMount({ ...mount, mode: event.target.value as typeof mount.mode })}
+            aria-label="挂载方式"
+            className="rounded-lg border border-[var(--ed-border)] bg-[var(--ed-bg)] px-2.5 py-1.5 text-sm outline-none"
+          >
+            <option value="github_tree">GitHub 目录</option>
+            <option value="path_json">path.json / 公开目录</option>
+          </select>
+          <input
+            value={mount.url}
+            onChange={(event) => setMount({ ...mount, url: event.target.value })}
+            placeholder="https://github.com/owner/repo/tree/main/docs"
+            aria-label="挂载地址"
+            className="rounded-lg border border-[var(--ed-border)] bg-[var(--ed-bg)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--ed-primary)]"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (!mount.path || !mount.url) {
+                setFeedback({ type: "error", text: "挂载目录与地址都不能为空" });
+                return;
+              }
+              const next = addMount(JSON.parse(json) as Record<string, unknown>, mount);
+              const text = `${JSON.stringify(next, null, 2)}\n`;
+              setJson(text);
+              save(text);
+              setMount({ path: "", mode: "github_tree", url: "" });
+            }}
+            className="rounded-lg bg-[var(--ed-primary)] px-3 py-1.5 text-sm font-medium text-white"
+          >
+            添加挂载
+          </button>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)] p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">高级：直接编辑 {configName}</h2>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setJson(`${JSON.stringify(serializePathConfig(tree), null, 2)}\n`)}
+              className="text-xs text-[var(--ed-text-muted)] hover:text-[var(--ed-primary)]"
+            >
+              从当前树重建
+            </button>
+            {draft ? (
+              <button
+                type="button"
+                onClick={() => {
+                  editor.removePathConfig(activeBranch);
+                  setFeedback({ type: "ok", text: "已放弃该版本的目录配置修改" });
+                }}
+                className="text-xs text-[var(--ed-text-muted)] hover:text-red-500"
+              >
+                放弃修改
+              </button>
+            ) : null}
+          </div>
+        </div>
+        <textarea
+          value={json}
+          onChange={(event) => setJson(event.target.value)}
+          spellCheck={false}
+          aria-label="目录配置源码"
+          className="h-64 w-full resize-y rounded-lg border border-[var(--ed-border)] bg-[var(--ed-bg)] p-3 font-mono text-[12px] leading-relaxed outline-none focus:border-[var(--ed-primary)]"
+        />
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => save(json)}
+            className="rounded-lg bg-[var(--ed-primary)] px-3 py-1.5 text-xs font-medium text-white"
+          >
+            保存到草稿
+          </button>
+          {feedback ? (
+            <span
+              className={cn(
+                "text-xs",
+                feedback.type === "ok" ? "text-emerald-500" : "text-red-500",
+              )}
+            >
+              {feedback.text}
+            </span>
+          ) : null}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function CatalogList({
+  nodes,
+  depth,
+  onRename,
+  onHide,
+}: {
+  nodes: DocsNode[];
+  depth: number;
+  onRename: (node: DocsNode, title: string) => void;
+  onHide: (node: DocsNode) => void;
+}) {
+  return (
+    <ul className="space-y-1">
+      {nodes.map((node) => {
+        const isFile = node.children.length === 0 && !node.index;
+        return (
+          <li key={node.index?.path ?? node.path}>
+            <div
+              className="flex items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-[var(--ed-bg-subtle)]"
+              style={{ marginLeft: `${depth * 0.75}rem` }}
+            >
+              {isFile ? (
+                <FilePlus2 className="size-3.5 shrink-0 opacity-50" />
+              ) : (
+                <FolderTree className="size-3.5 shrink-0 opacity-50" />
+              )}
+              <input
+                defaultValue={node.title}
+                onBlur={(event) => {
+                  const title = event.target.value.trim();
+                  if (title && title !== node.title) onRename(node, title);
+                }}
+                aria-label={`显示名：${node.title}`}
+                className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm outline-none hover:border-[var(--ed-border)] focus:border-[var(--ed-primary)]"
+              />
+              {node.mount ? (
+                <span className="rounded bg-[var(--ed-primary-soft)] px-1.5 py-0.5 text-[10px] text-[var(--ed-primary)]">
+                  外部挂载
+                </span>
+              ) : null}
+              {node.hidden ? (
+                <span className="rounded bg-[var(--ed-bg-subtle)] px-1.5 py-0.5 text-[10px] text-[var(--ed-text-subtle)]">
+                  隐藏
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => onHide(node)}
+                className="text-[11px] text-[var(--ed-text-subtle)] hover:text-red-500"
+              >
+                {node.hidden ? "显示" : "隐藏"}
+              </button>
+            </div>
+            {node.children.length > 0 ? (
+              <CatalogList nodes={node.children} depth={depth + 1} onRename={onRename} onHide={onHide} />
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** 在 path.json 中 upsert 显示名（保留顺序） */
+function upsertTitle(
+  root: Record<string, unknown>,
+  node: DocsNode,
+  title: string,
+): Record<string, unknown> {
+  const targetPath = node.index?.path ?? node.path;
+  const parent = dirOfPath(node.path);
+  const list = ensureChildList(root, parent);
+  const entry = list.find((item) => item.path === targetPath || item.path === node.path);
+  if (entry) entry.title = title;
+  else list.push({ path: targetPath, title });
+  return root;
+}
+
+/** 切换 hidden */
+function upsertHidden(root: Record<string, unknown>, node: DocsNode): Record<string, unknown> {
+  const targetPath = node.index?.path ?? node.path;
+  const parent = dirOfPath(node.path);
+  const list = ensureChildList(root, parent);
+  const entry = list.find((item) => item.path === targetPath || item.path === node.path);
+  if (entry) entry.hidden = !entry.hidden;
+  else list.push({ path: targetPath, hidden: true });
+  return root;
+}
+
+/** 追加外部挂载 */
+function addMount(
+  root: Record<string, unknown>,
+  mount: { path: string; mode: "github_tree" | "path_json"; url: string },
+): Record<string, unknown> {
+  const list = ensureChildList(root, "");
+  const entry = list.find((item) => item.path === mount.path);
+  if (entry) {
+    entry.external = { mode: mount.mode, url: mount.url };
+  } else {
+    list.push({ path: mount.path, external: { mode: mount.mode, url: mount.url } });
+  }
+  return root;
+}
+
+function dirOfPath(path: string): string {
+  const index = path.lastIndexOf("/");
+  return index === -1 ? "" : path.slice(0, index);
+}
+
+function ensureChildList(
+  root: Record<string, unknown>,
+  dirPath: string,
+): Array<Record<string, unknown>> {
+  if (!Array.isArray(root.children)) root.children = [];
+  let list = root.children as Array<Record<string, unknown>>;
+  if (!dirPath) return list;
+  for (const segment of dirPath.split("/").filter(Boolean)) {
+    let node = list.find(
+      (item) => item.path === segment || item.path === `${segment}/README.md`,
+    );
+    if (!node) {
+      node = { path: segment, children: [] };
+      list.push(node);
+    }
+    if (!Array.isArray(node.children)) node.children = [];
+    list = node.children as Array<Record<string, unknown>>;
+  }
+  return list;
 }
 
 /* ---------------- 构建部署 ---------------- */

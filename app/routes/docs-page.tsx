@@ -1,5 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useLoaderData, useNavigate, type LoaderFunctionArgs } from "react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Link,
+  isRouteErrorResponse,
+  useLoaderData,
+  useLocation,
+  useNavigate,
+  useRouteError,
+  type LoaderFunctionArgs,
+} from "react-router";
 import { FileText, Pencil, Plus } from "lucide-react";
 import type { Route } from "./+types/docs-page";
 import { loadDocRoute, type BranchLandingData, type DocPageData } from "~/lib/site/page.server";
@@ -24,15 +32,27 @@ import { EditToolbar } from "~/components/editor/edit-toolbar";
 import { DocContextMenu } from "~/components/markdown/doc-context-menu";
 import { docUrlPath, siteHref } from "~/lib/content/routes";
 import { useGlobalShortcuts } from "~/lib/editor/shortcuts";
+import NotFound from "./not-found";
 
 export async function loader({ params }: LoaderFunctionArgs) {
   const branch = params.branch ?? "";
   const splat = params["*"] ?? "";
-  const result = await loadDocRoute({ branch, splat });
-  if (!result) {
-    throw new Response("Not Found", { status: 404 });
+
+  try {
+    const result = await loadDocRoute({ branch, splat });
+    if (!result) {
+      throw new Response("Not Found", { status: 404 });
+    }
+    return result;
+  } catch (error) {
+    if (error instanceof Response) throw error;
+    // 浏览器端缺少该路径的预渲染数据（例如未预渲染的深链，经 404.html 回退而来）：
+    // 此时构建期模块（node:fs）不可用，统一当作 404，避免显示「页面加载失败」
+    if (typeof window !== "undefined") {
+      throw new Response("Not Found", { status: 404 });
+    }
+    throw error;
   }
-  return result;
 }
 
 export function meta({ data }: Route.MetaArgs) {
@@ -44,6 +64,70 @@ export function meta({ data }: Route.MetaArgs) {
     { title: `${data.page.title} · ${data.page.branchLabel}` },
     { name: "description", content: `${data.page.title} - ${data.page.branchLabel} 文档` },
   ];
+}
+
+/**
+ * 文档路由的错误边界
+ *
+ * 深路径经 404.html（= index.html 副本）回退时，浏览器端拿不到该路径的
+ * 预渲染数据，loader 会抛 404。这里渲染统一的「页面不存在」页，
+ * 而不是落到根级「页面加载失败」。
+ */
+export function ErrorBoundary() {
+  const error = useRouteError();
+  const aliasTarget = useAliasRedirect();
+  if (aliasTarget) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-md items-center justify-center px-6 text-sm text-[var(--ed-text-muted)]">
+        正在跳转到 <code>{aliasTarget}</code>…
+      </main>
+    );
+  }
+
+  // 1. 明确的 404
+  if (isRouteErrorResponse(error) && error.status === 404) return <NotFound />;
+
+  // 2. 浏览器端缺少该路径的预渲染数据（深链经 404.html 回退而来）：
+  //    客户端路由找不到 `docs-page` 的 loader 结果，等价于「页面不存在」。
+  if (error instanceof Error && /No result found for routeId/.test(error.message)) {
+    return <NotFound />;
+  }
+  return (
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-4 px-6 text-center">
+      <p className="text-7xl font-semibold text-[var(--ed-primary)]">错误</p>
+      <h1 className="text-xl font-medium">页面加载失败</h1>
+      <p className="text-sm text-[var(--ed-text-muted)]">发生意外错误，请稍后重试。</p>
+      <a
+        href={siteHref("/", "/")}
+        className="mt-2 rounded-lg bg-[var(--ed-primary)] px-4 py-2 text-sm font-medium text-white"
+      >
+        返回首页
+      </a>
+    </main>
+  );
+}
+
+/**
+ * `/docs/main/参考/README` 这类「未折叠索引页」地址并不在预渲染清单里，
+ * 但语义上等价于 `/docs/main/参考`。这里在浏览器端做一次 replace 跳转，
+ * 让外部旧链接（以及手工输入带 README 的地址）仍然可用。
+ */
+function useAliasRedirect(): string | null {
+  const location = useLocation();
+  const [target, setTarget] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const match = location.pathname.match(
+      /^(.*\/)(README|readme|index|INDEX|Index)(\.(?:md|markdown|html?))?$/,
+    );
+    if (!match) return;
+    const next = `${match[1].replace(/\/+$/, "")}${location.search}${location.hash}`;
+    setTarget(next);
+    window.location.replace(next);
+  }, [location.pathname, location.search, location.hash]);
+
+  return target;
 }
 
 export default function DocsPage() {
@@ -211,7 +295,11 @@ function DocView({ page }: { page: DocPageData }) {
                   dangerouslySetInnerHTML={{ __html: data.html }}
                 />
               ) : (
-                <HtmlDocument srcDoc={data.rawHtml ?? ""} title={data.title} />
+                <HtmlDocument
+                  srcDoc={data.rawHtml ?? ""}
+                  title={data.title}
+                  allowScripts={config.extensions.html_scripts}
+                />
               )}
 
               <DocGitInfo git={data.git} editUrl={data.editUrl} />
@@ -250,34 +338,47 @@ function DocView({ page }: { page: DocPageData }) {
 }
 
 /**
- * HTML 文档：沙箱 iframe 渲染。
- * 默认禁用脚本（allow-same-origin 与 allow-scripts 同时存在会突破沙箱），
- * 需要交互的文档由用户显式点击后启用脚本。
+ * HTML 文档
+ *
+ * v2.0.1 起不再为「安全」做限制：脚本、内联样式、iframe 等一律执行，
+ * 与直接打开 .html 文件的效果一致（`extensions.html_scripts=false` 可关闭脚本）。
+ * 仍有 `<base target="_parent">` 之类的处理：链接默认在新标签打开，避免把站点导航走丢。
  */
-function HtmlDocument({ srcDoc, title }: { srcDoc: string; title: string }) {
-  const [allowScripts, setAllowScripts] = useState(false);
+function HtmlDocument({
+  srcDoc,
+  title,
+  allowScripts,
+}: {
+  srcDoc: string;
+  title: string;
+  allowScripts: boolean;
+}) {
+  const prepared = useMemo(() => prepareHtmlDocument(srcDoc), [srcDoc]);
 
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between text-xs text-[var(--ed-text-muted)]">
-        <span>HTML 文档</span>
-        <button
-          type="button"
-          onClick={() => setAllowScripts((value) => !value)}
-          className="rounded border border-[var(--ed-border)] px-2 py-1 transition-colors hover:border-[var(--ed-primary)]"
-        >
-          {allowScripts ? "禁用脚本" : "启用脚本"}
-        </button>
-      </div>
-      <iframe
-        title={title}
-        srcDoc={srcDoc}
-        sandbox={allowScripts ? "allow-same-origin allow-scripts" : "allow-same-origin"}
-        className="h-[75vh] w-full rounded-xl border border-[var(--ed-border)] bg-white"
-        loading="lazy"
-      />
-    </div>
+    <iframe
+      title={title}
+      srcDoc={prepared}
+      // allow-same-origin 让文档能读取自身样式与字体；allow-scripts 让交互生效
+      sandbox={
+        allowScripts
+          ? "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads"
+          : "allow-same-origin allow-forms allow-popups allow-modals"
+      }
+      className="min-h-[70vh] w-full rounded-xl border border-[var(--ed-border)] bg-white"
+      loading="lazy"
+    />
   );
+}
+
+/** 注入 base 目标，避免 HTML 文档里的链接在 iframe 内打开 */
+function prepareHtmlDocument(html: string): string {
+  if (/<base\b/i.test(html)) return html;
+  const base = '<base target="_blank">';
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head([^>]*)>/i, (match) => `${match}${base}`);
+  }
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">${base}</head><body>${html}</body></html>`;
 }
 
 /** 版本首页：该版本没有索引页时，列出全部文档 */

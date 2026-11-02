@@ -1,9 +1,10 @@
 /**
  * 文档树模型
  *
- * 与 legacy 的 `path.json` 完全同构，便于：
- *  - 兼容已有的手工 path.json
- *  - 网页端编辑台复用同一结构
+ * 与 legacy 的 `path.json` 保持结构兼容，但额外承载 v2.0.1 的能力：
+ *  - 显示名与排序来自 path.json 配置（可被网页端编辑）
+ *  - `hidden` 条目在侧栏隐藏（文件仍可通过直链访问）
+ *  - 外部挂载节点带 `mount` 与 `externalUrl`
  */
 
 export interface GitInfo {
@@ -31,25 +32,27 @@ export interface DocIndexNode {
   git?: GitInfo;
 }
 
+/** 外部文档挂载声明（来自 path.json） */
+export interface ExternalMountInfo {
+  mode: "path_json" | "github_tree";
+  url: string;
+}
+
 export interface DocsNode {
   title: string;
-  /** 分支内相对路径（POSIX，无前导斜杠） */
+  /** 分支内相对路径（POSIX，无前导斜杠）；目录为空时可能是 "" */
   path: string;
   children: DocsNode[];
   index?: DocIndexNode;
   git?: GitInfo;
-  /** 外部挂载来源（仅运行时） */
-  external_source_url?: string;
-  /** 外部 github_tree 挂载的元信息（仅运行时） */
-  external_git_meta?: ExternalGitMeta;
-}
-
-export interface ExternalGitMeta {
-  repoUrl: string;
-  owner: string;
-  repo: string;
-  branch: string;
-  filePath: string;
+  /** 在侧栏隐藏（仍可直链访问） */
+  hidden?: boolean;
+  /** 外部挂载节点（目录或文件） */
+  mount?: ExternalMountInfo;
+  /** 外部文档的原始内容地址（用于前端实时拉取与「在来源查看」） */
+  externalUrl?: string;
+  /** 外部文档所属仓库（用于显示来源信息） */
+  externalRepo?: string;
 }
 
 export type DocKind = "markdown" | "html";
@@ -62,7 +65,8 @@ export interface DocEntry {
   /** 所属版本（data 分支下的目录名） */
   branch: string;
   git?: GitInfo;
-  external?: ExternalGitMeta;
+  /** 外部文档原始地址 */
+  externalUrl?: string;
 }
 
 export function isIndexFileName(fileName: string, indexPages: string[]): boolean {
@@ -81,6 +85,10 @@ export function fileExtension(path: string): string {
 
 export function docKind(path: string): DocKind {
   return fileExtension(path) === ".md" || fileExtension(path) === ".markdown" ? "markdown" : "html";
+}
+
+function isFolderNode(node: DocsNode): boolean {
+  return node.children.length > 0 || Boolean(node.index);
 }
 
 /** 扁平化文档树（深度优先，index 先于 children，与 legacy `getAllDocumentLinks` 一致） */
@@ -106,6 +114,7 @@ export function flattenDocs(node: DocsNode): DocEntry[] {
           title: child.title,
           kind: docKind(child.path),
           branch: "",
+          externalUrl: child.externalUrl,
         });
       } else {
         walk(child);
@@ -152,3 +161,13 @@ export function collectDocPaths(root: DocsNode): Array<{ path: string; title: st
   visit(root);
   return out;
 }
+
+/** 收集侧栏需要展示的节点（过滤 hidden） */
+export function visibleTree(node: DocsNode): DocsNode {
+  return {
+    ...node,
+    children: node.children.filter((child) => !child.hidden).map(visibleTree),
+  };
+}
+
+export { isFolderNode };

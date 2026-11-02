@@ -1,8 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Columns2, Eye, FileCode2, RotateCcw, Save, Undo2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Check,
+  Columns2,
+  Eye,
+  FileCode2,
+  PenLine,
+  RotateCcw,
+  Save,
+  Undo2,
+} from "lucide-react";
 import { MarkdownWorkspace, type EditorMode } from "./markdown-workspace";
 import { MarkdownTextarea } from "./markdown-textarea";
+import { WysiwygEditor } from "./wysiwyg-editor";
 import { useEditorContext } from "~/lib/editor/editor-store";
+import { useSite } from "~/components/providers/config-provider";
+import { renderPreview } from "~/lib/markdown/preview";
 import { cn } from "~/lib/utils";
 
 export interface InlineDocEditorProps {
@@ -33,14 +45,72 @@ export function InlineDocEditor({
   onExit,
 }: InlineDocEditorProps) {
   const { saveDraft, getDraft, removeDraft, drafts } = useEditorContext();
+  const { config, defaultBranch, branches } = useSite();
 
   const saved = getDraft(docPath);
   const [content, setContent] = useState(saved?.content ?? initialContent);
   const [docTitle, setDocTitle] = useState(saved?.title ?? title);
-  const [mode, setMode] = useState<EditorMode>(kind === "html" ? "split" : "rich");
+  // 默认进入「所见即所得」：直接编辑当前页面的渲染结果
+  const [mode, setMode] = useState<EditorMode>("wysiwyg");
   const [htmlMode, setHtmlMode] = useState<"preview" | "split">("split");
   const [justSaved, setJustSaved] = useState(false);
   const initialRef = useRef(initialContent);
+  const [wysiwygHtml, setWysiwygHtml] = useState("");
+
+  // 所见即所得模式需要「当前 Markdown 的渲染结果」作为编辑起点
+  useEffect(() => {
+    if (mode !== "wysiwyg" || kind !== "markdown") return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void renderPreview({
+        markdown: content,
+        docPath,
+        branch,
+        defaultBranch,
+        versions: branches.map((item) => item.name),
+        indexPages: config.document.index_pages,
+        supportedExtensions: config.document.supported_extensions,
+        baseUrl: config.site.base_url,
+        codeBlock: {
+          lineNumbers: config.document.code_block.line_numbers,
+          startLine: config.document.code_block.start_line,
+          theme: {
+            light: config.document.code_block.theme.light ?? "github-light",
+            dark: config.document.code_block.theme.dark ?? "github-dark",
+          },
+        },
+        codeCopyButton: config.document.code_copy_button,
+        math: config.extensions.math,
+        highlight: config.extensions.highlight,
+        mermaid: config.extensions.mermaid,
+        tocNumbering: config.document.toc_numbering,
+        tocIgnoreH1: config.document.toc_ignore_h1,
+      }).then((result) => {
+        if (!cancelled) setWysiwygHtml(result.html);
+      });
+    }, 200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+    // 只在切换模式或外部内容变化时重建编辑起点
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, kind, docPath, branch]);
+
+  const modeOptions = useMemo(
+    () =>
+      kind === "markdown"
+        ? ([
+            { id: "wysiwyg", label: "所见即所得", icon: <PenLine className="size-3.5" /> },
+            { id: "split", label: "分栏", icon: <Columns2 className="size-3.5" /> },
+            { id: "rich", label: "预览", icon: <Eye className="size-3.5" /> },
+          ] as const)
+        : ([
+            { id: "preview", label: "预览", icon: <Eye className="size-3.5" /> },
+            { id: "split", label: "分栏", icon: <Columns2 className="size-3.5" /> },
+          ] as const),
+    [kind],
+  );
 
   /** 与「已保存草稿」或「线上原文」不同即为未保存 */
   const unsaved = content !== (saved?.content ?? initialRef.current) || docTitle !== (saved?.title ?? title);
@@ -87,18 +157,21 @@ export function InlineDocEditor({
         />
 
         <div className="flex items-center gap-0.5 rounded-lg border border-[var(--ed-border)] p-0.5">
-          <ModeButton
-            active={kind === "html" ? htmlMode === "preview" : mode === "rich"}
-            onClick={() => (kind === "html" ? setHtmlMode("preview") : setMode("rich"))}
-            icon={<Eye className="size-3.5" />}
-            label="预览"
-          />
-          <ModeButton
-            active={kind === "html" ? htmlMode === "split" : mode === "split"}
-            onClick={() => (kind === "html" ? setHtmlMode("split") : setMode("split"))}
-            icon={<Columns2 className="size-3.5" />}
-            label="分栏"
-          />
+          {modeOptions.map((option) => {
+            const active = kind === "html" ? htmlMode === option.id : mode === option.id;
+            return (
+              <ModeButton
+                key={option.id}
+                active={active}
+                onClick={() => {
+                  if (kind === "html") setHtmlMode(option.id as "preview" | "split");
+                  else setMode(option.id as EditorMode);
+                }}
+                icon={option.icon}
+                label={option.label}
+              />
+            );
+          })}
         </div>
 
         <button
@@ -146,15 +219,19 @@ export function InlineDocEditor({
       </p>
 
       {kind === "markdown" ? (
-        <MarkdownWorkspace
-          value={content}
-          onChange={setContent}
-          docPath={docPath}
-          branch={branch}
-          mode={mode}
-          onModeChange={setMode}
-          onSave={save}
-        />
+        mode === "wysiwyg" ? (
+          <WysiwygEditor html={wysiwygHtml} onChange={setContent} />
+        ) : (
+          <MarkdownWorkspace
+            value={content}
+            onChange={setContent}
+            docPath={docPath}
+            branch={branch}
+            mode={mode}
+            onModeChange={(next) => setMode(next)}
+            onSave={save}
+          />
+        )
       ) : (
         <HtmlWorkspace
           value={content}

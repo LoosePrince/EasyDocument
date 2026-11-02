@@ -5,7 +5,8 @@
 - 真实路径（`/docs/main/使用指南/README`）+ 预渲染 HTML，无 `#` 路由，SEO 友好
 - 内容与代码分离：代码在 `main`，内容在 `data`（可配置）
 - 配置与原版 `config.js` **完全兼容**，可直接复用
-- 网页端编辑：填一次 GitHub PAT 即可新增/编辑/删除文档、改配置、触发重建
+- 网页端编辑：所见即所得，填一次 GitHub PAT 即可新增/编辑/删除文档、改配置、触发重建
+- 目录可配置：`path.json` 管显示名、排序、隐藏与外部文档挂载（GitHub 目录 / 公开 path.json）
 
 > v1（免编译的 Alpine.js + hash 路由版本）完整保留在 `legacy` 分支。
 
@@ -49,6 +50,35 @@ data 分支
 - `index_pages` 中的文件名（默认 `README.md` / `README.html` / `index.md` / `index.html`）作为目录索引页
 - 目录标题取自索引页的一级标题；没有索引页的目录只作分组
 
+## 目录配置 `path.json`
+
+放在内容根或版本目录下，只影响展示，不改变文件名：
+
+```json
+{
+  "title": "首页",
+  "children": [
+    { "path": "README.md", "title": "概览" },
+    { "path": "使用指南", "title": "使用手册" },
+    { "path": "旧版", "hidden": true },
+    {
+      "path": "外部文档",
+      "external": {
+        "mode": "github_tree",
+        "url": "https://github.com/owner/repo/tree/main/docs"
+      }
+    }
+  ]
+}
+```
+
+- **数组顺序即展示顺序**，未列出的条目排在后面
+- `title` 只改显示名；`hidden: true` 让条目在侧栏隐藏（仍可直链）
+- `external.mode`：`github_tree`（GitHub 目录链接）或 `path_json`（path.json / 含 path.json 的公开目录）
+- 构建期与前端都会拉取外部挂载；无需 token
+- legacy 的嵌套 `path.json` 可直接使用
+- 侧栏拖拽排序、双击改名，或在 `/admin` →「目录与排序」里统一调整
+
 ## URL 规则
 
 | 内容路径 | URL |
@@ -61,6 +91,7 @@ data 分支
 锚点直接使用标题文本（中文会百分号编码）：`/docs/main/使用指南#常见问题`。
 
 旧版链接（`main/#/使用指南/`、`main/#使用指南/`）在导航与首页按钮中会自动升级为新路径。
+外部直接访问的旧地址也会被 `404.html` 里的内联脚本在 React 水合前重写到 `/docs/...`。
 
 ## 配置
 
@@ -75,9 +106,10 @@ const config = {
   navigation: { home_text, breadcrumb, auto_collapse, back_to_top, prev_next_buttons, folder_expand_mode, nav_links },
   home: { use_file, file_path, hero, features, get_started,
           sections, stats, quick_links, code_demo },
-  document: { root_dir, branch_support, default_branch, available_branches, index_pages, supported_extensions, toc_*, code_*, external_docs },
+  document: { root_dir, branch_support, default_branch, available_branches, index_pages, supported_extensions,
+              toc_*, code_*, path_config, runtime_fetch },
   search: { enable, min_chars, max_results, placeholder, search_on_type, match_distance },
-  extensions: { math, highlight, mermaid, github, git, progress_bar, cache_menu },
+  extensions: { math, highlight, mermaid, html_scripts, github, git, progress_bar },
   footer: { copyright, powered_by, links, beian, columns },
 };
 export default config;
@@ -90,6 +122,9 @@ export default config;
 - `extensions.github.repo_url` 用于生成「在 GitHub 上编辑」链接
 - `admin.enable`（v2 新增）控制是否显示网页端编辑入口，默认 `true`
 - `home.sections` 控制首页各区块开关/标题；`home.stats`、`home.quick_links`、`home.code_demo` 为 v2 新增（缺失时用默认值）
+- `document.path_config` 指定目录配置文件名（默认 `path.json`），负责显示名、排序、隐藏与外部挂载
+- `extensions.html_scripts` 控制 HTML 文档是否执行脚本（默认 `true`）
+- `nav_links[].icon` / `home.features[].icon` 用**设计图标 id**（如 `rocket`、`book`），不依赖 FontAwesome
 
 ### 首页区块
 
@@ -114,9 +149,10 @@ export default config;
 编辑就在文档页里完成，不弹窗、不跳页：
 
 1. 在任意文档页点「编辑此页」（或在控制台点「进入编辑模式」，或按 <kbd>E</kbd>）
-2. 正文区域就地变成编辑器：
-   - **预览**：占满宽度，显示的就是最终发布效果
+2. 正文区域就地变成编辑器，三种模式：
+   - **所见即所得**（默认）：直接编辑渲染结果，工具条提供标题/加粗/列表/表格/提示框等
    - **分栏**：左侧 Markdown 源码（工具栏 + Tab 缩进 + <kbd>Ctrl</kbd>+<kbd>S</kbd>），右侧实时预览
+   - **预览**：占满宽度，显示的就是最终发布效果
 3. 预览使用与构建期**完全相同**的渲染管线（同一份 `renderMarkdown`），因此不会出现「编辑时好看、发布后变形」
 
 ### 保存 / 提交 / 重建 是三件事
@@ -253,7 +289,11 @@ app/
 | 内容位置 | 仓库 `data/` 目录 | 独立 git 分支（默认 `data`） |
 | 索引文件 | `build.py` 生成 `path.json` / `search.json` | 构建期扫描 + MiniSearch 索引，无需索引文件 |
 | 编辑 | 无 | 网页端直接编辑 |
-| 主题 | FontAwesome 图标类 | lucide-react 图标（`nav_links.icon` 的 FontAwesome 类名仍会渲染，需自行引入该字体） |
+| 主题 | FontAwesome 图标类 | lucide-react 图标，配置里写设计图标 id（如 `rocket`），不再依赖图标字体 |
+| 编辑 | 无 | 就地编辑，默认所见即所得 |
+| 排序/显示名 | `build.py` 生成的 `path.json` | 手写 `path.json`（构建期读取），侧栏可拖拽排序 |
+| 外部文档 | `document.external_docs` | 写在 `path.json` 的 `external` 里 |
+| 404 兜底 | 静态 404 页 | `404.html` = `index.html` 副本，兼作 SPA 回退与旧 hash 链接跳转 |
 
 ## License
 

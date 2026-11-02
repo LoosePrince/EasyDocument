@@ -14,7 +14,7 @@ import type { Route } from "./+types/home";
 import { useSite } from "~/components/providers/config-provider";
 import { SiteHeader } from "~/components/layout/site-header";
 import { SiteFooter } from "~/components/layout/site-footer";
-import { FontAwesomeCompat } from "~/components/markdown/doc-enhancements";
+import { Icon } from "~/components/ui/icon";
 import { PreviewPane } from "~/components/editor/preview-pane";
 import { SearchDialog } from "~/components/search/search-dialog";
 import { loadHomeContent } from "~/lib/site/home.server";
@@ -128,8 +128,8 @@ export default function HomePage() {
                     key={stat.label}
                     className="rounded-xl border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)]/70 px-3 py-3"
                   >
-                    <dt className="mt-1 text-xs text-[var(--ed-text-muted)]">{stat.label}</dt>
                     <dd className="text-xl font-semibold text-[var(--ed-primary)]">{stat.value}</dd>
+                    <dt className="mt-1 text-xs text-[var(--ed-text-muted)]">{stat.label}</dt>
                   </div>
                 ))}
               </dl>
@@ -223,8 +223,8 @@ export default function HomePage() {
                     style={staggerStyle(index, config.animation.sidebar.stagger_delay)}
                     className="rounded-2xl border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)] p-5 transition-shadow hover:shadow-lg"
                   >
-                    <span className="mb-3 grid size-10 place-items-center rounded-xl bg-[var(--ed-primary-soft)] text-[var(--ed-primary)] [&_.fa-compat]:size-5">
-                      <FontAwesomeCompat className={feature.icon} />
+                    <span className="mb-3 grid size-10 place-items-center rounded-xl bg-[var(--ed-primary-soft)] text-[var(--ed-primary)]">
+                      <Icon name={feature.icon} className="size-5" />
                     </span>
                     <h3 className="text-sm font-semibold">{feature.title}</h3>
                     <p className="mt-1.5 text-sm leading-relaxed text-[var(--ed-text-muted)]">
@@ -339,7 +339,7 @@ export default function HomePage() {
                   to={resolveHref(link.url)}
                   className="group rounded-xl border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)] p-4 transition-colors hover:border-[var(--ed-primary)]"
                 >
-                  <FontAwesomeCompat className={link.icon} />
+                  <Icon name={link.icon} className="size-5 text-[var(--ed-primary)]" />
                   <p className="mt-2 text-sm font-medium">{link.title}</p>
                   <p className="mt-1 text-xs text-[var(--ed-text-muted)]">{link.description}</p>
                 </Link>

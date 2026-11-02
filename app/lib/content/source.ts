@@ -16,6 +16,30 @@ export interface ContentSource {
   describe(): string;
 }
 
+/** 外部文档正文：优先使用构建期缓存，运行期缺失时按需拉取 */
+export async function readDocContent(
+  source: ContentSource,
+  pointer: import("./pointer").ContentPointer,
+  branch: string,
+  docPath: string,
+  externalUrl?: string,
+): Promise<string> {
+  try {
+    const { contentPath } = await import("./pointer");
+    return await source.readFile(contentPath(pointer, `${branch}/${docPath}`));
+  } catch (error) {
+    if (!externalUrl) throw error;
+    const response = await fetch(externalUrl);
+    if (!response.ok) {
+      throw new ContentSourceError(
+        `外部文档读取失败 (${response.status}): ${docPath}`,
+        externalUrl,
+      );
+    }
+    return response.text();
+  }
+}
+
 export class ContentSourceError extends Error {
   constructor(
     message: string,

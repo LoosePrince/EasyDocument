@@ -185,16 +185,8 @@ export const siteConfigSchema = z
             theme: z.object({ light: z.string().optional(), dark: z.string().optional() }).optional(),
           })
           .optional(),
-        external_docs: z
-          .array(
-            z.object({
-              mount_path: z.string(),
-              mode: z.enum(["path_json", "github_tree"]),
-              url: z.string(),
-              title: z.string().optional(),
-            }),
-          )
-          .optional(),
+        path_config: z.string().optional(),
+        runtime_fetch: z.boolean().optional(),
       })
       .optional(),
     search: z
@@ -203,7 +195,7 @@ export const siteConfigSchema = z
         min_chars: z.number().optional(),
         max_results: z.number().optional(),
         placeholder: z.string().optional(),
-        search_cached: z.boolean().optional(),
+        search_drafts: z.boolean().optional(),
         search_on_type: z.boolean().optional(),
         match_distance: z.number().optional(),
       })
@@ -213,6 +205,7 @@ export const siteConfigSchema = z
         math: z.boolean().optional(),
         highlight: z.boolean().optional(),
         mermaid: z.boolean().optional(),
+        html_scripts: z.boolean().optional(),
         github: z
           .object({
             enable: z.boolean().optional(),
@@ -230,7 +223,6 @@ export const siteConfigSchema = z
           })
           .optional(),
         progress_bar: z.object({ enable: z.boolean().optional() }).optional(),
-        cache_menu: z.object({ enable: z.boolean().optional() }).optional(),
       })
       .optional(),
     footer: z
@@ -391,14 +383,15 @@ const DEFAULT_CONFIG: ResolvedConfig = {
     toc_dynamic_expand: true,
     code_copy_button: true,
     code_block: { line_numbers: true, start_line: 1, theme: { light: "github-light", dark: "github-dark" } },
-    external_docs: [],
+    path_config: "path.json",
+    runtime_fetch: true,
   },
   search: {
     enable: true,
     min_chars: 2,
     max_results: 20,
     placeholder: "搜索文档...",
-    search_cached: true,
+    search_drafts: true,
     search_on_type: true,
     match_distance: 50,
   },
@@ -406,6 +399,7 @@ const DEFAULT_CONFIG: ResolvedConfig = {
     math: true,
     highlight: true,
     mermaid: true,
+    html_scripts: true,
     github: {
       enable: true,
       repo_url: "",
@@ -415,7 +409,6 @@ const DEFAULT_CONFIG: ResolvedConfig = {
     },
     git: { enable: true, show_last_modified: true, show_contributors: true },
     progress_bar: { enable: true },
-    cache_menu: { enable: true },
   },
   footer: {
     copyright: "",

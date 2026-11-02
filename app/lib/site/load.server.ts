@@ -21,6 +21,9 @@ import { buildDocsTree, extractTitle, type ScannedFile } from "../content/tree";
 import type { DocsNode } from "../content/types";
 import { docKind } from "../content/types";
 import { buildSearchDoc, type SearchDoc, type SearchIndexFile } from "../search/index";
+import { mergePathConfigs, parsePathConfig, type PathConfig } from "../content/path-config";
+import { loadExternalMount, mergeMountIntoTree } from "../content/external";
+import { fileExtension } from "../content/types";
 
 export interface BranchData {
   name: string;
@@ -28,6 +31,8 @@ export interface BranchData {
   tree: DocsNode;
   /** 分支内路径 → 文档条目 */
   docs: Map<string, DocEntryData>;
+  /** 目录配置（path.json）；无则为空配置 */
+  pathConfig: PathConfig;
 }
 
 export interface DocEntryData {
@@ -35,6 +40,9 @@ export interface DocEntryData {
   title: string;
   kind: "markdown" | "html";
   raw: string;
+  /** 外部文档：原始内容地址（不缓存正文） */
+  externalUrl?: string;
+  externalRepo?: string;
 }
 
 export interface SiteData {
@@ -104,11 +112,19 @@ export async function loadSiteData(options: LoadOptions = {}): Promise<SiteData>
 
   // 4. 逐版本构建树 + 读取文档
   const branches: BranchData[] = [];
+
+  // 内容根的目录配置（可包含所有版本的嵌套结构）
+  const rootPathConfig = await readPathConfig(source, pointer, config, "");
+
   for (const branch of branchList) {
     const prefix = `${branch.name}/`;
     const branchFiles = docFiles
       .filter((file) => file.path.startsWith(prefix))
       .map((file) => ({ ...file, path: file.path.slice(prefix.length) }));
+
+    // 版本目录下的目录配置（只描述该版本），覆盖根配置
+    const branchPathConfig = await readPathConfig(source, pointer, config, branch.name);
+    const pathConfig = mergePathConfigs([rootPathConfig, branchPathConfig]);
 
     const docs = new Map<string, DocEntryData>();
     const scanned: ScannedFile[] = [];
@@ -126,9 +142,43 @@ export async function loadSiteData(options: LoadOptions = {}): Promise<SiteData>
       indexPages: config.document.index_pages,
       supportedExtensions: config.document.supported_extensions,
       rootTitle: "首页",
+      pathConfig,
     });
 
-    branches.push({ name: branch.name, label: branch.label ?? branch.name, tree, docs });
+    // 外部挂载：构建期拉取一次，结果与本地内容一起预渲染
+    for (const mount of pathConfig.mounts) {
+      const { result, warning } = await loadExternalMount(mount, {
+        indexPages: config.document.index_pages,
+        supportedExtensions: config.document.supported_extensions,
+      });
+      if (warning) warnings.push(warning);
+      if (!result) continue;
+
+      mergeMountIntoTree(tree, result.node);
+      for (const [virtualPath, url] of result.resolvers) {
+        if (docs.has(virtualPath)) continue;
+        docs.set(virtualPath, {
+          path: virtualPath,
+          title: findTitle(tree, virtualPath),
+          kind: fileExtension(virtualPath) === ".md" ? "markdown" : "html",
+          raw: "",
+          externalUrl: url,
+          externalRepo: result.repos.get(virtualPath)?.repoUrl,
+        });
+        // 外部索引页同样要能访问
+        if (result.node.index?.path === virtualPath) {
+          docs.get(virtualPath)!.title = result.node.index.title;
+        }
+      }
+    }
+
+    branches.push({
+      name: branch.name,
+      label: branch.label ?? branch.name,
+      tree,
+      docs,
+      pathConfig,
+    });
   }
 
   const siteData: SiteData = {
@@ -160,6 +210,43 @@ async function createSource(
     }
   }
   return new RemoteContentSource({ pointer });
+}
+
+/** 读取并解析目录配置（缺失时返回空配置） */
+async function readPathConfig(
+  source: ContentSource,
+  pointer: ContentPointer,
+  config: ResolvedConfig,
+  branchDir: string,
+): Promise<PathConfig> {
+  const fileName = config.document.path_config || "path.json";
+  const relative = [branchDir, fileName].filter(Boolean).join("/");
+  const target = contentPath({ ...pointer, rootDir: pointer.rootDir }, relative);
+  try {
+    const raw = await source.readFile(target);
+    return parsePathConfig(JSON.parse(raw), branchDir || undefined);
+  } catch {
+    return { overrides: new Map(), mounts: [] };
+  }
+}
+
+/** 在树中找某路径的显示名 */
+function findTitle(tree: DocsNode, target: string): string {
+  let found: string | undefined;
+  const visit = (node: DocsNode) => {
+    if (found !== undefined) return;
+    if (node.index?.path === target) {
+      found = node.index.title;
+      return;
+    }
+    if (node.path === target) {
+      found = node.title;
+      return;
+    }
+    for (const child of node.children) visit(child);
+  };
+  visit(tree);
+  return found ?? (target.split("/").pop() ?? target);
 }
 
 function stripPrefix(filePath: string, prefix: string): string {

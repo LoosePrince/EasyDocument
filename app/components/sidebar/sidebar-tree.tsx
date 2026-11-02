@@ -14,6 +14,7 @@ import {
 import type { DocsNode } from "~/lib/content/types";
 import { stripExtension } from "~/lib/content/types";
 import { docUrlPath } from "~/lib/content/routes";
+import { serializePathConfig, reorderSiblings } from "~/lib/content/path-config";
 import { useSite } from "~/components/providers/config-provider";
 import { useEditorContext } from "~/lib/editor/editor-store";
 import { ContextMenu, copyText, menuIcons, useToast, type ContextMenuState } from "~/components/ui/context-menu";
@@ -42,7 +43,7 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
   const editor = useEditorContext();
   const toast = useToast();
 
-  const effectiveTree = useMemo(() => editor.previewTree(tree), [editor, tree]);
+  const effectiveTree = useMemo(() => editor.previewTree(tree, branch), [editor, tree, branch]);
 
   const [expanded, setExpanded] = useState<FolderState>(() =>
     computeInitialExpansion(effectiveTree, config.navigation.folder_expand_mode, activePath),
@@ -64,20 +65,73 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
   const expandAll = () => setExpanded(collectFolders(effectiveTree));
   const collapseAll = () => setExpanded({});
 
-  /** 重命名 / 新建：都落到草稿 */
+  /**
+   * 目录配置草稿
+   *
+   * 显示名、排序、隐藏都写进该版本的 path.json 草稿；
+   * 与正文草稿一起在顶部工具条「一键提交」。
+   */
+  const pathConfigPath = `${branch}/${config.document.path_config || "path.json"}`;
+
+  const readPathConfigDraft = useCallback((): Record<string, unknown> => {
+    const draft = editor.getPathConfig(branch);
+    if (!draft) return serializePathConfig(effectiveTree) as Record<string, unknown>;
+    try {
+      return JSON.parse(draft.content) as Record<string, unknown>;
+    } catch {
+      return serializePathConfig(effectiveTree) as Record<string, unknown>;
+    }
+  }, [branch, editor, effectiveTree]);
+
+  const writePathConfigDraft = useCallback(
+    (next: Record<string, unknown>) => {
+      editor.savePathConfig({
+        path: pathConfigPath,
+        branch,
+        content: `${JSON.stringify(next, null, 2)}\n`,
+      });
+    },
+    [branch, editor, pathConfigPath],
+  );
+
+  /** 重命名：只改显示名，物理文件名保持稳定 */
   const renameNode = (node: DocsNode, nextTitle: string) => {
     const title = nextTitle.trim();
     if (!title || title === node.title) return;
-    const target = node.index?.path ?? node.path;
-    editor.saveDraft({
-      path: target,
-      branch,
-      kind: "update",
-      title,
-      format: target.endsWith(".html") ? "html" : "md",
-    });
-    toast.show(`已重命名为「${title}」（提交后生效）`);
+
+    const configJson = readPathConfigDraft();
+    const targetPath = node.index?.path ?? node.path;
+    const updated = upsertPathEntry(configJson, targetPath, { title });
+    writePathConfigDraft(updated);
+    toast.show(`显示名已改为「${title}」（提交后生效，文件名不变）`);
   };
+
+  /** 拖拽排序：写回 path.json 的 children 顺序 */
+  const reorder = useCallback(
+    (fromPath: string, toPath: string, position: "before" | "after") => {
+      const tree = effectiveTree;
+      const siblings = findSiblings(tree, toPath);
+      if (!siblings) return;
+      if (!siblings.some((item) => sameNode(item, fromPath))) return;
+
+      const ordered = reorderSiblings(
+        siblings.map((item) => ({ path: item.index?.path ?? item.path, node: item })),
+        fromPath,
+        toPath,
+        position,
+      );
+
+      const configJson = readPathConfigDraft();
+      const updated = setChildrenOrder(
+        configJson,
+        siblings.map((item) => ({ path: item.index?.path ?? item.path, title: item.title })),
+        ordered.map((item) => item.path),
+      );
+      writePathConfigDraft(updated);
+      toast.show("顺序已更新（提交后生效）");
+    },
+    [effectiveTree, readPathConfigDraft, writePathConfigDraft, toast],
+  );
 
   const createIn = (parentPath: string, kind: "doc" | "folder", name: string) => {
     const clean = name.trim().replace(/^\/+|\/+$/g, "");
@@ -320,6 +374,7 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
               onRenameStart={setRenaming}
               onRenameSubmit={renameNode}
               onRenameCancel={() => setRenaming(null)}
+              onReorder={reorder}
             />
           ))}
         </ul>
@@ -359,6 +414,7 @@ interface TreeItemProps {
   onRenameStart: (path: string) => void;
   onRenameSubmit: (node: DocsNode, title: string) => void;
   onRenameCancel: () => void;
+  onReorder: (fromPath: string, toPath: string, position: "before" | "after") => void;
 }
 
 function TreeItem({
@@ -374,6 +430,7 @@ function TreeItem({
   onRenameStart,
   onRenameSubmit,
   onRenameCancel,
+  onReorder,
 }: TreeItemProps) {
   const { config } = useSite();
   const location = useLocation();
@@ -382,6 +439,41 @@ function TreeItem({
   const open = expanded[node.path] ?? false;
   const draft = editor.getDraft(node.index?.path ?? node.path);
   const isRenaming = renaming === node.path;
+  const [dragOver, setDragOver] = useState<"before" | "after" | null>(null);
+  const nodeKey = node.index?.path ?? node.path;
+
+  /** 拖拽排序（仅编辑模式；同父级内有效） */
+  const dragProps = editor.canEdit
+    ? {
+        draggable: true,
+        onDragStart: (event: React.DragEvent) => {
+          event.dataTransfer.setData("text/plain", nodeKey);
+          event.dataTransfer.effectAllowed = "move";
+        },
+        onDragOver: (event: React.DragEvent) => {
+          if (!event.dataTransfer.types.includes("text/plain")) return;
+          event.preventDefault();
+          const rect = event.currentTarget.getBoundingClientRect();
+          setDragOver(event.clientY < rect.top + rect.height / 2 ? "before" : "after");
+        },
+        onDragLeave: () => setDragOver(null),
+        onDrop: (event: React.DragEvent) => {
+          event.preventDefault();
+          const from = event.dataTransfer.getData("text/plain");
+          setDragOver(null);
+          if (!from || from === nodeKey) return;
+          onReorder(from, nodeKey, dragOver ?? "before");
+        },
+        onDragEnd: () => setDragOver(null),
+      }
+    : {};
+
+  const dropClass =
+    dragOver === "before"
+      ? "before:absolute before:-top-px before:left-0 before:right-0 before:h-0.5 before:bg-[var(--ed-primary)]"
+      : dragOver === "after"
+        ? "after:absolute after:-bottom-px after:left-0 after:right-0 after:h-0.5 after:bg-[var(--ed-primary)]"
+        : "";
 
   if (isRenaming) {
     return (
@@ -398,7 +490,7 @@ function TreeItem({
 
   if (!isFolder) {
     return (
-      <li>
+      <li className={cn("relative", dropClass)} {...dragProps}>
         <TreeLink
           to={docUrlPath({ branch, path: stripExtension(node.path) })}
           title={node.title}
@@ -418,7 +510,7 @@ function TreeItem({
     : undefined;
 
   return (
-    <li>
+    <li className={cn("relative", dropClass)} {...dragProps}>
       <div className="group flex items-center">
         <button
           type="button"
@@ -490,6 +582,7 @@ function TreeItem({
               onRenameStart={onRenameStart}
               onRenameSubmit={onRenameSubmit}
               onRenameCancel={onRenameCancel}
+              onReorder={onReorder}
             />
           ))}
         </ul>
@@ -619,6 +712,111 @@ function InlineCreate({
       </button>
     </div>
   );
+}
+
+/** 两个树节点是否指同一个条目（索引页与目录视为同一项） */
+function sameNode(node: DocsNode, path: string): boolean {
+  return node.path === path || node.index?.path === path;
+}
+
+/** 找到与目标路径同级的兄弟节点（含目标自身） */
+function findSiblings(tree: DocsNode, targetPath: string): DocsNode[] | null {
+  if (tree.children.some((child) => sameNode(child, targetPath))) return tree.children;
+  for (const child of tree.children) {
+    if (child.children.length === 0 && !child.index) continue;
+    const found = findSiblings(child, targetPath);
+    if (found) return found;
+  }
+  return null;
+}
+
+/** 从路径中取目录层级 */
+function dirKey(path: string): string {
+  const index = path.lastIndexOf("/");
+  return index === -1 ? "" : path.slice(0, index);
+}
+
+/**
+ * 在 path.json 中 upsert 一个条目（按所在目录定位 children 数组）。
+ * 保持既有顺序，只更新/新增目标项。
+ */
+function upsertPathEntry(
+  configJson: Record<string, unknown>,
+  targetPath: string,
+  patch: { title?: string },
+): Record<string, unknown> {
+  const key = dirKey(targetPath);
+  const list = ensureChildren(configJson, key);
+  const existing = list.find(
+    (item) => typeof item.path === "string" && item.path === targetPath,
+  ) as Record<string, unknown> | undefined;
+
+  if (existing) {
+    if (patch.title !== undefined) existing.title = patch.title;
+  } else {
+    list.push({ path: targetPath, ...(patch.title ? { title: patch.title } : {}) });
+  }
+
+  return configJson;
+}
+
+/** 按期望顺序重排某个目录下的 children（缺的补上，多出的保持在末尾） */
+function setChildrenOrder(
+  configJson: Record<string, unknown>,
+  siblings: Array<{ path: string; title: string }>,
+  order: string[],
+): Record<string, unknown> {
+  const first = order[0] ?? siblings[0]?.path ?? "";
+  const parentKey = dirKey(first);
+  const list = ensureChildren(configJson, parentKey);
+
+  const byPath = new Map<string, Record<string, unknown>>();
+  for (const item of list) {
+    const path = typeof item.path === "string" ? item.path : "";
+    if (path) byPath.set(path, item);
+  }
+  for (const sibling of siblings) {
+    if (!byPath.has(sibling.path)) byPath.set(sibling.path, { path: sibling.path, title: sibling.title });
+  }
+
+  const ordered = order
+    .map((path) => byPath.get(path))
+    .filter((item): item is Record<string, unknown> => Boolean(item));
+  const orderedPaths = new Set(order);
+  const remainder = list.filter(
+    (item) => typeof item.path !== "string" || !orderedPaths.has(item.path),
+  );
+
+  list.splice(0, list.length, ...ordered, ...remainder);
+  return configJson;
+}
+
+/**
+ * 取得目录配置中某个目录的 children 数组（不存在则创建）。
+ * `dirPath` 为空串表示顶层。
+ */
+function ensureChildren(
+  root: Record<string, unknown>,
+  dirPath: string,
+): Array<Record<string, unknown>> {
+  if (!root.children || !Array.isArray(root.children)) root.children = [];
+  let list = root.children as Array<Record<string, unknown>>;
+
+  if (!dirPath) return list;
+
+  for (const segment of dirPath.split("/").filter(Boolean)) {
+    let node = list.find((item) => item.path === segment || item.path === `${segment}/README.md` || item.path === `${segment}/README`) as
+      | Record<string, unknown>
+      | undefined;
+    if (!node) {
+      node = { path: segment, children: [] };
+      list.push(node);
+    }
+    if (!Array.isArray(node.children)) node.children = [];
+    list = node.children as Array<Record<string, unknown>>;
+  }
+
+  return list;
 }
 
 function parentOf(path: string): string {

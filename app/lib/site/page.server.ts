@@ -18,13 +18,13 @@ export interface DocPageData {
   docPath: string;
   title: string;
   kind: "markdown" | "html";
-  /** Markdown 渲染结果；HTML 文档为空（走 iframe） */
+  /** Markdown 渲染结果；HTML 文档为空（原样注入） */
   html: string;
   /** 原文（Markdown 或 HTML），供就地编辑器使用 */
   source: string;
   /** 构建期 git 信息（无则隐藏） */
   git?: import("~/lib/content/types").GitInfo;
-  /** HTML 文档的原始内容（放入 iframe srcdoc） */
+  /** HTML 文档的原始内容（原样注入，不做「安全」限制） */
   rawHtml?: string;
   toc: TocHeading[];
   tree: DocsNode;
@@ -34,6 +34,10 @@ export interface DocPageData {
   breadcrumbs: Array<{ title: string; path: string; linkable?: boolean }>;
   editUrl?: string;
   canonicalPath: string;
+  /** 外部挂载文档：内容来源地址（运行时按需拉取） */
+  externalUrl?: string;
+  /** 外部挂载文档：所属仓库 */
+  externalRepo?: string;
 }
 
 export interface DocPageRequest {
@@ -124,11 +128,17 @@ export async function buildDocPage(
     return config.document.index_pages.some((name) => branchData.docs.has(`${prefix}${name}`));
   };
 
+  // 外部挂载文档：构建期未缓存正文时按需拉取（前端实时拉取同理）
+  let raw = doc.raw;
+  if (!raw && doc.externalUrl) {
+    raw = await fetchExternalDoc(doc.externalUrl, site);
+  }
+
   // 3. Markdown 渲染 / HTML 直出
   let html = "";
   let toc: TocHeading[] = [];
   if (kind === "markdown") {
-    const rendered = await renderMarkdownInto(doc.raw, docPath, request.branch, site);
+    const rendered = await renderMarkdownInto(raw, docPath, request.branch, site);
     html = rendered.html;
     toc = rendered.toc;
   }
@@ -154,9 +164,11 @@ export async function buildDocPage(
     title: doc.title,
     kind,
     html,
-    source: doc.raw,
+    source: raw,
     git: findGitInfo(branchData.tree, docPath),
-    rawHtml: kind === "html" ? doc.raw : undefined,
+    rawHtml: kind === "html" ? raw : undefined,
+    externalUrl: doc.externalUrl,
+    externalRepo: doc.externalRepo,
     toc,
     tree: branchData.tree,
     prev: currentIndex > 0 ? flat[currentIndex - 1] : null,
@@ -294,6 +306,26 @@ function buildEditUrl(site: SiteData, branch: string, docPath: string): string |
   const [, owner, repo] = match;
   const path = [site.pointer.rootDir, branch, docPath].filter(Boolean).join("/");
   return `https://github.com/${owner}/${repo}/edit/${site.pointer.branch}/${path}`;
+}
+
+/**
+ * 拉取外部文档正文。
+ * 构建期只拉一次（结果参与预渲染），失败时降级为提示文本而不是让整站构建失败。
+ */
+async function fetchExternalDoc(url: string, site: SiteData): Promise<string> {
+  try {
+    const response = await fetch(url, {
+      headers: site.pointer.owner
+        ? { Accept: "application/vnd.github.raw+json, text/plain, */*" }
+        : undefined,
+    });
+    if (!response.ok) {
+      return `> [WARNING] 外部文档读取失败\n>\n> 地址：${url}\n> 状态：${response.status}`;
+    }
+    return await response.text();
+  } catch (error) {
+    return `> [WARNING] 外部文档读取失败\n>\n> 地址：${url}\n> ${error instanceof Error ? error.message : String(error)}`;
+  }
 }
 
 function safeDecode(value: string): string {
