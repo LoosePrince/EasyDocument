@@ -1,6 +1,6 @@
 # EasyDocument 文档中心
 
-**EasyDocument 2.0.1** —— 把文档放在独立 git 分支、构建时预渲染成真实路径的静态文档系统。
+**EasyDocument 2.0.2** —— 把文档放在独立 git 分支、构建时预渲染成真实路径的静态文档系统。
 
 ## 它解决什么
 
@@ -9,8 +9,11 @@
 EasyDocument 把这三件事拆开：
 
 - **内容在独立分支**：`main` 分支只放代码，`data` 分支只放文档与 `config.js`
-- **构建期预渲染**：每篇文档生成独立 HTML，`/docs/main/快速入门` 这样的地址可以直接打开、可以分享、可以被收录
+- **构建期预渲染**：每篇文档生成独立 HTML，`/docs-zh-CN/main/快速入门` 这样的地址可以直接打开、可以分享、可以被收录
 - **网页端就地编辑**：打开任意文档点「编辑此页」即可写作，保存为本地草稿，确认后一键提交
+- **全站多语言**：界面文案可切换，文档支持语言文件夹（`main/en/…`）与二级后缀（`README.en.md`）
+- **图标可配置**：导航、首页卡片、目录与文档图标都能用图标库弹窗选择或输入图标链接
+- **目录可视化排序**：拖动、点击上移/下移，支持在文件夹之间移入移出（会真实移动文件）
 
 > [NOTE] 编辑与提交是两件事：**保存**只写入本浏览器草稿，**提交**才推送到 GitHub，**重建**才让线上生效。
 
@@ -28,7 +31,7 @@ EasyDocument 把这三件事拆开：
 
 | 项目 | 值 |
 | --- | --- |
-| 版本 | 2.0.1 |
+| 版本 | 2.0.2 |
 | 技术栈 | React 19 · TypeScript · Vite 7 · TailwindCSS 4 · React Router 7 |
 | 渲染 | SSG（`ssr: false` + `prerender`） |
 | 内容来源 | git 分支 `data`（由 `easydocument.json` 指定） |
@@ -38,12 +41,12 @@ EasyDocument 把这三件事拆开：
 ```text
 data 分支
 ├── config.js                # 站点配置（导航、首页、页脚…）
-└── main/                    # 版本目录，对应 URL /docs/main
+└── main/                    # 版本目录，对应 URL /docs-zh-CN/main
     ├── README.md            # 版本首页
-    ├── 快速入门/README.md    # → /docs/main/快速入门
+    ├── 快速入门/README.md    # → /docs-zh-CN/main/快速入门
     ├── 使用指南/
-    │   ├── README.md        # → /docs/main/使用指南
-    │   └── 目录结构.md       # → /docs/main/使用指南/目录结构
+    │   ├── README.md        # → /docs-zh-CN/main/使用指南
+    │   └── 目录结构.md       # → /docs-zh-CN/main/使用指南/目录结构
     └── 参考/README.md
 ```
 

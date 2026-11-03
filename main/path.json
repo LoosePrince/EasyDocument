@@ -1,11 +1,38 @@
 {
   "title": "首页",
+  "translations": {
+    "en": { "title": "Home" }
+  },
   "children": [
-    { "path": "README.md", "title": "概览" },
-    { "path": "快速入门", "title": "快速开始" },
-    { "path": "使用指南", "title": "使用指南" },
-    { "path": "编辑与发布", "title": "编辑与发布" },
-    { "path": "配置详解", "title": "配置详解" },
-    { "path": "参考", "title": "参考手册" }
+    {
+      "path": "README.md",
+      "title": "概览",
+      "translations": { "en": { "title": "Overview" } }
+    },
+    {
+      "path": "快速入门",
+      "title": "快速开始",
+      "translations": { "en": { "title": "Quick Start" } }
+    },
+    {
+      "path": "使用指南",
+      "title": "使用指南",
+      "translations": { "en": { "title": "User Guide" } }
+    },
+    {
+      "path": "编辑与发布",
+      "title": "编辑与发布",
+      "translations": { "en": { "title": "Editing & Publishing" } }
+    },
+    {
+      "path": "配置详解",
+      "title": "配置详解",
+      "translations": { "en": { "title": "Configuration" } }
+    },
+    {
+      "path": "参考",
+      "title": "参考手册",
+      "translations": { "en": { "title": "Reference" } }
+    }
   ]
 }

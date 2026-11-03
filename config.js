@@ -1,11 +1,11 @@
 /**
- * EasyDocument 2.0.1 配置文件
+ * EasyDocument 2.0.2 配置文件
  *
  * 本文件位于内容分支（默认 `data`）的根目录，由 `main` 分支的
  * `easydocument.json`（{ "data": "data:/config.js" }）指向。
  *
  * 所有字段都可省略，缺失时使用内置默认值；类型不符会回退默认值并在控制台提示。
- * 完整字段说明见文档：/docs/main/配置详解
+ * 完整字段说明见文档：/docs-zh-CN/main/配置详解
  */
 
 const config = {
@@ -80,21 +80,21 @@ const config = {
       },
       {
         text: "文档",
-        url: "/docs/main"
+        url: "/docs-zh-CN/main"
       },
       {
         text: "教程",
         url: [
-          { text: "快速入门", url: "/docs/main/快速入门", icon: "rocket" },
-          { text: "使用指南", url: "/docs/main/使用指南", icon: "book" },
-          { text: "编辑与发布", url: "/docs/main/编辑与发布", icon: "edit" },
-          { text: "配置详解", url: "/docs/main/配置详解", icon: "settings" }
+          { text: "快速入门", url: "/docs-zh-CN/main/快速入门", icon: "rocket" },
+          { text: "使用指南", url: "/docs-zh-CN/main/使用指南", icon: "book" },
+          { text: "编辑与发布", url: "/docs-zh-CN/main/编辑与发布", icon: "edit" },
+          { text: "配置详解", url: "/docs-zh-CN/main/配置详解", icon: "settings" }
         ],
         icon: "graduation"
       },
       {
         text: "参考",
-        url: "/docs/main/参考"
+        url: "/docs-zh-CN/main/参考"
       },
       {
         text: "GitHub",
@@ -112,7 +112,7 @@ const config = {
 
     // 首屏
     hero: {
-      badge: "v2.0.1 · 所见即所得 · 目录配置",
+      badge: "v2.0.2 · 多语言 · 图标 · 目录排序",
       title: "EasyDocument",
       subtitle: "内容与代码分离的静态文档系统",
       description:
@@ -120,9 +120,9 @@ const config = {
       logo: "/assets/img/logo.svg",
       search_placeholder: "搜索文档…", // 留空则隐藏首屏搜索框
       button_text: "开始阅读",
-      button_link: "/docs/main",
+      button_link: "/docs-zh-CN/main",
       secondary_text: "编辑与发布",
-      secondary_link: "/docs/main/编辑与发布"
+      secondary_link: "/docs-zh-CN/main/编辑与发布"
     },
 
     // 区块开关与标题
@@ -211,7 +211,7 @@ const config = {
         }
       ],
       button_text: "阅读快速入门",
-      button_link: "/docs/main/快速入门"
+      button_link: "/docs-zh-CN/main/快速入门"
     },
 
     // 首页快捷入口（每条都必须指向真实页面）
@@ -219,25 +219,25 @@ const config = {
       {
         title: "快速入门",
         description: "安装、第一篇文档、部署",
-        url: "/docs/main/快速入门",
+        url: "/docs-zh-CN/main/快速入门",
         icon: "rocket"
       },
       {
         title: "编辑与发布",
         description: "就地编辑、草稿、提交与重建",
-        url: "/docs/main/编辑与发布",
+        url: "/docs-zh-CN/main/编辑与发布",
         icon: "edit"
       },
       {
         title: "配置详解",
         description: "站点、布局、首页、搜索、页脚",
-        url: "/docs/main/配置详解",
+        url: "/docs-zh-CN/main/配置详解",
         icon: "settings"
       },
       {
         title: "参考",
         description: "Markdown 语法与故障排查",
-        url: "/docs/main/参考",
+        url: "/docs-zh-CN/main/参考",
         icon: "help"
       }
     ]
@@ -250,7 +250,7 @@ const config = {
     default_branch: "main", // 默认版本目录名
     available_branches: [
       // 目录不存在时自动隐藏；顺序即展示顺序
-      { name: "main", label: "v2.0.1" }
+      { name: "main", label: "v2.0.2" }
     ],
     default_page: "README.md",
     index_pages: ["README.md", "README.html", "index.md", "index.html"],
@@ -272,6 +272,26 @@ const config = {
     path_config: "path.json",
     // 前端实时拉取外部文档（关闭后只用构建期结果）
     runtime_fetch: true
+  },
+
+  // ============ 国际化与多语言文档 ============
+  i18n: {
+    enable: true, // 总开关：关闭后不显示语言切换器，也不识别多语言文档
+    ui: true, // 翻译界面文案（内置中文 / English，英文文案在 lang/en.json）
+    switcher: true, // 顶栏显示语言切换器（站点语言 + 文档语言两个列表）
+    default_language: "zh-CN", // 默认站点语言：只影响界面文案，保存在 localStorage
+    site_languages: [
+      { code: "zh-CN", label: "中文" },
+      { code: "en", label: "English" }
+    ],
+    // 文档语言可以自由扩展，甚至只保留一个语言（此时不显示文档语言列表）
+    document_languages: [
+      { code: "zh-CN", label: "中文", dir: "zh", suffix: "zh" },
+      { code: "en", label: "English", dir: "en", suffix: "en" }
+    ],
+    default_document_language: "zh-CN", // 文档语言决定 /docs-{语言}/ 前缀
+    // auto：同时识别语言文件夹与文件二级后缀；folder / suffix / off 可强制单一方式
+    document_mode: "auto"
   },
 
   // ============ 搜索 ============
@@ -345,6 +365,207 @@ const config = {
       { key: "links", title: "资源", type: "links", enable: true },
       { key: "stack", title: "技术栈", type: "stack", enable: true }
     ]
+  },
+
+  // ============ 英文站点配置 ============
+  // 站点语言只保存在浏览器 localStorage；这里覆盖界面可见的站点文案。
+  // 数组字段（nav_links / features / quick_links 等）会整体替换基础配置。
+  locales: {
+    en: {
+      site: {
+        name: "EasyDocument",
+        title: "EasyDocument · Static Documentation",
+        description:
+          "A static documentation system that keeps content in a separate git branch, prerenders real paths, and lets you edit in the browser.",
+        keywords: "documentation,static site,markdown,SSG,React,Vite"
+      },
+
+      navigation: {
+        home_text: "Home",
+        nav_links: [
+          { text: "Home", url: "/" },
+          { text: "Docs", url: "/docs-en/main" },
+          {
+            text: "Guides",
+            url: [
+              { text: "Quick Start", url: "/docs-en/main/快速入门", icon: "rocket" },
+              { text: "User Guide", url: "/docs-en/main/使用指南", icon: "book" },
+              { text: "Editing & Publishing", url: "/docs-en/main/编辑与发布", icon: "edit" },
+              { text: "Configuration", url: "/docs-en/main/配置详解", icon: "settings" }
+            ],
+            icon: "graduation"
+          },
+          { text: "Reference", url: "/docs-en/main/参考" },
+          {
+            text: "GitHub",
+            url: "https://github.com/LoosePrince/EasyDocument",
+            icon: "github",
+            external: true
+          }
+        ]
+      },
+
+      home: {
+        hero: {
+          badge: "v2.0.2 · i18n · Icons · Catalog ordering",
+          title: "EasyDocument",
+          subtitle: "Documentation separated from code",
+          description:
+            "Docs live on their own git branch and are prerendered into real-path static pages. Edit in place, preview instantly, commit once, then rebuild.",
+          search_placeholder: "Search docs…",
+          button_text: "Start reading",
+          button_link: "/docs-en/main",
+          secondary_text: "Editing & publishing",
+          secondary_link: "/docs-en/main/编辑与发布"
+        },
+
+        sections: {
+          features: {
+            title: "Core features",
+            description: "The foundations of a documentation system that stays out of your way"
+          },
+          docs: {
+            title: "Documentation",
+            description: "Browse by version; every entry points to real content"
+          },
+          code_demo: {
+            title: "One rendering pipeline",
+            description: "Markdown on the left, the same build-time renderer on the right"
+          },
+          get_started: {
+            title: "Three steps to launch",
+            description: "From empty folder to published site"
+          }
+        },
+
+        stats: [
+          { value: "SSG", label: "Prerendered output" },
+          { value: "Real paths", label: "No hash routing" },
+          { value: "In-place editing", label: "Live preview" },
+          { value: "Three modes", label: "WYSIWYG / Split / Preview" }
+        ],
+
+        features: [
+          {
+            icon: "feather",
+            title: "Content separate from code",
+            description:
+              "Docs live on their own git branch, so content changes never touch the code repository",
+            color: "blue"
+          },
+          {
+            icon: "palette",
+            title: "Real-path prerendering",
+            description:
+              "Every document gets its own HTML file: direct links work and search engines can index them",
+            color: "orange"
+          },
+          {
+            icon: "settings",
+            title: "Config-driven site",
+            description:
+              "A single config.js controls navigation, home page, layout, search and footer",
+            color: "green"
+          },
+          {
+            icon: "edit",
+            title: "Edit in the browser",
+            description:
+              "Edit in place, preview live, save a local draft, then commit everything at once",
+            color: "purple"
+          },
+          {
+            icon: "layers",
+            title: "Multiple versions",
+            description:
+              "Each top-level folder on the content branch is a version with its own structure",
+            color: "cyan"
+          },
+          {
+            icon: "search",
+            title: "Full-text search",
+            description:
+              "A build-time index with CJK bigram tokenization, prefix and fuzzy matching",
+            color: "rose"
+          }
+        ],
+
+        code_demo: {
+          filename: "README.md",
+          content:
+            "# My docs\n\n> [TIP] Callouts, math, Mermaid and syntax highlighting are built in.\n\n- Real paths + prerendering, SEO friendly\n- Content separated into its own git branch\n- Edit in the browser, save drafts, commit once\n\nInline math $E = mc^2$, and a code block with line numbers:\n\n```ts\nexport const hello = (name: string) => `Hello, ${name}`;\n```\n\n| Mode | Purpose |\n| --- | --- |\n| Preview | See the final result |\n| Split | Compare source and result |\n"
+        },
+
+        get_started: {
+          enable: true,
+          title: "Get started in three steps",
+          steps: [
+            {
+              title: "Put docs on the content branch",
+              description:
+                "Create .md or .html files under a version folder on the data branch; optionally add README.md as the folder index"
+            },
+            {
+              title: "Edit in the browser",
+              description:
+                "Open any document, click “Edit this page”, write in preview or split mode, then “Save changes” to store a local draft"
+            },
+            {
+              title: "Commit and rebuild",
+              description:
+                "Use “Commit all” in the top toolbar, then trigger a rebuild from “Build & deploy” in the console"
+            }
+          ],
+          button_text: "Read the quick start",
+          button_link: "/docs-en/main/快速入门"
+        },
+
+        quick_links: [
+          {
+            title: "Quick Start",
+            description: "Install, first document, deploy",
+            url: "/docs-en/main/快速入门",
+            icon: "rocket"
+          },
+          {
+            title: "Editing & Publishing",
+            description: "In-place editing, drafts, commits and rebuilds",
+            url: "/docs-en/main/编辑与发布",
+            icon: "edit"
+          },
+          {
+            title: "Configuration",
+            description: "Site, layout, home page, search and footer",
+            url: "/docs-en/main/配置详解",
+            icon: "settings"
+          },
+          {
+            title: "Reference",
+            description: "Markdown syntax and troubleshooting",
+            url: "/docs-en/main/参考",
+            icon: "help"
+          }
+        ]
+      },
+
+      search: {
+        placeholder: "Search docs…"
+      },
+
+      footer: {
+        copyright: "© 2026 EasyDocument · MIT License",
+        powered_by: { text: "Built with:" },
+        links: [
+          { text: "GitHub", url: "https://github.com/LoosePrince/EasyDocument" },
+          { text: "Report an issue", url: "https://github.com/LoosePrince/EasyDocument/issues" }
+        ],
+        columns: [
+          { key: "nav", title: "Navigation", type: "nav", enable: true },
+          { key: "links", title: "Resources", type: "links", enable: true },
+          { key: "stack", title: "Tech stack", type: "stack", enable: true }
+        ]
+      }
+    }
   }
 };
 
