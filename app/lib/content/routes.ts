@@ -20,6 +20,13 @@ export interface DocRoute {
   branch: string;
   /** 分支内路径，"" 表示版本根 */
   path: string;
+  /**
+   * 文档语言（v2.0.2）。URL 形如 `/docs-{documentLanguage}/{branch}/...`；
+   * 省略时保留旧 `/docs/...`（供测试与兼容调用）。
+   */
+  documentLanguage?: string;
+  /** @deprecated 兼容旧调用，等价于 documentLanguage */
+  language?: string;
   anchor?: string;
 }
 
@@ -71,12 +78,14 @@ export const DEFAULT_INDEX_NAMES = ["readme", "index"];
  */
 export function docUrlPath(route: DocRoute, anchor?: string): string {
   const normalizedRoutePath = foldIndexSegment(route.path);
-  const segments = ["docs", route.branch, normalizedRoutePath].filter(
-    (segment) => segment !== undefined && segment !== null && segment !== "",
-  );
-  const path = `/${segments
-    .map((segment) => (segment === "docs" ? segment : encodeSegments(segment)))
-    .join("/")}`;
+  const documentLanguage = route.documentLanguage ?? route.language;
+  const segments: string[] = [
+    documentLanguage ? `docs-${encodeSegments(documentLanguage)}` : "docs",
+  ];
+  if (route.branch) segments.push(route.branch);
+  if (normalizedRoutePath) segments.push(normalizedRoutePath);
+
+  const path = `/${segments.map((segment) => encodeSegments(segment)).join("/")}`;
   const normalized = path.replace(/\/{2,}/g, "/");
   return anchor ? `${normalized}#${anchor}` : normalized;
 }
@@ -108,6 +117,102 @@ export function siteHref(path: string, baseUrl: string): string {
   const base = baseUrl === "/" ? "" : baseUrl;
   const clean = path.startsWith("/") ? path : `/${path}`;
   return base ? `${base}${clean}` : clean;
+}
+
+/**
+ * 把已经生成的 /docs-{默认文档语言}/... 链接换成当前文档语言。
+ * 站点语言只在 localStorage，不进入 URL。
+ */
+export function withDocumentLanguage(
+  href: string,
+  documentLanguage: string,
+  defaultDocumentLanguage: string,
+): string {
+  if (!documentLanguage || documentLanguage === defaultDocumentLanguage) return href;
+  if (/^https?:\/\//i.test(href)) return href;
+  return href
+    .replace(/\/docs-[^/]+/, `/docs-${documentLanguage}`)
+    .replace(/\/docs(?=\/|$)/, `/docs-${documentLanguage}`);
+}
+
+/**
+ * 解析站内文档 URL（v2.0.2）
+ *
+ *   /docs-zh-CN/main/使用指南   → 文档语言 zh-CN，path=使用指南
+ *   /docs-en/main/使用指南      → 文档语言 en，path=使用指南
+ *   /docs/main/使用指南         → legacy：文档语言 = 默认文档语言
+ *
+ * 站点语言只保存在 localStorage，不参与 URL。
+ */
+export function parseDocsUrl(
+  pathname: string,
+  config: Pick<ResolvedConfig, "site" | "i18n">,
+): {
+  branch: string;
+  documentLanguage: string;
+  explicitDocumentLanguage: boolean;
+  path: string;
+  legacy: boolean;
+} | null {
+  const base = config.site.base_url === "/" ? "" : config.site.base_url;
+  let clean = pathname || "/";
+  if (base && (clean === base || clean.startsWith(`${base}/`))) {
+    clean = clean.slice(base.length) || "/";
+  }
+
+  const match = clean.match(/^\/(docs(?:-[^/]+)?)(?:\/(.*))?$/);
+  if (!match) return null;
+
+  const docsSegment = match[1];
+  let explicitDocumentLanguage = false;
+  let documentLanguage = config.i18n.default_document_language;
+  let legacy = false;
+
+  if (docsSegment.startsWith("docs-")) {
+    explicitDocumentLanguage = true;
+    try {
+      documentLanguage = decodeURIComponent(docsSegment.slice("docs-".length));
+    } catch {
+      documentLanguage = docsSegment.slice("docs-".length);
+    }
+    if (!config.i18n.document_languages.some((lang) => lang.code === documentLanguage)) {
+      documentLanguage = config.i18n.default_document_language;
+    }
+  } else {
+    legacy = true;
+  }
+
+  const rawSegments = (match[2] ?? "").split("/").filter(Boolean);
+  const segments = rawSegments.map((segment) => {
+    try {
+      return decodeURIComponent(segment);
+    } catch {
+      return segment;
+    }
+  });
+  const branch = segments[0] ?? "";
+  const path = segments.slice(1).join("/");
+
+  return {
+    branch,
+    documentLanguage,
+    explicitDocumentLanguage,
+    path,
+    legacy,
+  };
+}
+
+/** 站点语言自动单向同步到文档语言；站点语言没有文档时回落到默认文档语言 */
+export function documentLanguageForSite(
+  siteLanguage: string,
+  i18n: Pick<ResolvedConfig, "i18n">["i18n"],
+): string {
+  if (!i18n.enable || i18n.document_mode === "off") {
+    return i18n.default_document_language;
+  }
+  return i18n.document_languages.some((lang) => lang.code === siteLanguage)
+    ? siteLanguage
+    : i18n.default_document_language;
 }
 
 /**

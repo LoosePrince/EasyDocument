@@ -5,6 +5,7 @@ import {
   useLoaderData,
   useLocation,
   useNavigate,
+  useParams,
   useRouteError,
   type LoaderFunctionArgs,
 } from "react-router";
@@ -12,6 +13,7 @@ import { FileText, Pencil, Plus } from "lucide-react";
 import type { Route } from "./+types/docs-page";
 import { loadDocRoute, type BranchLandingData, type DocPageData } from "~/lib/site/page.server";
 import { useSite } from "~/components/providers/config-provider";
+import { useI18n } from "~/lib/i18n/provider";
 import { useEditorContext } from "~/lib/editor/editor-store";
 import { SiteHeader } from "~/components/layout/site-header";
 import { SiteFooter } from "~/components/layout/site-footer";
@@ -35,11 +37,16 @@ import { useGlobalShortcuts } from "~/lib/editor/shortcuts";
 import NotFound from "./not-found";
 
 export async function loader({ params }: LoaderFunctionArgs) {
+  const docsPrefix = params.docsPrefix ?? "";
+  if (!docsPrefix.startsWith("docs-")) {
+    throw new Response("Not Found", { status: 404 });
+  }
   const branch = params.branch ?? "";
   const splat = params["*"] ?? "";
+  const documentLanguage = docsPrefix.slice("docs-".length);
 
   try {
-    const result = await loadDocRoute({ branch, splat });
+    const result = await loadDocRoute({ branch, splat, documentLanguage });
     if (!result) {
       throw new Response("Not Found", { status: 404 });
     }
@@ -132,6 +139,15 @@ function useAliasRedirect(): string | null {
 
 export default function DocsPage() {
   const data = useLoaderData<typeof loader>();
+  const params = useParams();
+  const navigate = useNavigate();
+
+  // 不匹配 /docs-{站点语言} 的动态路径交给 404（避免被 :docsPrefix 路由捕获）
+  useEffect(() => {
+    if (params.docsPrefix?.startsWith("docs-")) return;
+    navigate("/404", { replace: true });
+  }, [navigate, params.docsPrefix]);
+
   if (data.kind === "landing") {
     return <BranchLanding landing={data.landing} />;
   }
@@ -141,6 +157,7 @@ export default function DocsPage() {
 function DocView({ page }: { page: DocPageData }) {
   const data = page;
   const { config } = useSite();
+  const { t } = useI18n();
   const editor = useEditorContext();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -163,9 +180,9 @@ function DocView({ page }: { page: DocPageData }) {
     window.scrollTo({ top: 0 });
   }, [data.docPath, editor.editing]);
 
-  const canEdit = editor.canEdit;
+  const canEdit = editor.canEdit && !data.fallbackLanguage && !data.externalUrl;
   const draft = editor.getDraft(data.docPath);
-  const editingThis = editor.editing && draft?.kind !== "delete";
+  const editingThis = editor.editing && draft?.kind !== "delete" && canEdit;
 
   return (
     <div className="min-h-screen">
@@ -201,16 +218,21 @@ function DocView({ page }: { page: DocPageData }) {
             </button>
           </div>
 
-          <VersionSwitcher current={data.branch} className="mb-3" />
+          <VersionSwitcher current={data.branch} language={data.documentLanguage} className="mb-3" />
 
           <SidebarTree
             tree={data.tree}
             branch={data.branch}
+            language={data.documentLanguage}
             activePath={data.docPath}
             onNavigate={() => setSidebarOpen(false)}
             onOpenDoc={(path) => {
               navigate(
-                docUrlPath({ branch: data.branch, path: path.replace(/\.(md|markdown|html?)$/i, "") }),
+                docUrlPath({
+                  branch: data.branch,
+                  documentLanguage: data.documentLanguage,
+                  path: path.replace(/\.(md|markdown|html?)$/i, ""),
+                }),
               );
               editor.setEditing(true);
             }}
@@ -230,9 +252,16 @@ function DocView({ page }: { page: DocPageData }) {
           <Breadcrumbs
             branch={data.branch}
             branchLabel={data.branchLabel}
+            language={data.documentLanguage}
             crumbs={data.breadcrumbs}
             currentTitle={editingThis ? draft?.title ?? data.title : data.title}
           />
+
+          {data.fallbackLanguage ? (
+            <p className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+              {t("当前语言尚无对应译文，暂时显示默认语言内容。")}
+            </p>
+          ) : null}
 
           {canEdit && !editor.editing ? (
             <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
@@ -242,7 +271,7 @@ function DocView({ page }: { page: DocPageData }) {
                 className="flex items-center gap-1.5 rounded-lg border border-[var(--ed-border)] px-2.5 py-1.5 text-xs text-[var(--ed-text-muted)] transition-colors hover:border-[var(--ed-primary)] hover:text-[var(--ed-primary)]"
               >
                 <Pencil className="size-3.5" />
-                编辑此页
+                {t("编辑此页")}
               </button>
               <button
                 type="button"
@@ -253,7 +282,7 @@ function DocView({ page }: { page: DocPageData }) {
                 className="flex items-center gap-1.5 rounded-lg border border-[var(--ed-border)] px-2.5 py-1.5 text-xs text-[var(--ed-text-muted)] transition-colors hover:border-[var(--ed-primary)] hover:text-[var(--ed-primary)]"
               >
                 <Plus className="size-3.5" />
-                新建 / 管理
+                {t("新建 / 管理")}
               </button>
             </div>
           ) : null}
@@ -262,6 +291,7 @@ function DocView({ page }: { page: DocPageData }) {
             <InlineDocEditor
               branch={data.branch}
               docPath={data.docPath}
+              draftPath={data.sourcePath}
               initialContent={data.source}
               kind={data.kind}
               title={data.title}
@@ -277,13 +307,13 @@ function DocView({ page }: { page: DocPageData }) {
             >
               {draft?.kind === "delete" ? (
                 <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-500">
-                  此文档已标记为「待删除」，提交后将移除。
+                  {t("此文档已标记为「待删除」，提交后将移除。")}
                   <button
                     type="button"
                     onClick={() => editor.removeDraft(draft.path)}
                     className="ml-auto underline"
                   >
-                    撤销删除
+                    {t("撤销删除")}
                   </button>
                 </div>
               ) : null}
@@ -304,12 +334,21 @@ function DocView({ page }: { page: DocPageData }) {
 
               <DocGitInfo git={data.git} editUrl={data.editUrl} />
 
-              <PrevNext branch={data.branch} prev={data.prev} next={data.next} />
+              <PrevNext
+                branch={data.branch}
+                language={data.documentLanguage}
+                prev={data.prev}
+                next={data.next}
+              />
 
               <p className="mt-8 text-xs text-[var(--ed-text-subtle)]">
-                当前版本：
+                {t("当前版本：")}
                 <Link
-                  to={docUrlPath({ branch: data.branch, path: "" })}
+                  to={docUrlPath({
+                    branch: data.branch,
+                    path: "",
+                    documentLanguage: data.documentLanguage,
+                  })}
                   className="text-[var(--ed-primary)] hover:underline"
                 >
                   {data.branchLabel}
@@ -384,6 +423,7 @@ function prepareHtmlDocument(html: string): string {
 /** 版本首页：该版本没有索引页时，列出全部文档 */
 function BranchLanding({ landing }: { landing: BranchLandingData }) {
   const { config } = useSite();
+  const { t } = useI18n();
   const editor = useEditorContext();
 
   return (
@@ -393,14 +433,22 @@ function BranchLanding({ landing }: { landing: BranchLandingData }) {
 
       <div className="mx-auto flex max-w-[1600px] gap-6 px-0 lg:px-4">
         <aside className="sticky top-[var(--ed-header-height)] hidden h-[calc(100vh-var(--ed-header-height))] w-[var(--ed-sidebar-width)] shrink-0 overflow-y-auto py-6 lg:block">
-          <VersionSwitcher current={landing.branch} className="mb-3" />
-          <SidebarTree tree={landing.tree} branch={landing.branch} />
+          <VersionSwitcher
+            current={landing.branch}
+            language={landing.documentLanguage}
+            className="mb-3"
+          />
+          <SidebarTree
+            tree={landing.tree}
+            branch={landing.branch}
+            language={landing.documentLanguage}
+          />
         </aside>
 
         <main className="min-w-0 flex-1 px-5 py-8">
           <h1 className="text-2xl font-semibold">{landing.branchLabel}</h1>
           <p className="mt-1.5 text-sm text-[var(--ed-text-muted)]">
-            共 {landing.docs.length} 篇文档
+            {t("共 {count} 篇文档", { count: landing.docs.length })}
           </p>
 
           {landing.docs.length > 0 ? (
@@ -410,6 +458,7 @@ function BranchLanding({ landing }: { landing: BranchLandingData }) {
                   <Link
                     to={docUrlPath({
                       branch: landing.branch,
+                      documentLanguage: landing.documentLanguage,
                       path: doc.path.replace(/\.(md|markdown|html?)$/i, ""),
                     })}
                     className="flex items-center gap-2 rounded-xl border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)] px-3.5 py-2.5 text-sm transition-colors hover:border-[var(--ed-primary)]"
@@ -422,21 +471,21 @@ function BranchLanding({ landing }: { landing: BranchLandingData }) {
             </ul>
           ) : (
             <div className="mt-6 rounded-xl border border-dashed border-[var(--ed-border)] p-10 text-center">
-              <p className="text-sm text-[var(--ed-text-muted)]">该版本还没有文档。</p>
+              <p className="text-sm text-[var(--ed-text-muted)]">{t("该版本还没有文档。")}</p>
               {editor.canEdit ? (
                 <button
                   type="button"
                   onClick={() => editor.setEditing(true)}
                   className="mt-3 inline-block text-sm text-[var(--ed-primary)] hover:underline"
                 >
-                  在侧栏新建第一篇文档
+                  {t("在侧栏新建第一篇文档")}
                 </button>
               ) : (
                 <Link
                   to={siteHref("/admin", config.site.base_url)}
                   className="mt-3 inline-block text-sm text-[var(--ed-primary)] hover:underline"
                 >
-                  前往编辑台
+                  {t("前往编辑台")}
                 </Link>
               )}
             </div>

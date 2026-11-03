@@ -100,6 +100,30 @@ describe("parsePathConfig", () => {
     const config = parsePathConfig({ title: "版本首页", children: [] }, "main");
     expect(config.rootTitle).toBeUndefined();
   });
+
+  it("translations 按文档语言覆盖显示名与图标", () => {
+    const raw = {
+      title: "首页",
+      translations: { en: { title: "Home" } },
+      children: [
+        {
+          path: "使用指南",
+          title: "使用指南",
+          icon: "book",
+          translations: { en: { title: "User Guide", icon: "book-open" } },
+        },
+      ],
+    };
+
+    const zh = parsePathConfig(raw, undefined, "zh-CN", "zh-CN");
+    expect(zh.rootTitle).toBe("首页");
+    expect(zh.overrides.get("使用指南")?.title).toBe("使用指南");
+
+    const en = parsePathConfig(raw, undefined, "en", "zh-CN");
+    expect(en.rootTitle).toBe("Home");
+    expect(en.overrides.get("使用指南")?.title).toBe("User Guide");
+    expect(en.overrides.get("使用指南")?.icon).toBe("book-open");
+  });
 });
 
 describe("mergePathConfigs", () => {

@@ -16,6 +16,8 @@ import {
   TriangleAlert,
   Undo2,
 } from "lucide-react";
+import { useI18n } from "~/lib/i18n/provider";
+import { PromptDialog } from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
 
 export interface WysiwygEditorProps {
@@ -40,6 +42,9 @@ export function WysiwygEditor({ html, onChange, className }: WysiwygEditorProps)
   const editorRef = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef<string>("");
   const [ready, setReady] = useState(false);
+  const { t } = useI18n();
+  const [linkOpen, setLinkOpen] = useState(false);
+  const linkRange = useRef<Range | null>(null);
 
   // 只在进入编辑器/内容被外部替换时重建 DOM，避免输入过程中光标跳动
   useEffect(() => {
@@ -88,69 +93,75 @@ export function WysiwygEditor({ html, onChange, className }: WysiwygEditorProps)
   return (
     <div className={cn("flex min-h-0 flex-col", className)}>
       <div className="flex flex-wrap items-center gap-1 border-b border-[var(--ed-border)] pb-2">
-        <ToolbarButton label="一级标题" onClick={() => wrapBlock("h1")}>
+        <ToolbarButton label={t("一级标题")} onClick={() => wrapBlock("h1")}>
           <Heading1 className="size-4" />
         </ToolbarButton>
-        <ToolbarButton label="二级标题" onClick={() => wrapBlock("h2")}>
+        <ToolbarButton label={t("二级标题")} onClick={() => wrapBlock("h2")}>
           <Heading2 className="size-4" />
         </ToolbarButton>
-        <ToolbarButton label="三级标题" onClick={() => wrapBlock("h3")}>
+        <ToolbarButton label={t("三级标题")} onClick={() => wrapBlock("h3")}>
           <Heading3 className="size-4" />
         </ToolbarButton>
         <Divider />
-        <ToolbarButton label="加粗" onClick={() => exec("bold")}>
+        <ToolbarButton label={t("加粗")} onClick={() => exec("bold")}>
           <Bold className="size-4" />
         </ToolbarButton>
-        <ToolbarButton label="斜体" onClick={() => exec("italic")}>
+        <ToolbarButton label={t("斜体")} onClick={() => exec("italic")}>
           <Italic className="size-4" />
         </ToolbarButton>
-        <ToolbarButton label="删除线" onClick={() => exec("strikeThrough")}>
+        <ToolbarButton label={t("删除线")} onClick={() => exec("strikeThrough")}>
           <Strikethrough className="size-4" />
         </ToolbarButton>
-        <ToolbarButton label="行内代码" onClick={() => insertHtml("<code>代码</code>")}>
+        <ToolbarButton label={t("行内代码")} onClick={() => insertHtml("<code>代码</code>")}>
           <Code2 className="size-4" />
         </ToolbarButton>
         <Divider />
-        <ToolbarButton label="无序列表" onClick={() => exec("insertUnorderedList")}>
+        <ToolbarButton label={t("无序列表")} onClick={() => exec("insertUnorderedList")}>
           <List className="size-4" />
         </ToolbarButton>
-        <ToolbarButton label="有序列表" onClick={() => exec("insertOrderedList")}>
+        <ToolbarButton label={t("有序列表")} onClick={() => exec("insertOrderedList")}>
           <ListOrdered className="size-4" />
         </ToolbarButton>
-        <ToolbarButton label="引用" onClick={() => wrapBlock("blockquote")}>
+        <ToolbarButton label={t("引用")} onClick={() => wrapBlock("blockquote")}>
           <Quote className="size-4" />
         </ToolbarButton>
         <Divider />
-        <ToolbarButton label="链接" onClick={() => promptLink(exec)}>
+        <ToolbarButton
+          label={t("链接")}
+          onClick={() => {
+            const selection = window.getSelection();
+            linkRange.current =
+              selection && selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+            setLinkOpen(true);
+          }}
+        >
           <Link2 className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          label="提示框"
+          label={t("提示框")}
           onClick={() => insertHtml('<aside class="callout callout-note" data-callout="NOTE"><p>提示内容</p></aside>')}
         >
           <TriangleAlert className="size-4" />
         </ToolbarButton>
-        <ToolbarButton label="表格" onClick={() => insertHtml(buildTable())}>
+        <ToolbarButton label={t("表格")} onClick={() => insertHtml(buildTable())}>
           <Table2 className="size-4" />
         </ToolbarButton>
-        <ToolbarButton label="分隔线" onClick={() => exec("insertHorizontalRule")}>
+        <ToolbarButton label={t("分隔线")} onClick={() => exec("insertHorizontalRule")}>
           <Minus className="size-4" />
         </ToolbarButton>
         <Divider />
-        <ToolbarButton label="撤销" onClick={() => exec("undo")}>
+        <ToolbarButton label={t("撤销")} onClick={() => exec("undo")}>
           <Undo2 className="size-4" />
         </ToolbarButton>
 
-        <span className="ml-auto text-[11px] text-[var(--ed-text-subtle)]">
-          直接修改排版，右侧/下方内容即时同步为 Markdown
-        </span>
+        <span className="ml-auto text-[11px] text-[var(--ed-text-subtle)]">{t("直接修改排版，右侧/下方内容即时同步为 Markdown")}</span>
       </div>
 
       <div
         ref={editorRef}
         role="textbox"
         aria-multiline="true"
-        aria-label="所见即所得编辑区"
+        aria-label={t("所见即所得编辑区")}
         contentEditable
         suppressContentEditableWarning
         spellCheck={false}
@@ -169,14 +180,32 @@ export function WysiwygEditor({ html, onChange, className }: WysiwygEditorProps)
           document.execCommand("insertText", false, text);
         }}
       />
+
+      <PromptDialog
+        open={linkOpen}
+        title={t("插入链接")}
+        label={t("链接地址")}
+        initialValue="https://"
+        placeholder="https://"
+        confirmText={t("确定")}
+        cancelText={t("取消")}
+        onCancel={() => setLinkOpen(false)}
+        onSubmit={(url) => {
+          setLinkOpen(false);
+          const editor = editorRef.current;
+          if (!editor) return;
+          editor.focus();
+          if (linkRange.current) {
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(linkRange.current);
+          }
+          document.execCommand("createLink", false, url);
+          void emit();
+        }}
+      />
     </div>
   );
-}
-
-function promptLink(exec: (command: string, value?: string) => void) {
-  const url = window.prompt("链接地址", "https://");
-  if (!url) return;
-  exec("createLink", url);
 }
 
 function buildTable(): string {

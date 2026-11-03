@@ -135,6 +135,53 @@ export interface AvailableBranch {
   label?: string;
 }
 
+/** 站点界面语言（v2.0.2） */
+export interface SiteLanguageConfig {
+  code: string;
+  label?: string;
+}
+
+/** 文档语言（v2.0.2） */
+export interface LanguageConfig extends SiteLanguageConfig {
+  /** 语言文件夹名（`document_mode` 为 folder / auto 时使用），默认取 code */
+  dir?: string;
+  /** 文件二级后缀（`document_mode` 为 suffix / auto 时使用），默认取 code */
+  suffix?: string;
+}
+
+export type DocumentLanguageMode = "auto" | "folder" | "suffix" | "off";
+
+/** 全站国际化与多语言文档（v2.0.2 新增） */
+export interface I18nConfig {
+  /** 总开关：关闭后不显示语言切换器，也不识别多语言文档 */
+  enable?: boolean;
+  /** 是否翻译界面文案 */
+  ui?: boolean;
+  /** 是否显示语言切换器 */
+  switcher?: boolean;
+  /** 默认站点语言代码（同时也是默认文档语言的后备） */
+  default_language?: string;
+  /** 站点界面语言列表（站点文案） */
+  site_languages?: SiteLanguageConfig[];
+  /** 文档语言列表（可与站点语言不同，支持任意扩展） */
+  document_languages?: LanguageConfig[];
+  /** 默认文档语言代码；缺省取 document_languages 第一项 */
+  default_document_language?: string;
+  /**
+   * 旧字段：v2.0.2 早期版本同时用于站点与文档语言。
+   * 现在作为 document_languages 的兼容别名。
+   */
+  languages?: LanguageConfig[];
+  /**
+   * 多语言文档组织方式：
+   *  - `folder`：版本目录下按语言文件夹区分，如 `main/en/README.md`
+   *  - `suffix`：文件二级后缀区分，如 `README.en.md`
+   *  - `auto`：两者都识别（文件夹优先）
+   *  - `off`：不识别多语言文档（界面仍可翻译）
+   */
+  document_mode?: DocumentLanguageMode;
+}
+
 /** 目录配置（path.json）中的外部文档挂载 */
 export interface ExternalMountConfig {
   /**
@@ -254,11 +301,21 @@ export interface SiteConfigFile {
   navigation?: NavigationConfig;
   home?: HomeConfig;
   document?: DocumentConfig;
+  i18n?: I18nConfig;
   search?: SearchConfig;
   extensions?: ExtensionsConfig;
   footer?: FooterConfig;
   admin?: AdminConfig;
+  /**
+   * 按站点语言覆盖配置（v2.0.2）
+   *
+   * 未列出的字段沿用基础配置；数组（nav_links / features / quick_links 等）
+   * 会整体替换，适合提供完整的英文版导航与首页。
+   */
+  locales?: Record<string, SiteConfigLocale>;
 }
+
+export type SiteConfigLocale = Omit<SiteConfigFile, "locales">;
 
 /** 校验后（默认值已补齐）的配置 */
 export interface ResolvedConfig {
@@ -330,6 +387,18 @@ export interface ResolvedConfig {
     code_block: Required<CodeBlockConfig>;
     path_config: string;
     runtime_fetch: boolean;
+  };
+  i18n: {
+    enable: boolean;
+    ui: boolean;
+    switcher: boolean;
+    default_language: string;
+    site_languages: Array<Required<SiteLanguageConfig>>;
+    /** 文档语言（保留 `languages` 作为兼容别名） */
+    languages: Array<Required<LanguageConfig>>;
+    document_languages: Array<Required<LanguageConfig>>;
+    default_document_language: string;
+    document_mode: DocumentLanguageMode;
   };
   search: {
     enable: boolean;

@@ -29,8 +29,10 @@ import { parsePathConfig } from "~/lib/content/path-config";
 export type DraftKind = "update" | "create" | "delete";
 
 export interface DraftEntry {
-  /** 分支内路径（写入/删除的目标文件） */
+  /** 逻辑路径（侧栏 / 预览使用） */
   path: string;
+  /** 实际写入的文件路径；多语言后缀/文件夹与逻辑路径不同 */
+  sourcePath?: string;
   branch: string;
   kind: DraftKind;
   /** update/create 的正文（Markdown 或配置源码） */
@@ -427,11 +429,12 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
         }
 
         for (const draft of drafts) {
+          const targetPath = draft.sourcePath ?? draft.path;
           if (draft.kind === "delete") {
-            const file = await client.getFile(repo, draft.path, dataBranch);
+            const file = await client.getFile(repo, targetPath, dataBranch);
             if (!file) continue;
             await client.deleteFile(repo, {
-              path: draft.path,
+              path: targetPath,
               branch: dataBranch,
               sha: file.sha,
               message: `${message}\n\n删除 ${draft.path}`,
@@ -441,9 +444,9 @@ export function EditorProvider({ repo, dataBranch, canEdit, children }: EditorPr
           }
 
           // update 需要远端 sha；create 若远端已存在（他人新建）则覆盖
-          const remote = await client.getFile(repo, draft.path, dataBranch);
+          const remote = await client.getFile(repo, targetPath, dataBranch);
           await client.putFile(repo, {
-            path: draft.path,
+            path: targetPath,
             branch: dataBranch,
             content: draft.content ?? "",
             sha: remote?.sha,

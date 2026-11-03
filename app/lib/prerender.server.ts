@@ -22,11 +22,31 @@ export async function enumerateDocPaths(): Promise<string[]> {
   const site = await loadSiteData();
   const paths = new Set<string>();
   const indexPages = site.config.document.index_pages;
+  const documentLanguages = site.config.i18n.document_languages.map((lang) => lang.code);
+
+  for (const language of documentLanguages) {
+    paths.add(`/docs-${language}`);
+  }
 
   for (const branch of site.branches) {
-    // 版本根
-    paths.add(`/docs/${branch.name}`);
+    // 新地址：/docs-{文档语言}/{version}/...
+    for (const language of branch.languages) {
+      const variant = branch.variants.get(language);
+      if (!variant) continue;
+      paths.add(`/docs-${language}/${branch.name}`);
+      for (const doc of collectDocPaths(variant.tree)) {
+        const route = normalizeDocPath(doc.path, indexPages, branch.name);
+        paths.add(
+          `/${[`docs-${language}`, route.branch, route.path].filter(Boolean).join("/")}`.replace(
+            /\/{2,}/g,
+            "/",
+          ),
+        );
+      }
+    }
 
+    // 旧地址：/docs/{version}/...（客户端会跳转到 /docs-{文档语言}/...）
+    paths.add(`/docs/${branch.name}`);
     for (const doc of collectDocPaths(branch.tree)) {
       const route = normalizeDocPath(doc.path, indexPages, branch.name);
       paths.add(
@@ -35,6 +55,7 @@ export async function enumerateDocPaths(): Promise<string[]> {
     }
   }
 
+  paths.add("/docs");
   return [...paths].sort();
 }
 

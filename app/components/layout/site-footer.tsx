@@ -1,6 +1,8 @@
 import { Link } from "react-router";
 import { ExternalLink } from "lucide-react";
 import { useSite } from "~/components/providers/config-provider";
+import { useI18n } from "~/lib/i18n/provider";
+import { withDocumentLanguage } from "~/lib/content/routes";
 
 export function SiteFooter() {
   const { config } = useSite();
@@ -56,6 +58,13 @@ export function SiteFooter() {
 
 function FooterColumn({ column }: { column: { key?: string; title?: string; type?: string } }) {
   const { config, resolveHref } = useSite();
+  const { documentLanguage } = useI18n();
+  const localizedHref = (path: string) =>
+    withDocumentLanguage(
+      resolveHref(path),
+      documentLanguage,
+      config.i18n.default_document_language,
+    );
 
   if (column.type === "nav") {
     return (
@@ -67,7 +76,7 @@ function FooterColumn({ column }: { column: { key?: string; title?: string; type
             .map((link) => (
               <li key={link.text}>
                 <Link
-                  to={resolveHref(String(link.url))}
+                  to={localizedHref(String(link.url))}
                   className="text-[var(--ed-text-muted)] transition-colors hover:text-[var(--ed-primary)]"
                 >
                   {link.text}

@@ -7,6 +7,7 @@ import { stripExtension } from "~/lib/content/types";
 export interface BreadcrumbsProps {
   branch: string;
   branchLabel: string;
+  language?: string;
   crumbs: Array<{ title: string; path: string; linkable?: boolean }>;
   currentTitle: string;
   /** 版本根是否有索引页；false 时版本名不可点 */
@@ -16,11 +17,13 @@ export interface BreadcrumbsProps {
 export function Breadcrumbs({
   branch,
   branchLabel,
+  language,
   crumbs,
   currentTitle,
   branchLinkable = true,
 }: BreadcrumbsProps) {
   const { config, branches } = useSite();
+  const documentLanguage = language;
   if (!config.navigation.breadcrumb) return null;
 
   const showVersion = config.document.branch_support && branches.length > 1;
@@ -38,7 +41,7 @@ export function Breadcrumbs({
       <Separator />
       {branchLinkable ? (
         <Link
-          to={docUrlPath({ branch, path: "" })}
+          to={docUrlPath({ branch, path: "", documentLanguage })}
           className="transition-colors hover:text-[var(--ed-primary)]"
         >
           {showVersion ? branchLabel : config.site.name}
@@ -56,7 +59,11 @@ export function Breadcrumbs({
             <span className="cursor-default text-[var(--ed-text-subtle)]">{crumb.title}</span>
           ) : (
             <Link
-              to={docUrlPath({ branch, path: stripExtension(crumb.path) })}
+              to={docUrlPath({
+                branch,
+                path: stripExtension(crumb.path),
+                documentLanguage,
+              })}
               className="transition-colors hover:text-[var(--ed-primary)]"
             >
               {crumb.title}

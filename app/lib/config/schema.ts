@@ -24,6 +24,18 @@ const sectionSchema = z.object({
   description: z.string().optional(),
 });
 
+const languageSchema = z.object({
+  code: z.string(),
+  label: z.string().optional(),
+  dir: z.string().optional(),
+  suffix: z.string().optional(),
+});
+
+const siteLanguageSchema = z.object({
+  code: z.string(),
+  label: z.string().optional(),
+});
+
 export const siteConfigSchema = z
   .object({
     site: z
@@ -189,6 +201,19 @@ export const siteConfigSchema = z
         runtime_fetch: z.boolean().optional(),
       })
       .optional(),
+    i18n: z
+      .object({
+        enable: z.boolean().optional(),
+        ui: z.boolean().optional(),
+        switcher: z.boolean().optional(),
+        default_language: z.string().optional(),
+        site_languages: z.array(siteLanguageSchema).optional(),
+        document_languages: z.array(languageSchema).optional(),
+        default_document_language: z.string().optional(),
+        languages: z.array(languageSchema).optional(),
+        document_mode: z.enum(["auto", "folder", "suffix", "off"]).optional(),
+      })
+      .optional(),
     search: z
       .object({
         enable: z.boolean().optional(),
@@ -270,6 +295,8 @@ export const siteConfigSchema = z
       })
       .optional(),
     admin: z.object({ enable: z.boolean().optional() }).optional(),
+    // 站点语言覆盖（结构同根配置，避免递归校验，解析时再套用 schema）
+    locales: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough();
 
@@ -386,6 +413,26 @@ const DEFAULT_CONFIG: ResolvedConfig = {
     path_config: "path.json",
     runtime_fetch: true,
   },
+  i18n: {
+    enable: true,
+    ui: true,
+    switcher: true,
+    default_language: "zh-CN",
+    site_languages: [
+      { code: "zh-CN", label: "中文" },
+      { code: "en", label: "English" },
+    ],
+    languages: [
+      { code: "zh-CN", label: "中文", dir: "zh", suffix: "zh" },
+      { code: "en", label: "English", dir: "en", suffix: "en" },
+    ],
+    document_languages: [
+      { code: "zh-CN", label: "中文", dir: "zh", suffix: "zh" },
+      { code: "en", label: "English", dir: "en", suffix: "en" },
+    ],
+    default_document_language: "zh-CN",
+    document_mode: "auto",
+  },
   search: {
     enable: true,
     min_chars: 2,
@@ -482,11 +529,90 @@ export function resolveConfig(raw: unknown): ConfigLoadResult {
   // base_url 归一：保证以 / 开头、不以 / 结尾（根为 "/"）
   merged.site.base_url = normalizeBaseUrl(merged.site.base_url);
 
+  // i18n：站点语言与文档语言分开，保留 languages 作为文档语言兼容别名
+  const rawI18n =
+    (parsed.success ? (parsed.data as SiteConfigFile).i18n : (raw as SiteConfigFile)?.i18n) ?? {};
+  const siteInput = rawI18n.site_languages ?? rawI18n.languages;
+  const documentInput =
+    rawI18n.document_languages ?? rawI18n.languages ?? rawI18n.site_languages;
+
+  merged.i18n.site_languages = normalizeSiteLanguages(
+    siteInput ?? merged.i18n.site_languages,
+    merged.i18n.default_language,
+  );
+  if (!merged.i18n.site_languages.some((lang) => lang.code === merged.i18n.default_language)) {
+    merged.i18n.default_language = merged.i18n.site_languages[0].code;
+  }
+
+  const documentDefault =
+    rawI18n.default_document_language?.trim() ||
+    merged.i18n.default_document_language ||
+    merged.i18n.default_language;
+  merged.i18n.document_languages = normalizeLanguages(
+    documentInput ?? merged.i18n.document_languages,
+    documentDefault,
+  );
+  merged.i18n.languages = merged.i18n.document_languages;
+  if (!merged.i18n.document_languages.some((lang) => lang.code === documentDefault)) {
+    merged.i18n.default_document_language = merged.i18n.document_languages[0].code;
+  } else {
+    merged.i18n.default_document_language = documentDefault;
+  }
+
   return {
     config: merged,
     warnings,
-    raw: (parsed.success ? parsed.data : (raw as SiteConfigFile)) ?? {},
+    raw: (parsed.success ? (parsed.data as SiteConfigFile) : (raw as SiteConfigFile)) ?? {},
   };
+}
+
+/** 站点语言：只保留 code/label */
+function normalizeSiteLanguages(
+  input: Array<{ code: string; label?: string }> | undefined,
+  defaultLanguage: string,
+): Array<{ code: string; label: string }> {
+  const list = Array.isArray(input) ? input : [];
+  const seen = new Set<string>();
+  const out: Array<{ code: string; label: string }> = [];
+
+  for (const lang of list) {
+    const code = String(lang.code ?? "").trim();
+    if (!code || seen.has(code)) continue;
+    seen.add(code);
+    out.push({ code, label: lang.label?.trim() || code });
+  }
+
+  if (!out.some((lang) => lang.code === defaultLanguage)) {
+    out.unshift({ code: defaultLanguage, label: defaultLanguage });
+  }
+  return out;
+}
+
+/** 补齐 dir/suffix/label，去重并保证默认语言可用 */
+function normalizeLanguages(
+  input: Array<{ code: string; label?: string; dir?: string; suffix?: string }> | undefined,
+  defaultLanguage: string,
+): Array<{ code: string; label: string; dir: string; suffix: string }> {
+  const list = Array.isArray(input) ? input : [];
+  const seen = new Set<string>();
+  const out: Array<{ code: string; label: string; dir: string; suffix: string }> = [];
+
+  for (const lang of list) {
+    const code = String(lang.code ?? "").trim();
+    if (!code || seen.has(code)) continue;
+    seen.add(code);
+    out.push({
+      code,
+      label: lang.label?.trim() || code,
+      dir: lang.dir?.trim() || code,
+      suffix: lang.suffix?.trim() || code,
+    });
+  }
+
+  if (!out.some((lang) => lang.code === defaultLanguage)) {
+    out.unshift({ code: defaultLanguage, label: defaultLanguage, dir: defaultLanguage, suffix: defaultLanguage });
+  }
+  return out;
 }
 
 export function normalizeBaseUrl(input: string): string {
@@ -494,6 +620,28 @@ export function normalizeBaseUrl(input: string): string {
   if (!value.startsWith("/")) value = `/${value}`;
   value = value.replace(/\/{2,}/g, "/").replace(/\/+$/, "");
   return value === "" ? "/" : value;
+}
+
+/**
+ * 解析某一站点语言的配置：基础配置 + `locales[language]` 覆盖。
+ *
+ * 数组字段（nav_links / home.features / footer.links 等）会整体替换，
+ * 对象字段做深合并；未提供该语言时返回基础配置。
+ */
+export function resolveConfigForLanguage(raw: unknown, language: string): ConfigLoadResult {
+  const base = resolveConfig(raw);
+  if (!raw || typeof raw !== "object") return base;
+  if (language === base.config.i18n.default_language) return base;
+
+  const configRaw = raw as SiteConfigFile;
+  const localized = configRaw.locales?.[language];
+  if (!localized) return base;
+
+  const { locales: _locales, ...root } = configRaw;
+  void _locales;
+  const merged = deepMerge(root as unknown, localized as unknown) as Record<string, unknown>;
+  const result = resolveConfig(merged);
+  return { ...result, raw: base.raw };
 }
 
 export { DEFAULT_CONFIG };

@@ -36,6 +36,8 @@ export interface MarkdownOptions {
   defaultBranch: string;
   /** 全部已知版本名（用于识别链接里的版本前缀） */
   versions?: string[];
+  /** 文档语言（URL 前缀 /docs-{documentLanguage}/...） */
+  documentLanguage?: string;
   /** 索引页文件名，用于折叠链接 */
   indexPages: string[];
   /** 允许的文档扩展名 */
@@ -213,13 +215,21 @@ export function resolveDocLink(rawPath: string, options: MarkdownOptions): strin
   }
 
   let resolved = segments.join("/");
+  const docsPrefix = (explicit?: string) =>
+    explicit || (options.documentLanguage ? `docs-${options.documentLanguage}` : "docs");
 
-  // 已带 /docs/ 前缀 → 视为最终站点路径
-  if (resolved === "docs" || resolved.startsWith("docs/")) {
-    const rest = resolved.slice("docs".length).replace(/^\/+/, "");
+  // 已带 /docs/ 或 /docs-{文档语言}/ 前缀 → 视为最终站点路径
+  const docsMatch = resolved.match(/^(docs(?:-[^/]+)?)\/(.*)$/);
+  if (docsMatch) {
+    const linkedPrefix = docsMatch[1] === "docs" ? docsPrefix() : docsMatch[1];
+    const rest = docsMatch[2];
     const [version, ...tail] = rest.split("/").filter(Boolean);
     if (version) {
-      const target = ["docs", version, foldIndexAndExtension(tail.join("/"), options.indexPages)]
+      const target = [
+        linkedPrefix,
+        version,
+        foldIndexAndExtension(tail.join("/"), options.indexPages),
+      ]
         .filter(Boolean)
         .join("/");
       return `${base}/${target}`.replace(/\/{2,}/g, "/");
@@ -238,7 +248,11 @@ export function resolveDocLink(rawPath: string, options: MarkdownOptions): strin
   const version = hasVersionPrefix ? firstSegment : options.branch;
   if (hasVersionPrefix) resolved = resolved.split("/").slice(1).join("/");
 
-  const target = ["docs", version, foldIndexAndExtension(resolved, options.indexPages)]
+  const target = [
+    docsPrefix(),
+    version,
+    foldIndexAndExtension(resolved, options.indexPages),
+  ]
     .filter(Boolean)
     .join("/");
   return `${base}/${target}`.replace(/\/{2,}/g, "/");

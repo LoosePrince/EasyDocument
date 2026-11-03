@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeBaseUrl, resolveConfig } from "./schema";
+import { normalizeBaseUrl, resolveConfig, resolveConfigForLanguage } from "./schema";
 import { evaluateConfigModule, stringifyConfigModule } from "./evaluate";
 
 describe("resolveConfig", () => {
@@ -39,6 +39,37 @@ describe("resolveConfig", () => {
   it("未知字段不报错（passthrough）", () => {
     const { warnings } = resolveConfig({ unknown_section: { foo: "bar" } });
     expect(warnings).toEqual([]);
+  });
+
+  it("locales 按站点语言覆盖配置，数组整体替换", () => {
+    const raw = {
+      site: { name: "中文站", title: "中文标题" },
+      navigation: {
+        nav_links: [{ text: "文档", url: "/docs-zh-CN/main" }],
+      },
+      home: { hero: { subtitle: "中文副标题", badge: "中文徽章" } },
+      locales: {
+        en: {
+          site: { title: "English title" },
+          navigation: {
+            nav_links: [{ text: "Docs", url: "/docs-en/main" }],
+          },
+          home: { hero: { subtitle: "English subtitle" } },
+        },
+      },
+    };
+
+    const base = resolveConfig(raw).config;
+    expect(base.site.name).toBe("中文站");
+    expect(base.site.title).toBe("中文标题");
+    expect(base.home.hero.badge).toBe("中文徽章");
+
+    const en = resolveConfigForLanguage(raw, "en").config;
+    expect(en.site.name).toBe("中文站"); // 未覆盖字段沿用基础配置
+    expect(en.site.title).toBe("English title");
+    expect(en.home.hero.subtitle).toBe("English subtitle");
+    expect(en.home.hero.badge).toBe("中文徽章");
+    expect(en.navigation.nav_links).toEqual([{ text: "Docs", url: "/docs-en/main" }]);
   });
 });
 

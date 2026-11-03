@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Search, X } from "lucide-react";
 import { useSite } from "~/components/providers/config-provider";
+import { useI18n } from "~/lib/i18n/provider";
 import { createSearchEngine, toSearchHits, type SearchDoc, type SearchHit } from "~/lib/search";
 import { docUrlPath } from "~/lib/content/routes";
+import { languageLabel } from "~/lib/content/language";
 
 interface SearchDialogProps {
   open: boolean;
@@ -20,6 +22,7 @@ interface SearchDialogProps {
  */
 export function SearchDialog({ open, onClose, branches, defaultBranch }: SearchDialogProps) {
   const { config } = useSite();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [activeBranch, setActiveBranch] = useState(defaultBranch);
@@ -102,7 +105,13 @@ export function SearchDialog({ open, onClose, branches, defaultBranch }: SearchD
       const hit = hits[activeIndex];
       if (hit) {
         onClose();
-        navigate(docUrlPath({ branch: hit.branch, path: stripExtForRoute(hit.path) }));
+        navigate(
+          docUrlPath({
+            branch: hit.branch,
+            documentLanguage: hit.language ?? config.i18n.default_document_language,
+            path: stripExtForRoute(hit.path),
+          }),
+        );
       }
     }
   };
@@ -131,13 +140,13 @@ export function SearchDialog({ open, onClose, branches, defaultBranch }: SearchD
             onKeyDown={handleKeyDown}
             placeholder={config.search.placeholder}
             className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-[var(--ed-text-subtle)]"
-            aria-label="搜索关键词"
+            aria-label={t("搜索关键词")}
           />
           <button
             type="button"
             onClick={onClose}
             className="grid size-7 shrink-0 place-items-center rounded-md text-[var(--ed-text-subtle)] hover:bg-[var(--ed-bg-subtle)]"
-            aria-label="关闭搜索"
+            aria-label={t("关闭搜索")}
           >
             <X className="size-4" />
           </button>
@@ -165,7 +174,7 @@ export function SearchDialog({ open, onClose, branches, defaultBranch }: SearchD
         <div className="max-h-[55vh] overflow-y-auto">
           {query.trim().length > 0 && query.trim().length < min_chars ? (
             <p className="px-4 py-6 text-center text-sm text-[var(--ed-text-muted)]">
-              请输入至少 {min_chars} 个字符
+              {t("请输入至少 {count} 个字符", { count: min_chars })}
             </p>
           ) : null}
 
@@ -179,7 +188,7 @@ export function SearchDialog({ open, onClose, branches, defaultBranch }: SearchD
 
           {!loading && hits.length === 0 && query.trim().length >= min_chars ? (
             <p className="px-4 py-8 text-center text-sm text-[var(--ed-text-muted)]">
-              未找到与「{query}」匹配的文档
+              {t("未找到与「{query}」匹配的文档", { query })}
             </p>
           ) : null}
 
@@ -190,6 +199,7 @@ export function SearchDialog({ open, onClose, branches, defaultBranch }: SearchD
                   <Link
                     to={docUrlPath({
                       branch: hit.branch,
+                      documentLanguage: hit.language ?? config.i18n.default_document_language,
                       path: stripExtForRoute(hit.path),
                     })}
                     onClick={onClose}
@@ -203,6 +213,11 @@ export function SearchDialog({ open, onClose, branches, defaultBranch }: SearchD
                       {branches.length > 1 ? (
                         <span className="rounded bg-[var(--ed-bg-subtle)] px-1.5 py-0.5 text-[10px] text-[var(--ed-text-subtle)]">
                           {hit.branch}
+                        </span>
+                      ) : null}
+                      {hit.language ? (
+                        <span className="rounded bg-[var(--ed-primary-soft)] px-1.5 py-0.5 text-[10px] text-[var(--ed-primary)]">
+                          {languageLabel(hit.language, config.i18n)}
                         </span>
                       ) : null}
                     </p>
@@ -219,8 +234,8 @@ export function SearchDialog({ open, onClose, branches, defaultBranch }: SearchD
         </div>
 
         <div className="flex items-center justify-between border-t border-[var(--ed-border)] px-4 py-2 text-[11px] text-[var(--ed-text-subtle)]">
-          <span>↑↓ 选择 · Enter 打开 · Esc 关闭</span>
-          <span>{hits.length > 0 ? `${hits.length} 条结果` : ""}</span>
+          <span>{t("↑↓ 选择 · Enter 打开 · Esc 关闭")}</span>
+          <span>{hits.length > 0 ? t("{count} 条结果", { count: hits.length }) : ""}</span>
         </div>
       </div>
     </div>

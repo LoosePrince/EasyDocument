@@ -155,6 +155,23 @@ export const ICONS: Record<string, LucideIcon> = {
 /** 默认图标（未知 id 时使用） */
 export const DEFAULT_ICON = Sparkles;
 
+/** 配置值是否是图标链接 / 图片路径（而非图标 id） */
+export function isIconUrl(input?: string): boolean {
+  const value = String(input ?? "").trim();
+  if (!value) return false;
+  return (
+    /^(https?:)?\/\//i.test(value) ||
+    /^data:image\//i.test(value) ||
+    /^(\.{0,2}\/|\/)/.test(value) ||
+    /\.(svg|png|jpe?g|gif|webp|ico)(\?.*)?$/i.test(value)
+  );
+}
+
+/** 图标库可选项（去重后的 id 列表，供选择器展示） */
+export const ICON_CATALOG: Array<{ id: string; label: string }> = Object.keys(ICONS)
+  .filter((id, index, list) => list.indexOf(id) === index)
+  .map((id) => ({ id, label: id }));
+
 /**
  * 把配置中的 icon 值归一为设计 id：
  *  - "fas fa-rocket" → "rocket"

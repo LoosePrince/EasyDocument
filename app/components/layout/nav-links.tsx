@@ -2,11 +2,14 @@ import { Link } from "react-router";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import type { NavLinkConfig } from "~/lib/config/types";
 import { useSite } from "~/components/providers/config-provider";
+import { useI18n } from "~/lib/i18n/provider";
+import { withDocumentLanguage } from "~/lib/content/routes";
 import { cn } from "~/lib/utils";
 import { Icon } from "~/components/ui/icon";
 
 export function NavLinkItem({ link, className }: { link: NavLinkConfig; className?: string }) {
-  const { resolveHref, hasRoute } = useSite();
+  const { resolveHref, hasRoute, config } = useSite();
+  const { documentLanguage } = useI18n();
   const isExternal = link.external || (typeof link.url === "string" && /^https?:/i.test(link.url));
 
   if (Array.isArray(link.url)) {
@@ -33,7 +36,13 @@ export function NavLinkItem({ link, className }: { link: NavLinkConfig; classNam
     );
   }
 
-  const href = isExternal ? link.url : resolveHref(link.url);
+  const href = isExternal
+    ? link.url
+    : withDocumentLanguage(
+        resolveHref(link.url),
+        documentLanguage,
+        config.i18n.default_document_language,
+      );
   // 站内链接指向不存在的页面 → 不可点击
   const missing = !isExternal && !hasRoute(link.url);
 
@@ -69,10 +78,17 @@ export function NavLinkItem({ link, className }: { link: NavLinkConfig; classNam
 }
 
 function NavDropdownItem({ link }: { link: NavLinkConfig }) {
-  const { resolveHref, hasRoute } = useSite();
+  const { resolveHref, hasRoute, config } = useSite();
+  const { documentLanguage } = useI18n();
   const url = Array.isArray(link.url) ? (link.url[0]?.url ?? "/") : link.url;
   const isExternal = link.external || /^https?:/i.test(String(url));
-  const href = isExternal ? String(url) : resolveHref(String(url));
+  const href = isExternal
+    ? String(url)
+    : withDocumentLanguage(
+        resolveHref(String(url)),
+        documentLanguage,
+        config.i18n.default_document_language,
+      );
 
   if (!isExternal && !hasRoute(String(url))) {
     return (

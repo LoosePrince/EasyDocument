@@ -1,7 +1,7 @@
 {
   "name": "easydocument",
   "private": true,
-  "version": "2.0.1",
+  "version": "2.0.2",
   "type": "module",
   "description": "EasyDocument - 基于 React + Vite 的静态文档系统（SSG，内容托管于 git 分支）",
   "license": "MIT",

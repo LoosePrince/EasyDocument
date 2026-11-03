@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import {
   ChevronRight,
@@ -14,15 +14,21 @@ import {
 import type { DocsNode } from "~/lib/content/types";
 import { stripExtension } from "~/lib/content/types";
 import { docUrlPath } from "~/lib/content/routes";
+import { toSourcePath } from "~/lib/content/language";
 import { serializePathConfig, reorderSiblings } from "~/lib/content/path-config";
 import { useSite } from "~/components/providers/config-provider";
+import { useI18n } from "~/lib/i18n/provider";
 import { useEditorContext } from "~/lib/editor/editor-store";
 import { ContextMenu, copyText, menuIcons, useToast, type ContextMenuState } from "~/components/ui/context-menu";
+import { Icon } from "~/components/ui/icon";
+import { IconPicker } from "~/components/ui/icon-picker";
 import { cn } from "~/lib/utils";
 
 export interface SidebarTreeProps {
   tree: DocsNode;
   branch: string;
+  /** 当前文档语言（用于生成带语言段的链接与新建文件路径） */
+  language?: string;
   activePath?: string;
   onNavigate?: () => void;
   onOpenDoc?: (path: string) => void;
@@ -36,12 +42,16 @@ type FolderState = Record<string, boolean>;
  * 浏览态：折叠展开（folder_expand_mode）、高亮、搜索过滤
  * 编辑态：新建文档/文件夹、就地重命名、删除、右键菜单快捷操作
  */
-export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }: SidebarTreeProps) {
+export function SidebarTree({ tree, branch, language, activePath, onNavigate, onOpenDoc }: SidebarTreeProps) {
   const { config } = useSite();
+  const { t } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
   const editor = useEditorContext();
   const toast = useToast();
+  const navRef = useRef<HTMLElement | null>(null);
+  /** 文档语言由页面数据传入；站点语言来自当前 UI */
+  const documentLanguage = language;
 
   const effectiveTree = useMemo(() => editor.previewTree(tree, branch), [editor, tree, branch]);
 
@@ -52,11 +62,22 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [creating, setCreating] = useState<{ parent: string; kind: "doc" | "folder" } | null>(null);
+  const [iconTarget, setIconTarget] = useState<DocsNode | null>(null);
 
   useEffect(() => {
     if (!activePath) return;
     setExpanded((current) => ({ ...current, ...expandAncestors(effectiveTree, activePath) }));
   }, [activePath, effectiveTree]);
+
+  // 非点击跳转（搜索 / 上一篇 / 直链 / 版本切换）后，把当前项滚进可视区域
+  useEffect(() => {
+    if (!activePath) return;
+    const frame = requestAnimationFrame(() => {
+      const element = navRef.current?.querySelector<HTMLElement>('[aria-current="page"]');
+      element?.scrollIntoView({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activePath, effectiveTree, location.pathname]);
 
   const toggle = useCallback((path: string) => {
     setExpanded((current) => ({ ...current, [path]: !current[path] }));
@@ -74,14 +95,18 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
   const pathConfigPath = `${branch}/${config.document.path_config || "path.json"}`;
 
   const readPathConfigDraft = useCallback((): Record<string, unknown> => {
+    const serializeOptions = {
+      localizeLanguage: language,
+      defaultLanguage: config.i18n.default_document_language,
+    };
     const draft = editor.getPathConfig(branch);
-    if (!draft) return serializePathConfig(effectiveTree) as Record<string, unknown>;
+    if (!draft) return serializePathConfig(effectiveTree, serializeOptions) as Record<string, unknown>;
     try {
       return JSON.parse(draft.content) as Record<string, unknown>;
     } catch {
-      return serializePathConfig(effectiveTree) as Record<string, unknown>;
+      return serializePathConfig(effectiveTree, serializeOptions) as Record<string, unknown>;
     }
-  }, [branch, editor, effectiveTree]);
+  }, [branch, editor, effectiveTree, language, config.i18n.default_document_language]);
 
   const writePathConfigDraft = useCallback(
     (next: Record<string, unknown>) => {
@@ -100,10 +125,31 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
     if (!title || title === node.title) return;
 
     const configJson = readPathConfigDraft();
-    const targetPath = node.index?.path ?? node.path;
-    const updated = upsertPathEntry(configJson, targetPath, { title });
+    const targetPath = node.path || node.index?.path || "";
+    const updated = upsertPathEntry(
+      configJson,
+      targetPath,
+      { title },
+      language,
+      config.i18n.default_document_language,
+    );
     writePathConfigDraft(updated);
-    toast.show(`显示名已改为「${title}」（提交后生效，文件名不变）`);
+    toast.show(t("显示名已改为「{title}」（提交后生效，文件名不变）", { title }));
+  };
+
+  /** 设置目录 / 文档图标（图标 id 或链接） */
+  const setNodeIcon = (node: DocsNode, icon: string) => {
+    const configJson = readPathConfigDraft();
+    const targetPath = node.path || node.index?.path || "";
+    const updated = upsertPathEntry(
+      configJson,
+      targetPath,
+      { icon },
+      language,
+      config.i18n.default_document_language,
+    );
+    writePathConfigDraft(updated);
+    toast.show(icon ? t("图标已更新（提交后生效）") : t("图标已清除（提交后生效）"));
   };
 
   /** 拖拽排序：写回 path.json 的 children 顺序 */
@@ -128,9 +174,9 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
         ordered.map((item) => item.path),
       );
       writePathConfigDraft(updated);
-      toast.show("顺序已更新（提交后生效）");
+      toast.show(t("顺序已更新（提交后生效）"));
     },
-    [effectiveTree, readPathConfigDraft, writePathConfigDraft, toast],
+    [effectiveTree, readPathConfigDraft, writePathConfigDraft, toast, t],
   );
 
   const createIn = (parentPath: string, kind: "doc" | "folder", name: string) => {
@@ -144,12 +190,13 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
     const title = clean.replace(/\.(md|html)$/i, "");
 
     if (editor.getDraft(fullPath)) {
-      toast.show("该路径已在待提交列表中");
+      toast.show(t("该路径已在待提交列表中"));
       return;
     }
 
     editor.saveDraft({
       path: fullPath,
+      sourcePath: toSourcePath(fullPath, language ?? config.i18n.default_language, config.i18n),
       branch,
       kind: "create",
       content:
@@ -163,7 +210,7 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
     if (kind === "doc") {
       onOpenDoc?.(fullPath);
     } else {
-      toast.show(`已新建目录「${title}」（含 README.md）`);
+      toast.show(t("已新建目录「{title}」（含 README.md）", { title }));
     }
   };
 
@@ -173,16 +220,17 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
     const draft = editor.getDraft(target);
     if (draft?.kind === "create") {
       editor.removeDraft(target);
-      toast.show("已从待提交列表移除");
+      toast.show(t("已从待提交列表移除"));
       return;
     }
     editor.saveDraft({
       path: target,
+      sourcePath: node.index?.sourcePath ?? node.sourcePath ?? target,
       branch,
       kind: "delete",
       title: node.title,
     });
-    toast.show(`已标记删除「${node.title}」（提交后生效）`);
+    toast.show(t("已标记删除「{title}」（提交后生效）", { title: node.title }));
   };
 
   const openMenu = (
@@ -197,7 +245,7 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
     const isFolder = node.children.length > 0 || Boolean(node.index);
     const absoluteUrl =
       typeof window !== "undefined"
-        ? new URL(docUrlPath({ branch, path: stripExtension(node.index?.path ?? node.path) }), window.location.origin).toString()
+        ? new URL(docUrlPath({ branch, documentLanguage, path: stripExtension(node.index?.path ?? node.path) }), window.location.origin).toString()
         : "";
 
     setMenu({
@@ -207,37 +255,37 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
       items: [
         {
           id: "open",
-          label: isFolder && !node.index ? "展开/折叠" : "打开",
+          label: isFolder && !node.index ? t("展开折叠") : t("打开"),
           icon: menuIcons.open,
           disabled: !target,
           onSelect: () => {
             if (isFolder && !node.index) toggle(node.path);
-            else if (target) navigate(docUrlPath({ branch, path: stripExtension(target) }));
+            else if (target) navigate(docUrlPath({ branch, documentLanguage, path: stripExtension(target) }));
           },
         },
         {
           id: "copy-url",
-          label: "复制链接",
+          label: t("复制链接"),
           icon: menuIcons.copy,
           hidden: !target,
           onSelect: async () => {
             const ok = await copyText(absoluteUrl);
-            toast.show(ok ? "链接已复制" : "复制失败");
+            toast.show(ok ? t("链接已复制") : t("复制失败"));
           },
         },
         {
           id: "copy-md",
-          label: "复制为 Markdown 链接",
+          label: t("复制为 Markdown 链接"),
           icon: menuIcons.markdown,
           hidden: !target,
           onSelect: async () => {
             const ok = await copyText(`[${node.title}](${absoluteUrl})`);
-            toast.show(ok ? "Markdown 链接已复制" : "复制失败");
+            toast.show(ok ? t("Markdown 链接已复制") : t("复制失败"));
           },
         },
         {
           id: "new-doc",
-          label: "在此新建文档",
+          label: t("在此新建文档"),
           icon: menuIcons.newDoc,
           separated: true,
           hidden: !editor.canEdit,
@@ -245,14 +293,14 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
         },
         {
           id: "new-folder",
-          label: "在此新建文件夹",
+          label: t("在此新建文件夹"),
           icon: menuIcons.newFolder,
           hidden: !editor.canEdit || !isFolder,
           onSelect: () => setCreating({ parent: node.path, kind: "folder" }),
         },
         {
           id: "rename",
-          label: isFolder ? "重命名目录" : "重命名",
+          label: isFolder ? t("重命名目录") : t("重命名"),
           icon: menuIcons.rename,
           separated: true,
           disabled: !target,
@@ -260,8 +308,16 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
           onSelect: () => setRenaming(node.path),
         },
         {
+          id: "icon",
+          label: t("设置图标"),
+          icon: <Icon name={node.icon ?? node.index?.icon ?? "sparkles"} className="size-3.5" />,
+          disabled: !target,
+          hidden: !editor.canEdit || options.isRoot,
+          onSelect: () => setIconTarget(node),
+        },
+        {
           id: "delete",
-          label: isFolder ? "删除目录（含 README）" : "删除文档",
+          label: isFolder ? t("删除目录（含 README）") : t("删除文档"),
           icon: menuIcons.delete,
           danger: true,
           disabled: !target,
@@ -284,15 +340,15 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
           <input
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            placeholder="筛选目录…"
-            aria-label="筛选目录"
+            placeholder={t("筛选目录…")}
+            aria-label={t("筛选目录")}
             className="w-full rounded-lg border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)] py-1.5 pl-7 pr-6 text-xs outline-none focus:border-[var(--ed-primary)]"
           />
           {filter ? (
             <button
               type="button"
               onClick={() => setFilter("")}
-              aria-label="清除筛选"
+              aria-label={t("清除筛选")}
               className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--ed-text-subtle)] hover:text-[var(--ed-text)]"
             >
               <X className="size-3" />
@@ -303,8 +359,8 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
         <button
           type="button"
           onClick={expandAll}
-          title="全部展开"
-          aria-label="全部展开"
+          title={t("全部展开")}
+          aria-label={t("全部展开")}
           className="grid size-7 shrink-0 place-items-center rounded-md text-[var(--ed-text-subtle)] hover:bg-[var(--ed-bg-subtle)] hover:text-[var(--ed-text)]"
         >
           <ChevronsUpDown className="size-3.5" />
@@ -312,8 +368,8 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
         <button
           type="button"
           onClick={collapseAll}
-          title="全部折叠"
-          aria-label="全部折叠"
+          title={t("全部折叠")}
+          aria-label={t("全部折叠")}
           className="grid size-7 shrink-0 place-items-center rounded-md text-[var(--ed-text-subtle)] hover:bg-[var(--ed-bg-subtle)] hover:text-[var(--ed-text)]"
         >
           <ChevronsDownUp className="size-3.5" />
@@ -322,8 +378,8 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
           <button
             type="button"
             onClick={() => setCreating({ parent: "", kind: "doc" })}
-            title="新建文档"
-            aria-label="新建文档"
+            title={t("新建文档")}
+            aria-label={t("新建文档")}
             className="grid size-7 shrink-0 place-items-center rounded-md text-[var(--ed-text-subtle)] hover:bg-[var(--ed-bg-subtle)] hover:text-[var(--ed-primary)]"
           >
             <Plus className="size-4" />
@@ -343,14 +399,14 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
         />
       ) : null}
 
-      <nav aria-label="文档导航" className="min-h-0 flex-1 overflow-y-auto text-sm">
+      <nav ref={navRef} aria-label={t("文档导航")} className="min-h-0 flex-1 overflow-y-auto text-sm">
         <ul className="space-y-0.5">
           {displayTree.index && displayTree.path === "" ? (
             <li>
               <TreeLink
-                to={docUrlPath({ branch, path: "" })}
+                to={docUrlPath({ branch, path: "", documentLanguage })}
                 title={displayTree.index.title}
-                active={isActive(location.pathname, branch, displayTree.index.path, config)}
+                active={isActive(location.pathname, branch, displayTree.index.path, config, documentLanguage)}
                 depth={0}
                 onNavigate={onNavigate}
                 onContextMenu={(event) => openMenu(event, displayTree, { isRoot: true })}
@@ -364,6 +420,7 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
               key={node.path}
               node={node}
               branch={branch}
+              language={documentLanguage}
               depth={0}
               expanded={expanded}
               onToggle={toggle}
@@ -381,14 +438,14 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
 
         {displayTree.children.length === 0 && !displayTree.index ? (
           <p className="px-1 py-4 text-xs text-[var(--ed-text-subtle)]">
-            {filter ? "没有匹配的条目" : "此版本还没有文档。"}
+            {filter ? t("没有匹配的条目") : t("此版本还没有文档。")}
             {editor.canEdit && !filter ? (
               <button
                 type="button"
                 onClick={() => setCreating({ parent: "", kind: "doc" })}
                 className="mt-2 block text-[var(--ed-primary)] hover:underline"
               >
-                新建第一篇文档
+                {t("新建第一篇文档")}
               </button>
             ) : null}
           </p>
@@ -396,6 +453,16 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
       </nav>
 
       <ContextMenu state={menu} onClose={() => setMenu(null)} />
+      <IconPicker
+        open={iconTarget !== null}
+        value={iconTarget ? (iconTarget.icon ?? iconTarget.index?.icon ?? "") : ""}
+        title={t("设置图标")}
+        onClose={() => setIconTarget(null)}
+        onSelect={(value) => {
+          if (iconTarget) setNodeIcon(iconTarget, value);
+          setIconTarget(null);
+        }}
+      />
       {toast.node}
     </div>
   );
@@ -404,6 +471,7 @@ export function SidebarTree({ tree, branch, activePath, onNavigate, onOpenDoc }:
 interface TreeItemProps {
   node: DocsNode;
   branch: string;
+  language?: string;
   depth: number;
   expanded: FolderState;
   onToggle: (path: string) => void;
@@ -420,6 +488,7 @@ interface TreeItemProps {
 function TreeItem({
   node,
   branch,
+  language,
   depth,
   expanded,
   onToggle,
@@ -433,6 +502,7 @@ function TreeItem({
   onReorder,
 }: TreeItemProps) {
   const { config } = useSite();
+  const { t } = useI18n();
   const location = useLocation();
   const editor = useEditorContext();
   const isFolder = node.children.length > 0 || Boolean(node.index);
@@ -492,13 +562,19 @@ function TreeItem({
     return (
       <li className={cn("relative", dropClass)} {...dragProps}>
         <TreeLink
-          to={docUrlPath({ branch, path: stripExtension(node.path) })}
+          to={docUrlPath({ branch, documentLanguage: language, path: stripExtension(node.path) })}
           title={node.title}
-          active={isActive(location.pathname, branch, node.path, config)}
+          active={isActive(location.pathname, branch, node.path, config, language)}
           depth={depth}
           onNavigate={onNavigate}
           onContextMenu={(event) => onContextMenu(event, node)}
-          icon={<FileText className="size-3.5 shrink-0 opacity-50" />}
+          icon={
+            node.icon ? (
+              <Icon name={node.icon} className="size-3.5 shrink-0 opacity-80" />
+            ) : (
+              <FileText className="size-3.5 shrink-0 opacity-50" />
+            )
+          }
           draftState={draft?.kind}
         />
       </li>
@@ -506,22 +582,31 @@ function TreeItem({
   }
 
   const folderHref = node.index
-    ? docUrlPath({ branch, path: stripExtension(node.index.path) })
+    ? docUrlPath({ branch, documentLanguage: language, path: stripExtension(node.index.path) })
     : undefined;
 
   return (
     <li className={cn("relative", dropClass)} {...dragProps}>
       <div className="group flex items-center">
-        <button
-          type="button"
-          onClick={() => onToggle(node.path)}
-          className="grid size-6 shrink-0 place-items-center rounded text-[var(--ed-text-subtle)] transition-colors hover:bg-[var(--ed-bg-subtle)] hover:text-[var(--ed-text)]"
-          aria-expanded={open}
-          aria-label={open ? `折叠 ${node.title}` : `展开 ${node.title}`}
-          style={{ marginLeft: `${depth * 0.75}rem` }}
-        >
-          <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
-        </button>
+        {node.children.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => onToggle(node.path)}
+            className="grid size-6 shrink-0 place-items-center rounded text-[var(--ed-text-subtle)] transition-colors hover:bg-[var(--ed-bg-subtle)] hover:text-[var(--ed-text)]"
+            aria-expanded={open}
+            aria-label={open ? `${t("折叠")} ${node.title}` : `${t("展开")} ${node.title}`}
+            style={{ marginLeft: `${depth * 0.75}rem` }}
+          >
+            <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
+          </button>
+        ) : (
+          // 只有 README.md 的目录：没有可展开内容，不显示展开/折叠按钮
+          <span
+            className="size-6 shrink-0"
+            style={{ marginLeft: `${depth * 0.75}rem` }}
+            aria-hidden="true"
+          />
+        )}
 
         {folderHref ? (
           <Link
@@ -531,12 +616,19 @@ function TreeItem({
             onDoubleClick={() => editor.canEdit && onRenameStart(node.path)}
             className={cn(
               "flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 py-1.5 transition-colors",
-              isActive(location.pathname, branch, node.index!.path, config)
+              isActive(location.pathname, branch, node.index!.path, config, language)
                 ? "bg-[var(--ed-primary-soft)] font-medium text-[var(--ed-primary)]"
                 : "text-[var(--ed-text-muted)] hover:bg-[var(--ed-bg-subtle)] hover:text-[var(--ed-text)]",
             )}
+            aria-current={
+              isActive(location.pathname, branch, node.index!.path, config, language)
+                ? "page"
+                : undefined
+            }
           >
-            {open ? (
+            {node.icon ? (
+              <Icon name={node.icon} className="size-3.5 shrink-0 opacity-80" />
+            ) : open ? (
               <FolderOpen className="size-3.5 shrink-0 opacity-60" />
             ) : (
               <Folder className="size-3.5 shrink-0 opacity-60" />
@@ -552,9 +644,11 @@ function TreeItem({
             onContextMenu={(event) => onContextMenu(event, node)}
             onDoubleClick={() => editor.canEdit && onRenameStart(node.path)}
             className="flex min-w-0 flex-1 cursor-default items-center gap-1.5 rounded-md px-1.5 py-1.5 text-left text-[var(--ed-text-subtle)] transition-colors hover:bg-[var(--ed-bg-subtle)]"
-            title="分组目录（无索引页）"
+            title={t("分组目录（无索引页）")}
           >
-            {open ? (
+            {node.icon ? (
+              <Icon name={node.icon} className="size-3.5 shrink-0 opacity-80" />
+            ) : open ? (
               <FolderOpen className="size-3.5 shrink-0 opacity-60" />
             ) : (
               <Folder className="size-3.5 shrink-0 opacity-60" />
@@ -572,6 +666,7 @@ function TreeItem({
               key={child.path}
               node={child}
               branch={branch}
+              language={language}
               depth={depth + 1}
               expanded={expanded}
               onToggle={onToggle}
@@ -632,11 +727,12 @@ function TreeLink({
 }
 
 function DraftBadge({ kind }: { kind?: "update" | "create" | "delete" }) {
+  const { t } = useI18n();
   if (!kind) return null;
   const meta = {
-    create: { text: "新增", className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" },
-    update: { text: "修改", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
-    delete: { text: "删除", className: "bg-red-500/15 text-red-500" },
+    create: { text: t("新增"), className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" },
+    update: { text: t("修改"), className: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
+    delete: { text: t("删除"), className: "bg-red-500/15 text-red-500" },
   }[kind];
 
   return (
@@ -743,7 +839,9 @@ function dirKey(path: string): string {
 function upsertPathEntry(
   configJson: Record<string, unknown>,
   targetPath: string,
-  patch: { title?: string },
+  patch: { title?: string; icon?: string },
+  language?: string,
+  defaultLanguage?: string,
 ): Record<string, unknown> {
   const key = dirKey(targetPath);
   const list = ensureChildren(configJson, key);
@@ -751,10 +849,46 @@ function upsertPathEntry(
     (item) => typeof item.path === "string" && item.path === targetPath,
   ) as Record<string, unknown> | undefined;
 
+  const localize = Boolean(language && defaultLanguage && language !== defaultLanguage);
+  const applyLocalized = (entry: Record<string, unknown>) => {
+    const translations =
+      entry.translations && typeof entry.translations === "object"
+        ? { ...(entry.translations as Record<string, unknown>) }
+        : {};
+    const current =
+      translations[language!] && typeof translations[language!] === "object"
+        ? (translations[language!] as Record<string, unknown>)
+        : {};
+    const next = { ...current };
+    if (patch.title !== undefined) next.title = patch.title;
+    if (patch.icon !== undefined) {
+      if (patch.icon) next.icon = patch.icon;
+      else delete next.icon;
+    }
+    translations[language!] = next;
+    entry.translations = translations;
+  };
+
   if (existing) {
-    if (patch.title !== undefined) existing.title = patch.title;
+    if (localize) {
+      applyLocalized(existing);
+    } else {
+      if (patch.title !== undefined) existing.title = patch.title;
+      if (patch.icon !== undefined) {
+        if (patch.icon) existing.icon = patch.icon;
+        else delete existing.icon;
+      }
+    }
+  } else if (localize) {
+    const entry: Record<string, unknown> = { path: targetPath };
+    applyLocalized(entry);
+    list.push(entry);
   } else {
-    list.push({ path: targetPath, ...(patch.title ? { title: patch.title } : {}) });
+    list.push({
+      path: targetPath,
+      ...(patch.title ? { title: patch.title } : {}),
+      ...(patch.icon ? { icon: patch.icon } : {}),
+    });
   }
 
   return configJson;
@@ -930,9 +1064,11 @@ function isActive(
   branch: string,
   docPath: string,
   config: { document: { index_pages: string[] }; site: { base_url: string } },
+  documentLanguage?: string,
 ): boolean {
   const route = docUrlPath({
     branch,
+    documentLanguage,
     path: stripExtension(docPath).replace(
       new RegExp(
         `/(?:${config.document.index_pages.map((name) => stripExtension(name)).join("|")})$`,
@@ -942,5 +1078,16 @@ function isActive(
     ),
   });
   const base = config.site.base_url === "/" ? "" : config.site.base_url;
-  return pathname === `${base}${route}` || pathname === `${base}${route}/`;
+  const target = `${base}${route}`;
+  // 浏览器可能把 CJK / 空格编码进 location.pathname，比较前统一解码
+  const decode = (value: string) => {
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  };
+  const current = decode(pathname).replace(/\/+$/, "");
+  const expected = decode(target).replace(/\/+$/, "");
+  return current === expected;
 }

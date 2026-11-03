@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const DOC = "/docs/main/快速入门/";
+const DOC = "/docs-zh-CN/main/快速入门/";
 
 test.describe("文档站冒烟", () => {
   test("首页可渲染并含 Hero 标题", async ({ page }) => {
@@ -27,7 +27,7 @@ test.describe("文档站冒烟", () => {
   });
 
   test("Markdown 增强语法渲染（提示框 / 表格 / 代码高亮）", async ({ page }) => {
-    await page.goto("/docs/main/参考/Markdown语法/");
+    await page.goto("/docs-zh-CN/main/参考/Markdown语法/");
     await expect(page.locator(".callout").first()).toBeVisible();
     await expect(page.locator(".doc-table").first()).toBeVisible();
     await expect(page.locator(".code-wrapper .shiki").first()).toBeVisible();
@@ -71,18 +71,18 @@ test.describe("文档站冒烟", () => {
   });
 
   test("版本首页列出文档", async ({ page }) => {
-    await page.goto("/docs/main");
+    await page.goto("/docs-zh-CN/main");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("未知路径返回 404 页面", async ({ page }) => {
-    const response = await page.goto("/docs/main/不存在的文档");
+    const response = await page.goto("/docs-zh-CN/main/不存在的文档");
     expect(response?.status()).toBe(404);
     await expect(page.getByText("页面不存在")).toBeVisible();
   });
 
   test("直接访问深路径刷新仍可用（无 hash 路由）", async ({ page }) => {
-    const response = await page.goto("/docs/main/使用指南/目录结构/");
+    const response = await page.goto("/docs-zh-CN/main/使用指南/目录结构/");
     expect(response?.status()).toBe(200);
     await expect(page.getByRole("heading", { name: "目录与文件规则", level: 1 })).toBeVisible();
     expect(page.url()).not.toContain("#");

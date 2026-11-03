@@ -12,13 +12,18 @@ import {
 } from "lucide-react";
 import type { Route } from "./+types/home";
 import { useSite } from "~/components/providers/config-provider";
+import { useI18n } from "~/lib/i18n/provider";
+import { isIconUrl } from "~/lib/icons";
 import { SiteHeader } from "~/components/layout/site-header";
 import { SiteFooter } from "~/components/layout/site-footer";
 import { Icon } from "~/components/ui/icon";
 import { PreviewPane } from "~/components/editor/preview-pane";
 import { SearchDialog } from "~/components/search/search-dialog";
 import { loadHomeContent } from "~/lib/site/home.server";
-import { docUrlPath } from "~/lib/content/routes";
+import {
+  docUrlPath,
+  withDocumentLanguage,
+} from "~/lib/content/routes";
 import { stripExtension } from "~/lib/content/types";
 import { staggerStyle } from "~/lib/utils";
 
@@ -40,12 +45,23 @@ export function meta({ data }: Route.MetaArgs) {
 export default function HomePage() {
   const data = useLoaderData<typeof loader>();
   const { config, resolveHref } = useSite();
+  const { t, documentLanguage } = useI18n();
+  const hrefFor = (path: string) =>
+    withDocumentLanguage(
+      resolveHref(path),
+      documentLanguage,
+      config.i18n.default_document_language,
+    );
   const { home } = config;
   const [searchOpen, setSearchOpen] = useState(false);
 
   const sections = home.sections;
   const showSearch = config.search.enable && Boolean(home.hero.search_placeholder);
-  const docsHref = docUrlPath({ branch: data.defaultBranch, path: "" });
+  const docsHref = docUrlPath({
+    branch: data.defaultBranch,
+    path: "",
+    documentLanguage,
+  });
 
   return (
     <div className="min-h-screen">
@@ -65,7 +81,11 @@ export default function HomePage() {
             ) : null}
 
             {home.hero.logo ? (
-              <img src={home.hero.logo} alt="" className="mb-6 size-16" width={64} height={64} />
+              isIconUrl(home.hero.logo) ? (
+                <img src={home.hero.logo} alt="" className="mb-6 size-16" width={64} height={64} />
+              ) : (
+                <Icon name={home.hero.logo} className="mb-6 size-16" />
+              )
             ) : null}
 
             <h1 className="text-4xl font-semibold tracking-tight sm:text-[3.25rem] sm:leading-[1.1]">
@@ -102,7 +122,7 @@ export default function HomePage() {
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               {home.hero.button_text ? (
                 <Link
-                  to={resolveHref(home.hero.button_link || docsHref)}
+                  to={hrefFor(home.hero.button_link || docsHref)}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--ed-primary)] px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-[var(--ed-primary)]/20 transition-transform hover:-translate-y-0.5"
                 >
                   {home.hero.button_text}
@@ -112,7 +132,7 @@ export default function HomePage() {
 
               {home.hero.secondary_text ? (
                 <Link
-                  to={resolveHref(home.hero.secondary_link || docsHref)}
+                  to={hrefFor(home.hero.secondary_link || docsHref)}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--ed-border)] px-5 py-2.5 text-sm font-medium transition-colors hover:border-[var(--ed-primary)] hover:text-[var(--ed-primary)]"
                 >
                   {home.hero.secondary_text}
@@ -158,7 +178,11 @@ export default function HomePage() {
                 {data.branches.map((branch) => (
                   <Link
                     key={branch.name}
-                    to={docUrlPath({ branch: branch.name, path: "" })}
+                    to={docUrlPath({
+                      branch: branch.name,
+                      path: "",
+                      documentLanguage,
+                    })}
                     className="group flex items-center gap-3 rounded-xl border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)] px-4 py-3 transition-colors hover:border-[var(--ed-primary)]"
                   >
                     <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[var(--ed-primary-soft)] text-[var(--ed-primary)]">
@@ -169,12 +193,12 @@ export default function HomePage() {
                         {branch.label}
                         {branch.name === data.defaultBranch ? (
                           <span className="rounded bg-[var(--ed-primary-soft)] px-1.5 py-0.5 text-[10px] font-normal text-[var(--ed-primary)]">
-                            默认
+                            {t("默认")}
                           </span>
                         ) : null}
                       </span>
                       <span className="mt-0.5 block text-xs text-[var(--ed-text-muted)]">
-                        {branch.docCount} 篇文档
+                        {t("{count} 篇文档", { count: branch.docCount })}
                       </span>
                     </span>
                     <ChevronRight className="size-4 shrink-0 text-[var(--ed-text-subtle)] transition-transform group-hover:translate-x-0.5" />
@@ -188,7 +212,11 @@ export default function HomePage() {
                     {data.featuredDocs.map((doc) => (
                       <li key={`${doc.branch}/${doc.path}`}>
                         <Link
-                          to={docUrlPath({ branch: doc.branch, path: stripExtension(doc.path) })}
+                          to={docUrlPath({
+                            branch: doc.branch,
+                            path: stripExtension(doc.path),
+                            documentLanguage,
+                          })}
                           className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--ed-text-muted)] transition-colors hover:bg-[var(--ed-bg-subtle)] hover:text-[var(--ed-text)]"
                         >
                           <FileText className="size-3.5 shrink-0 opacity-60" />
@@ -199,7 +227,7 @@ export default function HomePage() {
                   </ul>
                 ) : (
                   <p className="px-3 py-8 text-center text-sm text-[var(--ed-text-subtle)]">
-                    文档正在编写中。
+                    {t("文档正在编写中。")}
                   </p>
                 )}
               </div>
@@ -266,6 +294,7 @@ export default function HomePage() {
                 branch={data.defaultBranch}
                 defaultBranch={data.defaultBranch}
                 versions={data.branches.map((branch) => branch.name)}
+                documentLanguage={documentLanguage}
                 indexPages={config.document.index_pages}
                 supportedExtensions={config.document.supported_extensions}
                 baseUrl={config.site.base_url}
@@ -317,7 +346,7 @@ export default function HomePage() {
               {home.get_started.button_text ? (
                 <div className="mt-6 pl-6">
                   <Link
-                    to={resolveHref(home.get_started.button_link || docsHref)}
+                    to={hrefFor(home.get_started.button_link || docsHref)}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--ed-primary)] px-4 py-2 text-sm font-medium text-[var(--ed-primary)] transition-colors hover:bg-[var(--ed-primary-soft)]"
                   >
                     {home.get_started.button_text}
@@ -336,7 +365,7 @@ export default function HomePage() {
               {home.quick_links.map((link) => (
                 <Link
                   key={link.title}
-                  to={resolveHref(link.url)}
+                  to={hrefFor(link.url)}
                   className="group rounded-xl border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)] p-4 transition-colors hover:border-[var(--ed-primary)]"
                 >
                   <Icon name={link.icon} className="size-5 text-[var(--ed-primary)]" />

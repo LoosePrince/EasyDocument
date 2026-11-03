@@ -162,14 +162,16 @@ function buildNodeFromPathJson(
       path?: unknown;
       index?: unknown;
       children?: unknown;
+      icon?: unknown;
     };
 
     const rawPath = typeof record.path === "string" ? normalize(record.path) : "";
     const childList = Array.isArray(record.children) ? record.children : [];
     const indexRecord =
       record.index && typeof record.index === "object"
-        ? (record.index as { title?: unknown; path?: unknown })
+        ? (record.index as { title?: unknown; path?: unknown; icon?: unknown })
         : null;
+    const iconOf = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : undefined);
 
     const directoryLike = childList.length > 0 || Boolean(indexRecord);
     if (directoryLike && rawPath && depth > 0) {
@@ -193,6 +195,7 @@ function buildNodeFromPathJson(
             children: [],
             externalUrl: options.resolveUrl(originalIndex),
             externalRepo: repoUrl,
+            icon: iconOf(indexRecord.icon),
           });
         }
       }
@@ -224,6 +227,7 @@ function buildNodeFromPathJson(
           children: [],
           externalUrl: options.resolveUrl(childPath),
           externalRepo: repoUrl,
+          icon: iconOf((child as { icon?: unknown }).icon),
         });
       }
 
@@ -239,8 +243,9 @@ function buildNodeFromPathJson(
               : titleFromPath(nodePath),
           path: nodePath,
           children: rest,
+          icon: iconOf(record.icon),
           ...(indexChild
-            ? { index: { title: indexChild.title, path: indexChild.path } }
+            ? { index: { title: indexChild.title, path: indexChild.path, icon: indexChild.icon } }
             : {}),
         },
       ];
@@ -263,6 +268,7 @@ function buildNodeFromPathJson(
             : titleFromPath(virtual),
         path: virtual,
         children: [],
+        icon: iconOf(record.icon),
         externalUrl: options.resolveUrl(rawPath),
       },
     ];

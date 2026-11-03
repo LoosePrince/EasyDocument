@@ -30,6 +30,12 @@ export interface DocIndexNode {
   title: string;
   path: string;
   git?: GitInfo;
+  /** 图标 id 或图标链接（path.json 配置，v2.0.2） */
+  icon?: string;
+  /** 实际文件路径（多语言后缀/文件夹与逻辑路径不同） */
+  sourcePath?: string;
+  /** 所属文档语言 */
+  language?: string;
 }
 
 /** 外部文档挂载声明（来自 path.json） */
@@ -53,6 +59,14 @@ export interface DocsNode {
   externalUrl?: string;
   /** 外部文档所属仓库（用于显示来源信息） */
   externalRepo?: string;
+  /** 图标 id 或图标链接（path.json 配置，v2.0.2） */
+  icon?: string;
+  /** 实际文件路径（多语言后缀/文件夹与逻辑路径不同） */
+  sourcePath?: string;
+  /** 所属文档语言 */
+  language?: string;
+  /** path.json 的多语言覆盖（原样保留，写回时使用） */
+  translations?: Record<string, unknown>;
 }
 
 export type DocKind = "markdown" | "html";
@@ -67,6 +81,8 @@ export interface DocEntry {
   git?: GitInfo;
   /** 外部文档原始地址 */
   externalUrl?: string;
+  /** 文档语言（v2.0.2） */
+  language?: string;
 }
 
 export function isIndexFileName(fileName: string, indexPages: string[]): boolean {

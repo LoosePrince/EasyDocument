@@ -1,10 +1,12 @@
 import { Clock } from "lucide-react";
 import { useSite } from "~/components/providers/config-provider";
+import { useI18n } from "~/lib/i18n/provider";
 import type { GitInfo } from "~/lib/content/types";
 
 /** 文档最后编辑时间与贡献者（构建期注入的 git 信息，缺省则隐藏） */
 export function DocGitInfo({ git, editUrl }: { git?: GitInfo; editUrl?: string }) {
   const { config } = useSite();
+  const { t, language } = useI18n();
   if (!git) return null;
 
   const { git: gitConfig, github } = config.extensions;
@@ -19,9 +21,9 @@ export function DocGitInfo({ git, editUrl }: { git?: GitInfo; editUrl?: string }
       {showModified && git.last_modified ? (
         <span className="flex items-center gap-1.5">
           <Clock className="size-3.5" />
-          <span>最后编辑于</span>
+          <span>{t("最后编辑于")}</span>
           <time dateTime={new Date(git.last_modified.timestamp).toISOString()}>
-            {new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium" }).format(
+            {new Intl.DateTimeFormat(language, { dateStyle: "medium" }).format(
               new Date(git.last_modified.timestamp),
             )}
           </time>
@@ -31,7 +33,7 @@ export function DocGitInfo({ git, editUrl }: { git?: GitInfo; editUrl?: string }
 
       {showContributors && git.contributors ? (
         <span className="flex items-center gap-2">
-          <span>贡献者</span>
+          <span>{t("贡献者")}</span>
           <span className="flex -space-x-1.5">
             {git.contributors.slice(0, 8).map((contributor) =>
               github.show_avatar && contributor.github_avatar ? (
@@ -64,7 +66,7 @@ export function DocGitInfo({ git, editUrl }: { git?: GitInfo; editUrl?: string }
           rel="noopener noreferrer"
           className="ml-auto text-[var(--ed-primary)] hover:underline"
         >
-          在 GitHub 上编辑
+          {t("在 GitHub 上编辑")}
         </a>
       ) : null}
     </div>

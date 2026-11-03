@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-const DOC = "/docs/main/快速入门/";
+const DOC = "/docs-zh-CN/main/快速入门/";
 
 test.describe("v2.0.1 能力", () => {
   test("侧栏使用 path.json 的显示名与顺序", async ({ page }) => {
-    await page.goto("/docs/main");
+    await page.goto("/docs-zh-CN/main");
     const titles = await page.evaluate(() =>
       [...document.querySelectorAll("aside nav > ul > li")]
         .map((item) => item.textContent?.trim() ?? "")
@@ -22,13 +22,13 @@ test.describe("v2.0.1 能力", () => {
     expect(response?.status()).toBe(404);
     await expect
       .poll(() => decodeURIComponent(page.url()))
-      .toMatch(/\/docs\/main\/使用指南\/目录结构$/);
+      .toMatch(/\/docs-zh-CN\/main\/使用指南\/目录结构$/);
     await expect(page.getByRole("heading", { name: "目录与文件规则", level: 1 })).toBeVisible();
   });
 
   test("旧版 hash 根链接回退到版本首页", async ({ page }) => {
     await page.goto("/main/#使用指南/");
-    await expect.poll(() => decodeURIComponent(page.url())).toMatch(/\/docs\/main\/使用指南$/);
+    await expect.poll(() => decodeURIComponent(page.url())).toMatch(/\/docs-zh-CN\/main\/使用指南$/);
   });
 
   test("404.html 复制自 index.html，带 SPA 回退脚本", async ({ request }) => {
@@ -40,14 +40,14 @@ test.describe("v2.0.1 能力", () => {
   });
 
   test("未预渲染的深链仍能由客户端渲染（SPA 回退）", async ({ page }) => {
-    const response = await page.goto("/docs/main/参考/README");
-    await expect.poll(() => decodeURIComponent(page.url())).toMatch(/\/docs\/main\/参考$/);
+    const response = await page.goto("/docs-zh-CN/main/参考/README");
+    await expect.poll(() => decodeURIComponent(page.url())).toMatch(/\/docs-zh-CN\/main\/参考$/);
     expect(response?.status()).toBe(404);
     await expect(page.getByRole("heading", { name: "参考", level: 1 })).toBeVisible();
   });
 
   test("未知文档返回站点 404 页而不是崩溃", async ({ page }) => {
-    const response = await page.goto("/docs/main/不存在的文档");
+    const response = await page.goto("/docs-zh-CN/main/不存在的文档");
     expect(response?.status()).toBe(404);
     await expect(page.getByRole("heading", { name: "页面不存在" })).toBeVisible();
     await expect(page.getByRole("link", { name: "浏览文档" })).toBeVisible();
@@ -90,7 +90,7 @@ test.describe("v2.0.1 能力", () => {
   });
 
   test("HTML 文档脚本不再被拦截", async ({ page }) => {
-    await page.goto("/docs/main/使用指南");
+    await page.goto("/docs-zh-CN/main/使用指南");
     // 仅断言页面正常渲染；脚本执行能力由 iframe sandbox 配置保证
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });

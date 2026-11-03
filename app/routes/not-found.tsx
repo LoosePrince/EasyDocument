@@ -20,6 +20,7 @@ export default function NotFound() {
   const data = useRouteLoaderData("root") as RootLoaderData | undefined;
   const config = data?.config;
   const baseUrl = config?.site.base_url ?? "/";
+  const docsPath = `/docs-${config?.i18n.default_document_language ?? "zh-CN"}`;
 
   return (
     <div className="min-h-screen">
@@ -38,7 +39,7 @@ export default function NotFound() {
             返回首页
           </Link>
           <Link
-            to={siteHref("/docs", baseUrl)}
+            to={siteHref(docsPath, baseUrl)}
             className="rounded-lg border border-[var(--ed-border)] px-4 py-2 text-sm font-medium"
           >
             浏览文档

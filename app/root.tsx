@@ -15,7 +15,9 @@ import { loadSiteData } from "~/lib/site/load.server";
 import { applyTheme, buildThemeInitScript, resolveTheme } from "~/lib/theme";
 import { hexToRgbTriplet } from "~/lib/utils";
 import { ConfigProvider } from "~/components/providers/config-provider";
+import { SiteLocaleProvider } from "~/components/providers/site-locale-provider";
 import { ThemeProvider } from "~/components/providers/theme-provider";
+import { I18nProvider } from "~/lib/i18n/provider";
 import { EditorProvider } from "~/lib/editor/editor-store";
 import { DraftIndicator } from "~/components/editor/edit-toolbar";
 import stylesheet from "~/styles/app.css?url";
@@ -35,6 +37,7 @@ export async function loader() {
   const site = await loadSiteData();
   return {
     config: site.config,
+    configs: site.configs,
     configWarnings: site.configWarnings,
     defaultBranch: site.defaultBranch,
     branches: site.branches.map((branch) => ({
@@ -120,19 +123,26 @@ export default function App() {
   ]);
 
   return (
-    <ConfigProvider value={data}>
-      <ThemeProvider defaultMode={data.config.appearance.default_dark_mode}>
-        <EditorProvider
-          repo={{ owner: data.pointer.owner, repo: data.pointer.repo }}
-          dataBranch={data.pointer.branch}
-          canEdit={data.config.admin.enable}
-        >
-          <Outlet />
-          {/* 未进入编辑模式时，若有本地草稿，用悬浮按钮提示 */}
-          <DraftIndicator />
-        </EditorProvider>
-      </ThemeProvider>
-    </ConfigProvider>
+    <SiteLocaleProvider
+      siteLanguages={data.config.i18n.site_languages}
+      defaultLanguage={data.config.i18n.default_language}
+    >
+      <ConfigProvider value={data}>
+        <I18nProvider>
+          <ThemeProvider defaultMode={data.config.appearance.default_dark_mode}>
+            <EditorProvider
+              repo={{ owner: data.pointer.owner, repo: data.pointer.repo }}
+              dataBranch={data.pointer.branch}
+              canEdit={data.config.admin.enable}
+            >
+              <Outlet />
+              {/* 未进入编辑模式时，若有本地草稿，用悬浮按钮提示 */}
+              <DraftIndicator />
+            </EditorProvider>
+          </ThemeProvider>
+        </I18nProvider>
+      </ConfigProvider>
+    </SiteLocaleProvider>
   );
 }
 

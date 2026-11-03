@@ -17,6 +17,7 @@ export interface PreviewRenderInput {
   branch: string;
   defaultBranch: string;
   versions: string[];
+  documentLanguage?: string;
   indexPages: string[];
   supportedExtensions: string[];
   baseUrl: string;
@@ -63,6 +64,7 @@ export async function renderPreview(input: PreviewRenderInput): Promise<PreviewR
     branch: input.branch,
     defaultBranch: input.defaultBranch,
     versions: input.versions,
+    documentLanguage: input.documentLanguage,
     indexPages: input.indexPages,
     supportedExtensions: input.supportedExtensions,
     baseUrl: input.baseUrl,

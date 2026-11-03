@@ -17,6 +17,7 @@ import {
 import { MarkdownTextarea } from "./markdown-textarea";
 import { PreviewPane } from "./preview-pane";
 import { useSite } from "~/components/providers/config-provider";
+import { useI18n } from "~/lib/i18n/provider";
 import { warmPreviewRenderer } from "~/lib/markdown/preview";
 import { cn } from "~/lib/utils";
 
@@ -74,6 +75,7 @@ export function MarkdownWorkspace({
   onSave,
 }: MarkdownWorkspaceProps) {
   const { config, defaultBranch, branches } = useSite();
+  const { documentLanguage } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const [syncScroll, setSyncScroll] = useState(true);
 
@@ -123,6 +125,7 @@ export function MarkdownWorkspace({
       branch,
       defaultBranch,
       versions: branches.map((b) => b.name),
+      documentLanguage,
       indexPages: config.document.index_pages,
       supportedExtensions: config.document.supported_extensions,
       baseUrl: config.site.base_url,
@@ -141,7 +144,7 @@ export function MarkdownWorkspace({
       tocNumbering: config.document.toc_numbering,
       tocIgnoreH1: config.document.toc_ignore_h1,
     }),
-    [value, docPath, branch, config, defaultBranch, branches],
+    [value, docPath, branch, config, defaultBranch, branches, documentLanguage],
   );
 
   return (

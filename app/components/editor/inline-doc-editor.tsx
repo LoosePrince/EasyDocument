@@ -14,13 +14,16 @@ import { MarkdownTextarea } from "./markdown-textarea";
 import { WysiwygEditor } from "./wysiwyg-editor";
 import { useEditorContext } from "~/lib/editor/editor-store";
 import { useSite } from "~/components/providers/config-provider";
+import { useI18n } from "~/lib/i18n/provider";
 import { renderPreview } from "~/lib/markdown/preview";
 import { cn } from "~/lib/utils";
 
 export interface InlineDocEditorProps {
   branch: string;
-  /** 分支内真实路径，如 "使用指南/README.md" */
+  /** 逻辑路径（URL / 侧栏使用），如 "使用指南/README.md" */
   docPath: string;
+  /** 实际写入的文件路径（多语言后缀/文件夹），缺省时等于 docPath */
+  draftPath?: string;
   /** 初始正文（构建期读取的原文） */
   initialContent: string;
   kind: "markdown" | "html";
@@ -39,13 +42,16 @@ export interface InlineDocEditorProps {
 export function InlineDocEditor({
   branch,
   docPath,
+  draftPath,
   initialContent,
   kind,
   title,
   onExit,
 }: InlineDocEditorProps) {
+  const storagePath = draftPath ?? docPath;
   const { saveDraft, getDraft, removeDraft, drafts } = useEditorContext();
   const { config, defaultBranch, branches } = useSite();
+  const { t, language, documentLanguage } = useI18n();
 
   const saved = getDraft(docPath);
   const [content, setContent] = useState(saved?.content ?? initialContent);
@@ -68,6 +74,7 @@ export function InlineDocEditor({
         branch,
         defaultBranch,
         versions: branches.map((item) => item.name),
+        documentLanguage,
         indexPages: config.document.index_pages,
         supportedExtensions: config.document.supported_extensions,
         baseUrl: config.site.base_url,
@@ -101,15 +108,15 @@ export function InlineDocEditor({
     () =>
       kind === "markdown"
         ? ([
-            { id: "wysiwyg", label: "所见即所得", icon: <PenLine className="size-3.5" /> },
-            { id: "split", label: "分栏", icon: <Columns2 className="size-3.5" /> },
-            { id: "rich", label: "预览", icon: <Eye className="size-3.5" /> },
+            { id: "wysiwyg", label: t("所见即所得"), icon: <PenLine className="size-3.5" /> },
+            { id: "split", label: t("分栏"), icon: <Columns2 className="size-3.5" /> },
+            { id: "rich", label: t("预览"), icon: <Eye className="size-3.5" /> },
           ] as const)
         : ([
-            { id: "preview", label: "预览", icon: <Eye className="size-3.5" /> },
-            { id: "split", label: "分栏", icon: <Columns2 className="size-3.5" /> },
+            { id: "preview", label: t("预览"), icon: <Eye className="size-3.5" /> },
+            { id: "split", label: t("分栏"), icon: <Columns2 className="size-3.5" /> },
           ] as const),
-    [kind],
+    [kind, t],
   );
 
   /** 与「已保存草稿」或「线上原文」不同即为未保存 */
@@ -125,6 +132,7 @@ export function InlineDocEditor({
     }
     saveDraft({
       path: docPath,
+      sourcePath: storagePath,
       branch,
       kind: saved?.kind === "create" ? "create" : "update",
       content,
@@ -132,7 +140,7 @@ export function InlineDocEditor({
       format: kind === "markdown" ? "md" : "html",
     });
     setJustSaved(true);
-  }, [content, docTitle, docPath, branch, kind, initialRef, title, saved, saveDraft, removeDraft]);
+  }, [content, docTitle, docPath, storagePath, branch, kind, initialRef, title, saved, saveDraft, removeDraft]);
 
   useEffect(() => {
     if (!justSaved) return;
@@ -146,13 +154,13 @@ export function InlineDocEditor({
       <div className="sticky top-[var(--ed-header-height)] z-20 -mx-1 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--ed-border)] bg-[var(--ed-bg-elevated)]/95 px-3 py-2 backdrop-blur">
         <span className="flex items-center gap-1.5 rounded-md bg-[var(--ed-primary-soft)] px-2 py-1 text-[11px] font-medium text-[var(--ed-primary)]">
           <FileCode2 className="size-3.5" />
-          编辑中
+          {t("编辑中")}
         </span>
 
         <input
           value={docTitle}
           onChange={(event) => setDocTitle(event.target.value)}
-          aria-label="文档标题"
+          aria-label={t("文档标题")}
           className="min-w-32 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium outline-none hover:border-[var(--ed-border)] focus:border-[var(--ed-primary)]"
         />
 
@@ -185,7 +193,7 @@ export function InlineDocEditor({
           title="撤销全部未提交修改"
         >
           <Undo2 className="size-3.5" />
-          还原
+          {t("还原")}
         </button>
 
         <button
@@ -194,7 +202,7 @@ export function InlineDocEditor({
           className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--ed-text-muted)] hover:bg-[var(--ed-bg-subtle)]"
         >
           <RotateCcw className="size-3.5" />
-          退出编辑
+          {t("退出编辑")}
         </button>
 
         <button
@@ -205,17 +213,24 @@ export function InlineDocEditor({
           className="flex items-center gap-1.5 rounded-lg bg-[var(--ed-primary)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
         >
           {justSaved ? <Check className="size-3.5" /> : <Save className="size-3.5" />}
-          {justSaved ? "已保存" : unsaved ? "保存修改" : "已保存"}
+          {justSaved ? t("已保存") : unsaved ? t("保存修改") : t("已保存")}
         </button>
       </div>
 
       <p className="text-[11px] text-[var(--ed-text-subtle)]">
         {saved
-          ? `已保存到本地草稿（${new Date(saved.savedAt).toLocaleTimeString("zh-CN")}）· 共 ${drafts.length} 项待提交`
+          ? t("已保存到本地草稿（{time}）· 共 {count} 项待提交", {
+              time: new Date(saved.savedAt).toLocaleTimeString(language, {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              count: drafts.length,
+            })
           : unsaved
-            ? "有未保存的修改 · 点「保存修改」写入本地草稿"
-            : "与线上内容一致"}
-        {" · "}保存后可自由切换页面预览，确认无误再在顶部工具条「一键提交」。
+            ? t("有未保存的修改 · 点「保存修改」写入本地草稿")
+            : t("与线上内容一致")}
+        {" · "}
+        {t("保存后可自由切换页面预览，确认无误再在顶部工具条「一键提交」。")}
       </p>
 
       {kind === "markdown" ? (
@@ -242,7 +257,7 @@ export function InlineDocEditor({
       )}
 
       <p className="text-[11px] text-[var(--ed-text-subtle)]">
-        预览与正式页面使用同一渲染管线。
+        {t("预览与正式页面使用同一渲染管线。")}
       </p>
     </div>
   );

@@ -4,6 +4,9 @@ import type { GitHubClient, RepoRef } from "~/lib/github/client";
 import { evaluateConfigModule, stringifyConfigModule } from "~/lib/config/evaluate";
 import { resolveConfig } from "~/lib/config/schema";
 import { useSite } from "~/components/providers/config-provider";
+import { useI18n } from "~/lib/i18n/provider";
+import { ConfirmDialog, SelectMenu } from "~/components/ui/dialog";
+import { IconField } from "~/components/ui/icon-picker";
 
 interface ConfigEditorProps {
   client: GitHubClient | null;
@@ -22,6 +25,7 @@ interface ConfigEditorProps {
  */
 export function ConfigEditor({ client, repo, dataBranch }: ConfigEditorProps) {
   const { config, pointer } = useSite();
+  const { t } = useI18n();
   const configPath = pointer.configPath || "config.js";
 
   const [source, setSource] = useState("");
@@ -30,6 +34,7 @@ export function ConfigEditor({ client, repo, dataBranch }: ConfigEditorProps) {
   const [saving, setSaving] = useState(false);
   const [view, setView] = useState<"form" | "raw">("form");
   const [feedback, setFeedback] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+  const [confirmWarnings, setConfirmWarnings] = useState(false);
 
   const load = useCallback(async () => {
     if (!client) return;
@@ -63,11 +68,15 @@ export function ConfigEditor({ client, repo, dataBranch }: ConfigEditorProps) {
   const save = async () => {
     if (!client || !parsed) return;
     if (parsed.warnings.length > 0) {
-      const proceed = window.confirm(
-        `配置存在 ${parsed.warnings.length} 处警告：\n\n${parsed.warnings.slice(0, 6).join("\n")}\n\n仍要提交吗？`,
-      );
-      if (!proceed) return;
+      setConfirmWarnings(true);
+      return;
     }
+    await performSave();
+  };
+
+  const performSave = async () => {
+    if (!client || !parsed) return;
+    setConfirmWarnings(false);
     setSaving(true);
     setFeedback(null);
     try {
@@ -166,7 +175,7 @@ export function ConfigEditor({ client, repo, dataBranch }: ConfigEditorProps) {
           aria-label="config.js 源码"
         />
       ) : (
-        <ConfigForm config={config} patch={patch} parsed={parsed} />
+        <ConfigForm config={parsed?.config ?? config} patch={patch} parsed={parsed} />
       )}
 
       {feedback ? (
@@ -179,6 +188,26 @@ export function ConfigEditor({ client, repo, dataBranch }: ConfigEditorProps) {
           {feedback.text}
         </p>
       ) : null}
+
+      <ConfirmDialog
+        open={confirmWarnings}
+        title={t("确认提交配置")}
+        message={
+          <div className="space-y-2">
+            <p>{t("配置存在 {count} 处警告：", { count: parsed?.warnings.length ?? 0 })}</p>
+            <ul className="max-h-48 space-y-1 overflow-y-auto rounded-lg bg-[var(--ed-bg-subtle)] p-2 font-mono text-[11px]">
+              {parsed?.warnings.slice(0, 8).map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+            <p>{t("仍要提交吗？")}</p>
+          </div>
+        }
+        confirmText={t("提交配置")}
+        cancelText={t("取消")}
+        onConfirm={() => void performSave()}
+        onCancel={() => setConfirmWarnings(false)}
+      />
     </div>
   );
 }
@@ -192,6 +221,7 @@ function ConfigForm({
   patch: (updater: (draft: Record<string, unknown>) => void) => void;
   parsed: ReturnType<typeof resolveConfig> | null;
 }) {
+  const { t } = useI18n();
   if (!parsed) return null;
 
   const field = (
@@ -202,7 +232,7 @@ function ConfigForm({
     type: "text" | "number" = "text",
   ) => (
     <label className="block">
-      <span className="mb-1 block text-xs text-[var(--ed-text-muted)]">{label}</span>
+      <span className="mb-1 block text-xs text-[var(--ed-text-muted)]">{t(label)}</span>
       <input
         type={type}
         value={value}
@@ -233,13 +263,55 @@ function ConfigForm({
         }}
         className="size-4 accent-[var(--ed-primary)]"
       />
-      {label}
+      {t(label)}
     </label>
   );
 
+  const setSectionValue = (section: string, key: string, value: unknown) =>
+    patch((draft) => {
+      const sectionDraft = (draft[section] as Record<string, unknown>) ?? {};
+      sectionDraft[key] = value;
+      draft[section] = sectionDraft;
+    });
+
+  const setNavIcon = (index: number, childIndex: number | null, icon: string) =>
+    patch((draft) => {
+      const navigation = (draft.navigation as Record<string, unknown>) ?? {};
+      const links = Array.isArray(navigation.nav_links)
+        ? structuredClone(navigation.nav_links as Array<Record<string, unknown>>)
+        : structuredClone(config.navigation.nav_links as unknown as Array<Record<string, unknown>>);
+      const target = links[index] ?? structuredClone(config.navigation.nav_links[index] as unknown as Record<string, unknown>);
+      if (!target) return;
+      if (childIndex === null) {
+        target.icon = icon;
+      } else if (Array.isArray(target.url)) {
+        const children = structuredClone(target.url as Array<Record<string, unknown>>);
+        children[childIndex] = { ...(children[childIndex] ?? {}), icon };
+        target.url = children;
+      }
+      links[index] = target;
+      navigation.nav_links = links;
+      draft.navigation = navigation;
+    });
+
+  const setHomeIcon = (
+    key: "features" | "quick_links",
+    index: number,
+    icon: string,
+  ) =>
+    patch((draft) => {
+      const home = (draft.home as Record<string, unknown>) ?? {};
+      const list = Array.isArray(home[key])
+        ? structuredClone(home[key] as Array<Record<string, unknown>>)
+        : structuredClone(config.home[key] as unknown as Array<Record<string, unknown>>);
+      list[index] = { ...(list[index] ?? {}), icon };
+      home[key] = list;
+      draft.home = home;
+    });
+
   return (
     <div className="space-y-5">
-      <Section title="站点信息">
+      <Section title={t("站点信息")}>
         <div className="grid gap-3 sm:grid-cols-2">
           {field("site", "name", "站点名称", config.site.name)}
           {field("site", "title", "浏览器标题", config.site.title)}
@@ -248,16 +320,88 @@ function ConfigForm({
         </div>
       </Section>
 
-      <Section title="外观">
+      <Section title={t("外观")}>
         <div className="grid gap-3 sm:grid-cols-2">
           {field("appearance", "theme_color", "主题色", config.appearance.theme_color)}
-          {field("appearance", "logo", "Logo 路径", config.appearance.logo)}
+          <IconField
+            label={t("Logo 路径")}
+            value={config.appearance.logo}
+            onChange={(value) => setSectionValue("appearance", "logo", value)}
+          />
           {field("appearance", "favicon", "Favicon 路径", config.appearance.favicon)}
           {field("appearance", "font_family", "字体（留空使用 Outfit）", config.appearance.font_family)}
         </div>
       </Section>
 
-      <Section title="布局">
+      <Section title={t("导航图标")}>
+        {config.navigation.nav_links.length === 0 ? (
+          <p className="text-xs text-[var(--ed-text-subtle)]">{t("暂无导航项")}</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {config.navigation.nav_links.map((link, index) => (
+              <div key={`${link.text}-${index}`} className="space-y-2">
+                <IconField
+                  label={link.text}
+                  value={link.icon}
+                  onChange={(value) => setNavIcon(index, null, value)}
+                />
+                {Array.isArray(link.url)
+                  ? link.url.map((child, childIndex) => (
+                      <IconField
+                        key={`${child.text}-${childIndex}`}
+                        label={`↳ ${child.text}`}
+                        value={child.icon}
+                        onChange={(value) => setNavIcon(index, childIndex, value)}
+                      />
+                    ))
+                  : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Section title={t("首页图标")}>
+        <IconField
+          label={t("Hero Logo")}
+          value={config.home.hero.logo}
+          onChange={(value) =>
+            patch((draft) => {
+              const home = (draft.home as Record<string, unknown>) ?? {};
+              const hero = (home.hero as Record<string, unknown>) ?? {};
+              hero.logo = value;
+              home.hero = hero;
+              draft.home = home;
+            })
+          }
+        />
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <h3 className="text-xs font-medium text-[var(--ed-text-muted)]">{t("特性图标")}</h3>
+            {config.home.features.map((feature, index) => (
+              <IconField
+                key={`${feature.title}-${index}`}
+                label={feature.title}
+                value={feature.icon}
+                onChange={(value) => setHomeIcon("features", index, value)}
+              />
+            ))}
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-xs font-medium text-[var(--ed-text-muted)]">{t("快捷入口图标")}</h3>
+            {config.home.quick_links.map((link, index) => (
+              <IconField
+                key={`${link.title}-${index}`}
+                label={link.title}
+                value={link.icon}
+                onChange={(value) => setHomeIcon("quick_links", index, value)}
+              />
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      <Section title={t("布局")}>
         <div className="grid gap-3 sm:grid-cols-3">
           {field("layout", "sidebar_width", "侧栏宽度", config.layout.sidebar_width)}
           {field("layout", "toc_width", "目录宽度", config.layout.toc_width)}
@@ -269,11 +413,11 @@ function ConfigForm({
         </div>
       </Section>
 
-      <Section title="文档">
+      <Section title={t("文档")}>
         <div className="grid gap-3 sm:grid-cols-3">
           {field("document", "default_branch", "默认版本", config.document.default_branch)}
           {field("document", "toc_depth", "目录深度", config.document.toc_depth, "number")}
-          {field("document", "folder_expand_mode", "侧栏展开模式 (1–5)", config.navigation.folder_expand_mode, "number")}
+          {field("navigation", "folder_expand_mode", "侧栏展开模式 (1–5)", config.navigation.folder_expand_mode, "number")}
         </div>
         <div className="mt-3 flex flex-wrap gap-4">
           {toggle("document", "toc_numbering", "目录编号", config.document.toc_numbering)}
@@ -283,7 +427,58 @@ function ConfigForm({
         </div>
       </Section>
 
-      <Section title="搜索与扩展">
+      <Section title={t("国际化")}>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="block">
+            <span className="mb-1 block text-xs text-[var(--ed-text-muted)]">{t("默认站点语言")}</span>
+            <SelectMenu
+              value={config.i18n.default_language}
+              options={config.i18n.site_languages.map((lang) => ({
+                value: lang.code,
+                label: `${lang.label} (${lang.code})`,
+              }))}
+              onChange={(value) => setSectionValue("i18n", "default_language", value)}
+              ariaLabel={t("默认站点语言")}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs text-[var(--ed-text-muted)]">{t("默认文档语言")}</span>
+            <SelectMenu
+              value={config.i18n.default_document_language}
+              options={config.i18n.document_languages.map((lang) => ({
+                value: lang.code,
+                label: `${lang.label} (${lang.code})`,
+              }))}
+              onChange={(value) => setSectionValue("i18n", "default_document_language", value)}
+              ariaLabel={t("默认文档语言")}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs text-[var(--ed-text-muted)]">{t("文档多语言方式")}</span>
+            <SelectMenu
+              value={config.i18n.document_mode}
+              options={[
+                { value: "auto", label: t("自动识别") },
+                { value: "folder", label: t("语言文件夹") },
+                { value: "suffix", label: t("文件后缀") },
+                { value: "off", label: t("关闭多语言文档") },
+              ]}
+              onChange={(value) => setSectionValue("i18n", "document_mode", value)}
+              ariaLabel={t("文档多语言方式")}
+            />
+          </label>
+        </div>
+        <p className="mt-2 text-[11px] text-[var(--ed-text-subtle)]">
+          {t("语言文件夹示例：main/en/README.md；文件后缀示例：README.en.md。")}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-4">
+          {toggle("i18n", "enable", "启用国际化", config.i18n.enable)}
+          {toggle("i18n", "ui", "启用界面翻译", config.i18n.ui)}
+          {toggle("i18n", "switcher", "显示语言切换器", config.i18n.switcher)}
+        </div>
+      </Section>
+
+      <Section title={t("搜索与扩展")}>
         <div className="grid gap-3 sm:grid-cols-3">
           {field("search", "min_chars", "最小搜索字符数", config.search.min_chars, "number")}
           {field("search", "max_results", "最大结果数", config.search.max_results, "number")}
@@ -297,7 +492,7 @@ function ConfigForm({
         </div>
       </Section>
 
-      <Section title="编辑台">
+      <Section title={t("编辑台")}>
         {toggle("admin", "enable", "允许网页端编辑（admin.enable）", config.admin.enable)}
       </Section>
     </div>

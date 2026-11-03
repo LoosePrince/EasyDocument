@@ -16,6 +16,10 @@ import { normalizeConfigPath, type PathConfig } from "./path-config";
 export interface ScannedFile {
   /** 分支内相对路径（POSIX） */
   path: string;
+  /** 实际文件路径（多语言文件夹/后缀与逻辑路径不同，v2.0.2） */
+  sourcePath?: string;
+  /** 文档语言（v2.0.2） */
+  language?: string;
   /** 已提取的标题；缺省时用文件名 */
   title?: string;
   git?: GitInfo;
@@ -81,6 +85,8 @@ export function buildDocsTree(files: ScannedFile[], options: BuildTreeOptions): 
     if (isIndexFileName(fileName, indexPages)) {
       const index: DocIndexNode = { title, path: cleanPath };
       if (git) index.git = git;
+      if (file.sourcePath) index.sourcePath = file.sourcePath;
+      if (file.language) index.language = file.language;
       current.index = index;
       // 目录标题跟随索引页标题（legacy 行为）
       if (current !== root && dirSegments.length > 0) {
@@ -89,6 +95,8 @@ export function buildDocsTree(files: ScannedFile[], options: BuildTreeOptions): 
     } else {
       const leaf: DocsNode = { title, path: cleanPath, children: [] };
       if (git) leaf.git = git;
+      if (file.sourcePath) leaf.sourcePath = file.sourcePath;
+      if (file.language) leaf.language = file.language;
       current.children.push(leaf);
     }
   }
@@ -137,10 +145,16 @@ function applyPathConfig(root: DocsNode, config: PathConfig) {
         if (node.index) node.index.title = override.title;
       }
       if (override.hidden) node.hidden = true;
+      if (override.icon) {
+        node.icon = override.icon;
+        if (node.index) node.index.icon = override.icon;
+      }
+      if (override.translations) node.translations = override.translations;
     }
 
     // 版本根标题
     if (node === root && config.rootTitle) root.title = config.rootTitle;
+    if (node === root && config.rootTranslations) root.translations = config.rootTranslations;
 
     for (const child of node.children) visit(child);
   };

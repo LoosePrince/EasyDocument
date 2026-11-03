@@ -1,17 +1,21 @@
 import { ChevronDown, GitBranch } from "lucide-react";
 import { useSite } from "~/components/providers/config-provider";
+import { useI18n } from "~/lib/i18n/provider";
 import { useState } from "react";
-import { siteHref } from "~/lib/content/routes";
+import { siteHref, docUrlPath } from "~/lib/content/routes";
 
 export interface VersionSwitcherProps {
   /** 当前版本 */
   current: string;
+  /** 当前文档语言（切换版本时保留） */
+  language?: string;
   className?: string;
 }
 
 /** 版本切换下拉（对应 legacy 的侧栏分支选择器） */
-export function VersionSwitcher({ current, className }: VersionSwitcherProps) {
+export function VersionSwitcher({ current, language, className }: VersionSwitcherProps) {
   const { config, branches, defaultBranch } = useSite();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
 
   if (!config.document.branch_support || branches.length <= 1) return null;
@@ -29,7 +33,7 @@ export function VersionSwitcher({ current, className }: VersionSwitcherProps) {
       >
         <span className="flex items-center gap-1.5">
           <GitBranch className="size-3.5" />
-          版本
+          {t("版本")}
         </span>
         <span className="flex items-center gap-1 text-[var(--ed-text)]">
           {currentLabel}
@@ -45,7 +49,14 @@ export function VersionSwitcher({ current, className }: VersionSwitcherProps) {
           {branches.map((branch) => (
             <li key={branch.name}>
               <a
-                href={siteHref(`/docs/${encodeURIComponent(branch.name)}`, config.site.base_url)}
+                href={siteHref(
+                  docUrlPath({
+                    branch: branch.name,
+                    path: "",
+                    documentLanguage: language,
+                  }),
+                  config.site.base_url,
+                )}
                 className={`block px-2.5 py-1.5 transition-colors hover:bg-[var(--ed-bg-subtle)] ${
                   branch.name === current
                     ? "font-medium text-[var(--ed-primary)]"
@@ -56,7 +67,7 @@ export function VersionSwitcher({ current, className }: VersionSwitcherProps) {
               >
                 {branch.label}
                 {branch.name === defaultBranch ? (
-                  <span className="ml-1.5 text-[10px] opacity-60">默认</span>
+                  <span className="ml-1.5 text-[10px] opacity-60">{t("默认")}</span>
                 ) : null}
               </a>
             </li>

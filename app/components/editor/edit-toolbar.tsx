@@ -12,6 +12,8 @@ import {
   X,
 } from "lucide-react";
 import { useEditorContext } from "~/lib/editor/editor-store";
+import { useI18n } from "~/lib/i18n/provider";
+import { ConfirmDialog } from "~/components/ui/dialog";
 import { TokenForm } from "./github-auth";
 import { cn } from "~/lib/utils";
 
@@ -25,10 +27,12 @@ import { cn } from "~/lib/utils";
  */
 export function EditToolbar() {
   const editor = useEditorContext();
+  const { t } = useI18n();
   const [pinned, setPinned] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [message, setMessage] = useState("");
   const [showLogin, setShowLogin] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "ok" | "error"; text: string } | null>(null);
 
   useEffect(() => {
@@ -81,7 +85,7 @@ export function EditToolbar() {
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-2 px-4 py-2">
         <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--ed-primary)]">
           <span className="size-1.5 animate-pulse rounded-full bg-[var(--ed-primary)]" />
-          编辑模式
+          {t("编辑模式")}
         </span>
 
         {/* 草稿统计（悬停展开清单） */}
@@ -97,26 +101,22 @@ export function EditToolbar() {
           )}
         >
           <GitCommitHorizontal className="size-3.5" />
-          {total === 0 ? "本地无草稿" : `${total} 项本地草稿`}
-          {counts.create ? <Count label="新增" value={counts.create} tone="emerald" /> : null}
-          {counts.update ? <Count label="修改" value={counts.update} tone="amber" /> : null}
-          {counts.delete ? <Count label="删除" value={counts.delete} tone="red" /> : null}
-          {configDrafts.length ? <Count label="目录" value={configDrafts.length} tone="blue" /> : null}
+          {total === 0 ? t("本地无草稿") : t("{count} 项本地草稿", { count: total })}
+          {counts.create ? <Count label={t("新增")} value={counts.create} tone="emerald" /> : null}
+          {counts.update ? <Count label={t("修改")} value={counts.update} tone="amber" /> : null}
+          {counts.delete ? <Count label={t("删除")} value={counts.delete} tone="red" /> : null}
+          {configDrafts.length ? <Count label={t("目录")} value={configDrafts.length} tone="blue" /> : null}
           <ChevronDown className={cn("size-3 transition-transform", expanded && "rotate-180")} />
         </button>
 
         {total > 0 ? (
           <button
             type="button"
-            onClick={() => {
-              if (!window.confirm(`确认放弃全部 ${total} 项本地草稿？此操作不可撤销。`)) return;
-              editor.discardAll();
-              setFeedback({ type: "ok", text: "已放弃全部本地草稿" });
-            }}
+            onClick={() => setConfirmDiscard(true)}
             className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--ed-text-muted)] hover:bg-[var(--ed-bg-subtle)]"
           >
             <RotateCcw className="size-3.5" />
-            放弃全部
+            {t("放弃全部")}
           </button>
         ) : null}
 
@@ -135,7 +135,7 @@ export function EditToolbar() {
                 className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--ed-text-muted)] hover:bg-[var(--ed-bg-subtle)]"
               >
                 <LogOut className="size-3.5" />
-                断开
+                {t("断开")}
               </button>
             </>
           ) : (
@@ -145,7 +145,7 @@ export function EditToolbar() {
               className="flex items-center gap-1.5 rounded-lg border border-[var(--ed-border)] px-2.5 py-1 text-xs text-[var(--ed-text-muted)]"
             >
               <CloudOff className="size-3.5" />
-              未连接 GitHub
+              {t("未连接 GitHub")}
             </button>
           )}
 
@@ -161,7 +161,7 @@ export function EditToolbar() {
             ) : (
               <Cloud className="size-3.5" />
             )}
-            一键提交{total > 0 ? `（${total}）` : ""}
+            {t("一键提交")}{total > 0 ? `（${total}）` : ""}
           </button>
 
           <button
@@ -182,7 +182,7 @@ export function EditToolbar() {
             <input
               value={message}
               onChange={(event) => setMessage(event.target.value)}
-              placeholder="提交信息（可选，默认「docs: 网页端编辑」）"
+              placeholder={t("提交信息（可选，默认「docs: 网页端编辑」）")}
               aria-label="提交信息"
               className="min-w-48 flex-1 rounded-lg border border-[var(--ed-border)] bg-[var(--ed-bg)] px-3 py-1.5 text-xs outline-none focus:border-[var(--ed-primary)]"
             />
@@ -197,7 +197,7 @@ export function EditToolbar() {
               ) : (
                 <Cloud className="size-3.5" />
               )}
-              提交到内容分支
+              {t("提交到内容分支")}
             </button>
           </div>
 
@@ -210,7 +210,7 @@ export function EditToolbar() {
                     className="flex items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-[var(--ed-bg-subtle)]"
                   >
                     <span className="shrink-0 rounded bg-blue-500/15 px-1 py-0.5 text-[10px] text-blue-600 dark:text-blue-400">
-                      目录
+                      {t("目录")}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-[var(--ed-text-muted)]">
                       {entry.path}
@@ -263,12 +263,12 @@ export function EditToolbar() {
                 ))}
               </ul>
               <p className="text-[11px] text-[var(--ed-text-subtle)]">
-                草稿保存在本浏览器，刷新或切换页面都不会丢失。提交后需到控制台「构建部署」手动触发重建。
+                {t("草稿保存在本浏览器，刷新或切换页面都不会丢失。提交后需到控制台「构建部署」手动触发重建。")}
               </p>
             </>
           ) : (
             <p className="text-[11px] text-[var(--ed-text-subtle)]">
-              还没有本地草稿。在文档页编辑后点「保存修改」，或在此新建文档。
+              {t("还没有本地草稿。在文档页编辑后点「保存修改」，或在此新建文档。")}
             </p>
           )}
         </div>
@@ -299,6 +299,21 @@ export function EditToolbar() {
         }}
         loading={editor.authLoading}
         error={editor.authError}
+      />
+
+      <ConfirmDialog
+        open={confirmDiscard}
+        title={t("确认放弃")}
+        message={t("确认放弃全部 {count} 项本地草稿？此操作不可撤销。", { count: total })}
+        confirmText={t("放弃全部")}
+        cancelText={t("取消")}
+        danger
+        onConfirm={() => {
+          editor.discardAll();
+          setConfirmDiscard(false);
+          setFeedback({ type: "ok", text: t("已放弃全部本地草稿") });
+        }}
+        onCancel={() => setConfirmDiscard(false)}
       />
     </div>
   );
@@ -379,6 +394,7 @@ function Count({
  */
 export function DraftIndicator() {
   const editor = useEditorContext();
+  const { t } = useI18n();
   const total = editor.drafts.length + Object.keys(editor.pathConfig).length;
   if (editor.editing || total === 0) return null;
 
@@ -387,10 +403,10 @@ export function DraftIndicator() {
       type="button"
       onClick={() => editor.setEditing(true)}
       className="fixed bottom-6 left-6 z-50 flex items-center gap-2 rounded-full border border-[var(--ed-primary)] bg-[var(--ed-bg-elevated)] px-3.5 py-2 text-xs font-medium text-[var(--ed-primary)] shadow-lg transition-transform hover:-translate-y-0.5"
-      title="点击进入编辑模式查看与提交"
+      title={t("点击进入编辑模式查看与提交")}
     >
       <GitCommitHorizontal className="size-3.5" />
-      {total} 项本地草稿未提交
+      {t("{count} 项本地草稿未提交", { count: total })}
     </button>
   );
 }

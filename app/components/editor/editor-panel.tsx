@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, Check, Loader2, RefreshCw, Save, Trash2, X } from "lucide-react";
 import { useSite } from "~/components/providers/config-provider";
+import { useI18n } from "~/lib/i18n/provider";
+import { ConfirmDialog } from "~/components/ui/dialog";
 import { SignedInBadge, TokenForm, useGitHubAuth } from "./github-auth";
 import { contentPath } from "~/lib/content/pointer";
 import type { RepoRef } from "~/lib/github/client";
@@ -24,6 +26,7 @@ export interface EditorPanelProps {
  */
 export function EditorPanel({ branch, docPath, onClose, mode = "edit" }: EditorPanelProps) {
   const { config, pointer } = useSite();
+  const { t } = useI18n();
   const auth = useGitHubAuth();
   const [content, setContent] = useState("");
   const [sha, setSha] = useState<string | undefined>();
@@ -32,6 +35,7 @@ export function EditorPanel({ branch, docPath, onClose, mode = "edit" }: EditorP
   const [message, setMessage] = useState(`docs(${branch}): 更新 ${docPath}`);
   const [feedback, setFeedback] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [rebuilding, setRebuilding] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const repo = useMemo<RepoRef>(
     () => ({ owner: pointer.owner, repo: pointer.repo }),
@@ -101,7 +105,12 @@ export function EditorPanel({ branch, docPath, onClose, mode = "edit" }: EditorP
 
   const remove = async () => {
     if (!auth.client || !sha) return;
-    if (!window.confirm(`确认删除 ${docPath}？此操作会直接提交到 ${pointer.branch} 分支。`)) return;
+    setConfirmDelete(true);
+  };
+
+  const performDelete = async () => {
+    if (!auth.client || !sha) return;
+    setConfirmDelete(false);
     setSaving(true);
     try {
       await auth.client.deleteFile(repo, {
@@ -274,6 +283,20 @@ export function EditorPanel({ branch, docPath, onClose, mode = "edit" }: EditorP
           </footer>
         ) : null}
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title={t("确认删除")}
+        message={t("确认删除 {path}？此操作会直接提交到 {branch} 分支。", {
+          path: docPath,
+          branch: pointer.branch,
+        })}
+        confirmText={t("删除")}
+        cancelText={t("取消")}
+        danger
+        onConfirm={() => void performDelete()}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

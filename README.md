@@ -2,11 +2,14 @@
 
 基于 **React 19 + TypeScript + Vite 7 + TailwindCSS 4** 的静态文档系统。文档内容存放在独立的 git 分支中，构建时预渲染为真实路径的静态页面，并支持在网页端直接编辑内容、修改站点配置、一键触发重新构建。
 
-- 真实路径（`/docs/main/使用指南/README`）+ 预渲染 HTML，无 `#` 路由，SEO 友好
+- 真实路径（`/docs-zh-CN/main/使用指南/README`）+ 预渲染 HTML，无 `#` 路由，SEO 友好
 - 内容与代码分离：代码在 `main`，内容在 `data`（可配置）
 - 配置与原版 `config.js` **完全兼容**，可直接复用
 - 网页端编辑：所见即所得，填一次 GitHub PAT 即可新增/编辑/删除文档、改配置、触发重建
-- 目录可配置：`path.json` 管显示名、排序、隐藏与外部文档挂载（GitHub 目录 / 公开 path.json）
+- 目录可配置：`path.json` 管显示名、排序、隐藏、图标与外部文档挂载（GitHub 目录 / 公开 path.json）
+- 全站 i18n：界面文案可切换，文档支持语言文件夹（`main/en/…`）与文件二级后缀（`README.en.md`）
+- 图标系统：导航、首页卡片、目录与文档图标均可从图标库弹窗选择，或输入图标链接
+- 可视化排序：控制台支持拖动与上移/下移，支持在文件夹之间移入/移出（会真实移动内容文件）
 
 > v1（免编译的 Alpine.js + hash 路由版本）完整保留在 `legacy` 分支。
 
@@ -58,11 +61,12 @@ data 分支
 {
   "title": "首页",
   "children": [
-    { "path": "README.md", "title": "概览" },
-    { "path": "使用指南", "title": "使用手册" },
+    { "path": "README.md", "title": "概览", "icon": "home" },
+    { "path": "使用指南", "title": "使用手册", "icon": "book" },
     { "path": "旧版", "hidden": true },
     {
       "path": "外部文档",
+      "icon": "https://example.com/icons/external.svg",
       "external": {
         "mode": "github_tree",
         "url": "https://github.com/owner/repo/tree/main/docs"
@@ -74,21 +78,82 @@ data 分支
 
 - **数组顺序即展示顺序**，未列出的条目排在后面
 - `title` 只改显示名；`hidden: true` 让条目在侧栏隐藏（仍可直链）
+- `icon` 支持图标库 id 或图标链接，目录与文档都可以设置
 - `external.mode`：`github_tree`（GitHub 目录链接）或 `path_json`（path.json / 含 path.json 的公开目录）
-- 构建期与前端都会拉取外部挂载；无需 token
+- 构建期与前端都会拉取外部挂载；无需 token；构建期成功拉取的正文会进入搜索索引
 - legacy 的嵌套 `path.json` 可直接使用
-- 侧栏拖拽排序、双击改名，或在 `/admin` →「目录与排序」里统一调整
+- 侧栏拖拽排序、双击改名，或在 `/admin` →「目录与排序」里拖动 / 上移下移 / 跨文件夹移动
+
+## 多语言文档
+
+```js
+i18n: {
+  enable: true,
+  ui: true,
+  switcher: true,
+  default_language: "zh-CN",
+  site_languages: [
+    { code: "zh-CN", label: "中文" },
+    { code: "en", label: "English" }
+  ],
+  document_languages: [
+    { code: "zh-CN", label: "中文", dir: "zh", suffix: "zh" },
+    { code: "en", label: "English", dir: "en", suffix: "en" }
+  ],
+  default_document_language: "zh-CN",
+  document_mode: "auto" // auto | folder | suffix | off
+}
+```
+
+站点语言只影响界面文案，保存在浏览器 `localStorage`；文档语言独立配置，并体现在 `/docs-{文档语言}/` 前缀中。英文文案位于 `lang/en.json`，中文为默认语言。两种组织方式可混用：
+
+```text
+main/zh/使用指南/README.md     → /docs-zh-CN/main/使用指南
+main/en/使用指南/README.md     → /docs-en/main/使用指南
+main/使用指南/README.zh.md     → /docs-zh-CN/main/使用指南
+main/使用指南/README.en.md     → /docs-en/main/使用指南
+```
+
+- 无语言标记的文件属于默认语言；同一逻辑路径优先显式标记
+- 目标语言没有译文时回落到默认语言内容，并给出提示
+- 站点语言切换时文档语言自动跟随；语言按钮里也可以单独选择文档语言
+- 站点语言只保存在 `localStorage`，不出现在 URL 中
+- 文档语言始终出现在 URL 前缀：`/docs-en/main/使用指南`
+- 旧 `/docs/main/...` 地址会自动跳转到默认文档语言的新地址
+- 站点配置可用顶层 `locales` 提供英文版导航/首页/页脚：
+  ```js
+  const config = {
+    // 基础（中文）配置…
+    locales: {
+      en: {
+        site: { title: "EasyDocument · Static Documentation" },
+        navigation: { home_text: "Home", nav_links: [/* … */] },
+        home: { hero: { subtitle: "Documentation separated from code" } },
+        footer: { links: [/* … */] }
+      }
+    }
+  };
+  ```
+- `path.json` 条目支持 `translations`：
+  ```json
+  {
+    "path": "使用指南",
+    "title": "使用指南",
+    "translations": { "en": { "title": "User Guide", "icon": "book-open" } }
+  }
+  ```
+  可覆盖 `title`、`icon`、`hidden` 与 `index` 的显示名/图标
 
 ## URL 规则
 
 | 内容路径 | URL |
 | --- | --- |
-| `main/README.md` | `/docs/main` |
-| `main/使用指南/README.md` | `/docs/main/使用指南` |
-| `main/使用指南/基本使用流程.md` | `/docs/main/使用指南/基本使用流程` |
+| `main/README.md` | `/docs-zh-CN/main` |
+| `main/使用指南/README.md` | `/docs-zh-CN/main/使用指南` |
+| `main/使用指南/基本使用流程.md` | `/docs-zh-CN/main/使用指南/基本使用流程` |
 | `1.3.4/配置详解/README.md` | `/docs/1.3.4/配置详解` |
 
-锚点直接使用标题文本（中文会百分号编码）：`/docs/main/使用指南#常见问题`。
+锚点直接使用标题文本（中文会百分号编码）：`/docs-zh-CN/main/使用指南#常见问题`。
 
 旧版链接（`main/#/使用指南/`、`main/#使用指南/`）在导航与首页按钮中会自动升级为新路径。
 外部直接访问的旧地址也会被 `404.html` 里的内联脚本在 React 水合前重写到 `/docs/...`。
@@ -108,6 +173,8 @@ const config = {
           sections, stats, quick_links, code_demo },
   document: { root_dir, branch_support, default_branch, available_branches, index_pages, supported_extensions,
               toc_*, code_*, path_config, runtime_fetch },
+  i18n: { enable, ui, switcher, default_language, site_languages, document_languages,
+          default_document_language, document_mode },
   search: { enable, min_chars, max_results, placeholder, search_on_type, match_distance },
   extensions: { math, highlight, mermaid, html_scripts, github, git, progress_bar },
   footer: { copyright, powered_by, links, beian, columns },
@@ -124,7 +191,9 @@ export default config;
 - `home.sections` 控制首页各区块开关/标题；`home.stats`、`home.quick_links`、`home.code_demo` 为 v2 新增（缺失时用默认值）
 - `document.path_config` 指定目录配置文件名（默认 `path.json`），负责显示名、排序、隐藏与外部挂载
 - `extensions.html_scripts` 控制 HTML 文档是否执行脚本（默认 `true`）
-- `nav_links[].icon` / `home.features[].icon` 用**设计图标 id**（如 `rocket`、`book`），不依赖 FontAwesome
+- `nav_links[].icon` / `home.features[].icon` / `path.json` 的 `icon` 支持**设计图标 id**（如 `rocket`、`book`）或**图标链接**，不依赖 FontAwesome
+- `i18n`（v2.0.2 新增）控制界面翻译、语言切换器与多语言文档的组织方式
+- `document.path_config` 里的 `icon` 同时作用于目录与文档；侧栏右键与控制台「目录与排序」都能设置
 
 ### 首页区块
 
@@ -289,10 +358,11 @@ app/
 | 内容位置 | 仓库 `data/` 目录 | 独立 git 分支（默认 `data`） |
 | 索引文件 | `build.py` 生成 `path.json` / `search.json` | 构建期扫描 + MiniSearch 索引，无需索引文件 |
 | 编辑 | 无 | 网页端直接编辑 |
-| 主题 | FontAwesome 图标类 | lucide-react 图标，配置里写设计图标 id（如 `rocket`），不再依赖图标字体 |
+| 主题 | FontAwesome 图标类 | lucide-react 图标；配置写图标 id 或图标链接，不依赖图标字体 |
 | 编辑 | 无 | 就地编辑，默认所见即所得 |
-| 排序/显示名 | `build.py` 生成的 `path.json` | 手写 `path.json`（构建期读取），侧栏可拖拽排序 |
-| 外部文档 | `document.external_docs` | 写在 `path.json` 的 `external` 里 |
+| 排序/显示名 | `build.py` 生成的 `path.json` | 手写 `path.json`（构建期读取），侧栏与控制台可拖拽/点击排序 |
+| 多语言 | 无 | 全站 i18n + 语言文件夹 / 文件二级后缀 |
+| 外部文档 | `document.external_docs` | 写在 `path.json` 的 `external` 里，正文参与搜索索引 |
 | 404 兜底 | 静态 404 页 | `404.html` = `index.html` 副本，兼作 SPA 回退与旧 hash 链接跳转 |
 
 ## License

@@ -9,9 +9,11 @@
 import MiniSearch from "minisearch";
 
 export interface SearchDoc {
-  /** 唯一键：`{branch}/{path}` */
+  /** 唯一键：`{branch}/{language?}/{path}` */
   id: string;
   branch: string;
+  /** 文档语言（默认语言省略） */
+  language?: string;
   path: string;
   title: string;
   content: string;
@@ -120,11 +122,13 @@ export function buildSearchDoc(params: {
   title: string;
   content: string;
   kind: "markdown" | "html";
+  language?: string;
 }): SearchDoc {
   const plain = toPlainText(params.content, params.kind);
   return {
-    id: `${params.branch}/${params.path}`,
+    id: `${params.branch}/${params.language ? `${params.language}/` : ""}${params.path}`,
     branch: params.branch,
+    language: params.language,
     path: params.path,
     title: params.title,
     content: plain,
@@ -136,7 +140,7 @@ export function buildSearchDoc(params: {
 export function createSearchEngine(docs: SearchDoc[]): MiniSearch<SearchDoc> {
   const engine = new MiniSearch<SearchDoc>({
     fields: ["title", "content", "keywords"],
-    storeFields: ["branch", "path", "title", "content"],
+    storeFields: ["branch", "language", "path", "title", "content"],
     tokenize: tokenizeForSearch,
     processTerm: (term) => term.toLowerCase(),
     searchOptions: {
@@ -174,6 +178,7 @@ export function tokenizeForSearch(text: string): string[] {
 
 export interface SearchHit {
   branch: string;
+  language?: string;
   path: string;
   title: string;
   snippet: string;
@@ -192,6 +197,7 @@ export function toSearchHits(
     const content = (result as unknown as { content?: string }).content ?? "";
     return {
       branch: String(result.branch ?? ""),
+      language: result.language ? String(result.language) : undefined,
       path: String(result.path ?? ""),
       title: String(result.title ?? ""),
       snippet: buildSnippet(content, query),

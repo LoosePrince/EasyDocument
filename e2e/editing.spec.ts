@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const DOC = "/docs/main/快速入门/";
+const DOC = "/docs-zh-CN/main/快速入门/";
 
 test.describe("就地编辑与控制台", () => {
   test("编辑此页在正文区内就地展开（不弹窗）", async ({ page }) => {
